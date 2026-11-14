@@ -39,9 +39,10 @@ def country_year(map_key: str, country: str, bbox: firms.BBox, year: int, start:
         for kind, source in firms.COUNTRY_FILES.items():
             if year >= firms.SOURCES[source][2].year:
                 frames.append(firms.country_file(kind, year, country, http))
-        n21 = firms.SOURCES["VIIRS_NOAA21_NRT"][2]
-        if year >= n21.year:
-            frames.append(firms.FirmsClient(map_key).fetch("VIIRS_NOAA21_NRT", max(lo, n21), hi, bbox))
+        if firms.NOAA21_HISTORY:
+            n21 = firms.SOURCES["VIIRS_NOAA21_NRT"][2]
+            if year >= n21.year:
+                frames.append(firms.FirmsClient(map_key).fetch("VIIRS_NOAA21_NRT", max(lo, n21), hi, bbox))
     else:
         frames.append(firms.fetch_archive(map_key, lo, hi, bbox))
     frames = [f for f in frames if len(f)]

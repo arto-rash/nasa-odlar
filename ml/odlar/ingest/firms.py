@@ -236,6 +236,12 @@ def fetch_recent(map_key: str, start: date, end: date, bbox: BBox | list[BBox] =
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"])
 
 
+# NOAA-21 (2024+) has no yearly country files, so its past years come from the
+# rate-limited area API, which is the slowest part of a world build. The harmonized
+# record and the models use S-NPP and MODIS only; NOAA-21 adds map points. Set
+# ODLAR_NOAA21_HISTORY=1 to fetch its past years too (this year is always fetched).
+NOAA21_HISTORY = os.environ.get("ODLAR_NOAA21_HISTORY", "0") == "1"
+
 # FIRMS yearly per-country archive files (science quality, with the ``type`` column).
 COUNTRY_FILES = {"modis": "MODIS_SP", "viirs-snpp": "VIIRS_SNPP_SP", "viirs-jpss1": "VIIRS_NOAA20_SP"}
 COUNTRY_URL = FIRMS_BASE + "/data/country/{kind}/{year}/{kind}_{year}_{country}.csv"
@@ -327,7 +333,7 @@ def fetch_country_archive(map_key: str, country: str, bbox: BBox, start: date, e
     frames.append(fetch_archive(map_key, date(end.year, 1, 1), end, bbox))
     client = FirmsClient(map_key)
     n21_start = SOURCES["VIIRS_NOAA21_NRT"][2]
-    if n21_start.year <= last_file_year:
+    if NOAA21_HISTORY and n21_start.year <= last_file_year:
         frames.append(client.fetch("VIIRS_NOAA21_NRT", n21_start, date(last_file_year, 12, 31), bbox))
     df = pd.concat([f for f in frames if len(f)], ignore_index=True)
     df = df[(pd.to_datetime(df["acq_date"]) >= pd.Timestamp(start)) & (pd.to_datetime(df["acq_date"]) <= pd.Timestamp(end))]
