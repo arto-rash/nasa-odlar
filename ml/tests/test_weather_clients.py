@@ -39,6 +39,32 @@ def test_power_uses_re_community_and_caches(tmp_path):
     assert route.call_count == 1  # older cache reused
 
 
+@respx.mock
+def test_power_fetches_once_per_grid_cell(tmp_path):
+    route = respx.get(power.POWER_URL).mock(return_value=httpx.Response(200, json=POWER_PAYLOAD))
+    # two regions in one 0.5 x 0.625 cell, one in the next cell east
+    regions = pd.DataFrame({"region_id": [1, 2, 3], "slug": ["a", "b", "c"],
+                            "lat": [40.1, 39.9, 40.0], "lon": [47.1, 46.9, 47.7]})
+    w, elev = power.fetch_regions_weather(regions, date(2024, 1, 1), date(2024, 1, 3), cache_dir=tmp_path)
+    assert route.call_count == 2
+    assert {float(c.request.url.params["longitude"]) for c in route.calls} == {47.5, 46.875}
+    assert len(w) == 9 and set(elev.index) == {1, 2, 3}
+
+
+@respx.mock
+def test_openmeteo_shares_points_on_a_grid():
+    day = {"time": ["2026-10-25"], "temperature_2m_max": [14], "temperature_2m_mean": [10],
+           "relative_humidity_2m_mean": [80], "wind_speed_10m_mean": [2.0], "precipitation_sum": [1.0]}
+    route = respx.get(openmeteo.FORECAST_URL).mock(
+        side_effect=lambda req: httpx.Response(200, json=[{"daily": day}] * len(req.url.params["latitude"].split(","))))
+    regions = pd.DataFrame({"region_id": [1, 2, 3], "lat": [40.2, 39.8, 42.0], "lon": [47.1, 46.9, 47.0]})
+    df = openmeteo.fetch_forecast(regions, days=1, step=1.0)
+    assert len(route.calls[0].request.url.params["latitude"].split(",")) == 2
+    assert sorted(df["region_id"]) == [1, 2, 3]
+    exact = openmeteo.fetch_forecast(regions, days=1)
+    assert len(route.calls[1].request.url.params["latitude"].split(",")) == 3 and len(exact) == 3
+
+
 def test_openmeteo_parse_multi():
     payload = [{"daily": {"time": ["2026-10-25", "2026-10-26"], "temperature_2m_max": [14, 17],
                           "temperature_2m_mean": [10, 12], "relative_humidity_2m_mean": [80, 60],

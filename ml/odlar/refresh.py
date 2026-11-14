@@ -88,14 +88,15 @@ def annual_update(old: pd.DataFrame, hw: pd.DataFrame, from_year: int) -> pd.Dat
     return out[old.columns].astype(old.dtypes.to_dict())
 
 
-def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool) -> tuple[pd.DataFrame, pd.DataFrame, str]:
+def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool,
+                   step: float | None = None) -> tuple[pd.DataFrame, pd.DataFrame, str]:
     """Top up observed weather through ``end`` and get the next 7 days of forecast."""
     last = pd.Timestamp(weather["date"].max()).date()
     if offline:
         fc = openmeteo.climatological_forecast(weather, pd.Timestamp(end) + pd.Timedelta(days=1))
         return weather, fc, "climatology"
     past = min((date.today() - last).days + 2, 92)
-    om = openmeteo.fetch_forecast(leaves, days=8, past_days=past)
+    om = openmeteo.fetch_forecast(leaves, days=8, past_days=past, step=step)
     seen = om[(om["date"] > pd.Timestamp(last) - pd.Timedelta(days=2)) & (om["date"] <= pd.Timestamp(end))]
     weather = pd.concat([weather[weather["date"] < seen["date"].min()], seen[WEATHER_COLUMNS]], ignore_index=True)
     fc = om[om["date"] > pd.Timestamp(end)]
@@ -162,7 +163,7 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
 
     weather = pd.read_parquet(state_dir / "weather.parquet")
     elev = pd.read_parquet(state_dir / "elevation.parquet").set_index("region_id")["elevation"]
-    weather, fc, fc_source = update_weather(weather, leaves, end, offline)
+    weather, fc, fc_source = update_weather(weather, leaves, end, offline, b.weather_step)
     end = min(end, pd.Timestamp(weather["date"].max()).date())
     fc_obs = fc[weather.columns.intersection(fc.columns)]
     cols = ["region_id", "date", "precip", "tmax"]

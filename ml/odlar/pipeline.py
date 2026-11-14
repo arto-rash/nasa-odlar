@@ -35,7 +35,8 @@ def log(msg: str, t0: float) -> None:
     print(f"[{time.time() - t0:7.1f}s] {msg}", flush=True)
 
 
-def load_weather(regions, start: date, end: date, offline: bool) -> tuple[pd.DataFrame, pd.Series, str]:
+def load_weather(regions, start: date, end: date, offline: bool,
+                 step: float | None = None) -> tuple[pd.DataFrame, pd.Series, str]:
     """NASA POWER history, topped up with Open-Meteo analysis for the last days."""
     leaves = leaf_regions(regions)
     cached = sorted((CACHE_DIR / "power").glob("*.json")) if (CACHE_DIR / "power").exists() else []
@@ -52,7 +53,7 @@ def load_weather(regions, start: date, end: date, offline: bool) -> tuple[pd.Dat
     if last < end and not offline:
         try:
             gap = (end - last).days
-            om = openmeteo.fetch_forecast(regions, days=1, past_days=min(gap + 1, 92))
+            om = openmeteo.fetch_forecast(regions, days=1, past_days=min(gap + 1, 92), step=step)
             om = om[(om["date"] > pd.Timestamp(last)) & (om["date"] <= pd.Timestamp(end))]
             w = pd.concat([w, om[w.columns.intersection(om.columns)]], ignore_index=True)
             source = "nasa_power+open_meteo"
@@ -75,7 +76,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     leaves = leaf_regions(regions)
     log(f"regions: {len(regions)} ({len(leaves)} leaf)", t0)
 
-    weather, elevation, weather_source = load_weather(regions, start, end, offline)
+    weather, elevation, weather_source = load_weather(regions, start, end, offline, b.weather_step)
     weather = weather.drop_duplicates(["region_id", "date"])
     end = min(end, pd.to_datetime(weather["date"]).max().date())
     log(f"weather: {weather_source}, {len(weather):,} rows, through {end}", t0)
@@ -148,7 +149,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     try:
         if offline:
             raise RuntimeError("offline")
-        fc = openmeteo.fetch_forecast(leaves, days=8)
+        fc = openmeteo.fetch_forecast(leaves, days=8, step=b.weather_step)
         fc = fc[fc["date"] > pd.Timestamp(end)]
     except Exception as exc:  # noqa: BLE001
         print(f"  forecast unavailable ({exc}); using climatology")

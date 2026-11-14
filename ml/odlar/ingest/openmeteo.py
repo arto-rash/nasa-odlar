@@ -28,16 +28,27 @@ def parse(payload: list[dict] | dict, region_ids: list[int]) -> pd.DataFrame:
 
 
 def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | None = None,
-                   chunk: int = 50, past_days: int = 0) -> pd.DataFrame:
-    """Daily forecast (and optionally the last ``past_days`` of analysis) per region."""
+                   chunk: int = 50, past_days: int = 0, step: float | None = None) -> pd.DataFrame:
+    """Daily forecast (and optionally the last ``past_days`` of analysis) per region.
+
+    With ``step`` (degrees), regions share the point at the centre of their grid
+    cell: one call per cell, which keeps tens of thousands of small regions inside
+    the free daily limit (10,000 locations)."""
     client = client or httpx.Client(timeout=60)
+    pts = regions[["region_id", "lat", "lon"]].copy()
+    if step:
+        pts["lat"] = (pts["lat"] / step).round() * step
+        pts["lon"] = (pts["lon"] / step).round() * step
+    cells = pts.drop_duplicates(["lat", "lon"]).reset_index(drop=True)
+    cells["cell"] = range(len(cells))
+    pts = pts.merge(cells[["lat", "lon", "cell"]], on=["lat", "lon"])
     frames = []
-    for i in range(0, len(regions), chunk):
-        part = regions.iloc[i:i + chunk]
+    for i in range(0, len(cells), chunk):
+        part = cells.iloc[i:i + chunk]
         params = {
             "latitude": ",".join(f"{v:.4f}" for v in part["lat"]),
             "longitude": ",".join(f"{v:.4f}" for v in part["lon"]),
-            "daily": ",".join(DAILY), "forecast_days": days, "timezone": "Asia/Baku", "wind_speed_unit": "ms",
+            "daily": ",".join(DAILY), "forecast_days": days, "timezone": "auto", "wind_speed_unit": "ms",
             "past_days": past_days,
         }
         for attempt in range(5):
@@ -46,11 +57,13 @@ def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | 
                 break
             time.sleep(2 + attempt * 4)
         resp.raise_for_status()
-        frames.append(parse(resp.json(), part["region_id"].tolist()))
-        if i + chunk < len(regions):
+        frames.append(parse(resp.json(), part["cell"].tolist()))
+        if i + chunk < len(cells):
             # every location counts as a call: stay under ~600 per minute
             time.sleep(chunk / 600 * 60)
-    return pd.concat(frames, ignore_index=True)
+    by_cell = pd.concat(frames, ignore_index=True).rename(columns={"region_id": "cell"})
+    out = pts[["region_id", "cell"]].merge(by_cell, on="cell").drop(columns="cell")
+    return out[[*RENAME.values(), "date", "region_id"]]
 
 
 def climatological_forecast(weather: pd.DataFrame, start: pd.Timestamp, days: int = 8) -> pd.DataFrame:

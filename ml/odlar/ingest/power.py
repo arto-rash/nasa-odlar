@@ -1,4 +1,4 @@
-"""NASA POWER daily point weather (MERRA-2 based) for region centroids."""
+"""NASA POWER daily point weather (MERRA-2 based) for regions, one point per grid cell."""
 
 from __future__ import annotations
 
@@ -19,6 +19,16 @@ PARAMS = ["T2M_MAX", "T2M", "RH2M", "WS10M", "PRECTOTCORR"]
 # NB: the "AG" community returns PRECTOTCORR 24x too large (checked against the
 # "RE" community and the Open-Meteo ERA5 archive), so "RE" is used.
 FILL = -999.0
+# POWER's MERRA-2 grid: every point inside one cell gets the same series, so
+# regions are fetched once per cell
+LAT_STEP, LON_STEP = 0.5, 0.625
+
+
+def grid_points(regions: pd.DataFrame, lat_step: float = LAT_STEP, lon_step: float = LON_STEP) -> pd.DataFrame:
+    """region_id -> the centre of its grid cell (``lat``, ``lon``)."""
+    return pd.DataFrame({"region_id": regions["region_id"].to_numpy(),
+                         "lat": np.round(regions["lat"].to_numpy() / lat_step) * lat_step,
+                         "lon": np.round(regions["lon"].to_numpy() / lon_step) * lon_step})
 
 
 def parse_power(payload: dict) -> tuple[pd.DataFrame, float]:
@@ -59,19 +69,23 @@ def fetch_point(lat: float, lon: float, start: date, end: date, client: httpx.Cl
 def fetch_regions_weather(regions: pd.DataFrame, start: date, end: date,
                           cache_dir: Path = CACHE_DIR / "power",
                           refresh: bool = False, workers: int = 6) -> tuple[pd.DataFrame, pd.Series]:
-    """Daily weather for every region centroid, cached per region as JSON.
+    """Daily weather for every region, fetched once per POWER grid cell (see
+    ``grid_points``) and cached per cell as JSON.
 
     An existing cache for the same start date is reused unless ``refresh`` is set;
     the pipeline tops up the most recent days from Open-Meteo instead. Missing
     points are fetched ``workers`` at a time (a 25-year point takes POWER ~1 min)."""
     cache_dir.mkdir(parents=True, exist_ok=True)
+    pts = grid_points(regions)
+    pts["key"] = [f"cell_{lat:+.2f}_{lon:+.3f}" for lat, lon in zip(pts["lat"], pts["lon"], strict=True)]
+    cells = pts.drop_duplicates("key")
 
     def cached(r) -> Path:
-        path = cache_dir / f"{r.slug}_{start:%Y%m%d}_{end:%Y%m%d}.json"
-        older = sorted(cache_dir.glob(f"{r.slug}_{start:%Y%m%d}_*.json"))
+        path = cache_dir / f"{r.key}_{start:%Y%m%d}_{end:%Y%m%d}.json"
+        older = sorted(cache_dir.glob(f"{r.key}_{start:%Y%m%d}_*.json"))
         return older[-1] if not path.exists() and older and not refresh else path
 
-    todo = [r for r in regions.itertuples() if not cached(r).exists()]
+    todo = [r for r in cells.itertuples() if not cached(r).exists()]
     if todo:
         with httpx.Client(limits=httpx.Limits(max_connections=workers)) as client:
             def get(r) -> None:
@@ -83,11 +97,11 @@ def fetch_regions_weather(regions: pd.DataFrame, start: date, end: date,
                 for i, _ in enumerate(pool.map(get, todo), 1):
                     if i % 25 == 0 or i == len(todo):
                         print(f"  NASA POWER: {i}/{len(todo)} points", flush=True)
+    parsed = {r.key: parse_power(json.loads(cached(r).read_text())) for r in cells.itertuples()}
     frames, elevations = [], {}
-    for r in regions.itertuples():
-        frame, elev = parse_power(json.loads(cached(r).read_text()))
-        frame["region_id"] = r.region_id
-        frames.append(frame.reset_index())
+    for r in pts.itertuples():
+        frame, elev = parsed[r.key]
+        frames.append(frame.reset_index().assign(region_id=r.region_id))
         elevations[r.region_id] = elev
     weather = pd.concat(frames, ignore_index=True)
     return weather, pd.Series(elevations, name="elevation")

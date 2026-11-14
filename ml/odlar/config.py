@@ -35,6 +35,12 @@ class Batch:
     replaced_by: str = ""  # ISO3 of a country now built in split batches instead
 
     @property
+    def weather_step(self) -> float | None:
+        """Open-Meteo grid (degrees) the batch's regions share: local units are
+        too many for one call each within the free daily limit."""
+        return 1.0 if self.split_of else None
+
+    @property
     def store_dir(self) -> Path:
         return ARTIFACTS_DIR / self.name / "store"
 
