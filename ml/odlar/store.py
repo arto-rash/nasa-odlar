@@ -173,6 +173,7 @@ def load_state_regions(state_dir: Path) -> gpd.GeoDataFrame | None:
 # are loaded one batch at a time (``calendar``). That keeps the API's memory flat
 # however many batches are served.
 _TABLES = ("regions", "annual", "outlook_now", "fire_weather")
+_SKILL_DETAIL = ("transfer", "loyo_annual")  # per-region lists in skill.json
 _ON_DISK = ("weekly", "risk_history")
 _ORDER = {"weekly": "week", "risk_history": "date"}
 _CALENDAR_BATCHES = 6
@@ -206,7 +207,10 @@ class Store:
             for t in _TABLES:
                 parts[t].append(pd.read_parquet(d / f"{t}.parquet"))
             metas[name] = json.loads((d / "meta.json").read_text())
-            self.skills[name] = json.loads((d / "skill.json").read_text())
+            # the per-region lists (transfer curves, leave-one-year-out) are large and
+            # read per region; only the summary numbers stay in memory
+            self.skills[name] = {k: v for k, v in json.loads((d / "skill.json").read_text()).items()
+                                 if k not in _SKILL_DETAIL}
             self.model_reports[name] = json.loads((d / "model_report.json").read_text())
             rn = pd.read_parquet(d / "risk_now.parquet")
             rn["drivers"] = rn["drivers"].map(json.loads)
@@ -215,6 +219,8 @@ class Store:
         cat = {t: pd.concat(v, ignore_index=True) for t, v in parts.items()}
         primary = names[0]
         self.batch_of = batch_of
+        self.skill_files = {name: d / "skill.json" for name, d in zip(names, dirs, strict=True)}
+        self._skill_detail: OrderedDict[str, dict] = OrderedDict()
         self.skill, self.model_report = self.skills[primary], self.model_reports[primary]
         self.meta = merged_meta(metas, primary)
         self.regions, self.annual = cat["regions"], cat["annual"]
@@ -250,8 +256,19 @@ class Store:
             self._calendars.move_to_end(name)
             return self._calendars[name].get(str(int(region_id)))
 
-    def skill_for(self, region_id: int) -> dict:
-        return self.skills[self.batch_of.get(int(region_id), next(iter(self.skills)))]
+    def skill_for(self, region_id: int, detail: bool = False) -> dict:
+        """The skill report of a region's batch; ``detail`` adds the per-region
+        lists, read from disk (the last two batches asked for are cached)."""
+        name = self.batch_of.get(int(region_id), next(iter(self.skills)))
+        if not detail:
+            return self.skills[name]
+        with self._cal_lock:
+            if name not in self._skill_detail:
+                self._skill_detail[name] = json.loads(self.skill_files[name].read_text())
+                while len(self._skill_detail) > 2:
+                    self._skill_detail.popitem(last=False)
+            self._skill_detail.move_to_end(name)
+            return self._skill_detail[name]
 
 
 def merged_meta(metas: dict[str, dict], primary: str) -> dict:

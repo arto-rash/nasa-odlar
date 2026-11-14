@@ -494,7 +494,7 @@ def aoi_summary(s: Store, geometry: dict) -> dict:
 def harmonization_skill(s: Store, slug: str | None = None) -> dict:
     """Skill of the pilot batch, or of the batch a region was harmonized in."""
     r = region_or_404(s, slug) if slug else None
-    full = s.skill_for(int(r.region_id)) if r is not None else s.skill
+    full = s.skill_for(int(r.region_id), detail=True) if r is not None else s.skill
     sk = {k: v for k, v in full.items() if k not in ("transfer", "loyo_annual")}
     if r is not None:
         rid = int(r.region_id)
