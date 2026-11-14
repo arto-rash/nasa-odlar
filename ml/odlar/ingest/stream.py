@@ -29,11 +29,12 @@ from odlar.ingest import firms
 from odlar.points import write_points
 
 
-def country_year(map_key: str, country: str, bbox: firms.BBox, year: int, start: date, end: date,
-                 http: httpx.Client) -> pd.DataFrame:
+def country_year(map_key: str, country: str, bbox: firms.BBox | list[firms.BBox], year: int, start: date,
+                 end: date, http: httpx.Client) -> pd.DataFrame:
     """All detections of one country for one calendar year."""
     last_file_year = end.year - 1
     lo, hi = max(start, date(year, 1, 1)), min(end, date(year, 12, 31))
+    boxes = bbox if isinstance(bbox, list) else [bbox]
     frames = []
     if year <= last_file_year:
         for kind, source in firms.COUNTRY_FILES.items():
@@ -42,9 +43,11 @@ def country_year(map_key: str, country: str, bbox: firms.BBox, year: int, start:
         if firms.NOAA21_HISTORY:
             n21 = firms.SOURCES["VIIRS_NOAA21_NRT"][2]
             if year >= n21.year:
-                frames.append(firms.FirmsClient(map_key).fetch("VIIRS_NOAA21_NRT", max(lo, n21), hi, bbox))
+                for box in boxes:
+                    frames.append(firms.FirmsClient(map_key).fetch("VIIRS_NOAA21_NRT", max(lo, n21), hi, box))
     else:
-        frames.append(firms.fetch_archive(map_key, lo, hi, bbox))
+        for box in boxes:
+            frames.append(firms.fetch_archive(map_key, lo, hi, box))
     frames = [f for f in frames if len(f)]
     if not frames:
         return pd.DataFrame(columns=firms.COLUMNS)
@@ -62,16 +65,14 @@ def ingest(map_key: str, batch, regions, start: date, end: date, staging: Path,
     shutil.rmtree(staging, ignore_errors=True)
     raw_dir = staging / "raw"
     raw_dir.mkdir(parents=True)
-    countries = regions[regions["level"] == "country"]
-    boxes = firms.batch_bboxes(batch, regions)
     by_code = {m["code"]: m for m in COUNTRIES.values()}
     cell_months: set[tuple[int, int, int]] = set()
     n_raw = 0
     with httpx.Client(timeout=300) as http:
         for year in range(start.year, end.year + 1):
-            parts = [country_year(map_key, by_code[c.country]["firms_name"], box, year, start, end, http)
-                     for c, box in zip(countries.itertuples(), boxes, strict=True)
-                     if by_code[c.country].get("firms_name")]
+            parts = [country_year(map_key, by_code[code]["firms_name"], cboxes, year, start, end, http)
+                     for code, cboxes in firms.country_bboxes(batch, regions)
+                     if by_code[code].get("firms_name")]
             parts = [p for p in parts if len(p)]
             if not parts:
                 continue

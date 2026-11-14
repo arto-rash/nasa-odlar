@@ -319,7 +319,7 @@ def download_global(start_year: int, end_year: int, global_dir: Path = GLOBAL_DI
                 print(f"  {path.name}: {path.stat().st_size / 1e6:.0f} MB", flush=True)
 
 
-def fetch_country_archive(map_key: str, country: str, bbox: BBox, start: date, end: date) -> pd.DataFrame:
+def fetch_country_archive(map_key: str, country: str, bbox: BBox | list[BBox], start: date, end: date) -> pd.DataFrame:
     """Yearly country files through last year, then the area API (science quality
     where FIRMS has it, NRT after) for this year. NOAA-21 has no country files, so
     its whole record comes from the area API."""
@@ -330,25 +330,49 @@ def fetch_country_archive(map_key: str, country: str, bbox: BBox, start: date, e
             first = max(start.year, SOURCES[source][2].year)
             for year in range(first, last_file_year + 1):
                 frames.append(country_file(kind, year, country, http))
-    frames.append(fetch_archive(map_key, date(end.year, 1, 1), end, bbox))
+    boxes = bbox if isinstance(bbox, list) else [bbox]
+    for box in boxes:
+        frames.append(fetch_archive(map_key, date(end.year, 1, 1), end, box))
     client = FirmsClient(map_key)
     n21_start = SOURCES["VIIRS_NOAA21_NRT"][2]
     if NOAA21_HISTORY and n21_start.year <= last_file_year:
-        frames.append(client.fetch("VIIRS_NOAA21_NRT", n21_start, date(last_file_year, 12, 31), bbox))
+        for box in boxes:
+            frames.append(client.fetch("VIIRS_NOAA21_NRT", n21_start, date(last_file_year, 12, 31), box))
     df = pd.concat([f for f in frames if len(f)], ignore_index=True)
     df = df[(pd.to_datetime(df["acq_date"]) >= pd.Timestamp(start)) & (pd.to_datetime(df["acq_date"]) <= pd.Timestamp(end))]
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
 
 
+def land_boxes(geom, cell_deg: float = 20.0, pad: float = 0.05) -> list[BBox]:
+    """Boxes around a country's land, one per cluster of its polygon parts (parts
+    grouped by the 20° cell their centre falls in). A single box around New
+    Zealand with the Chatham Islands, France with its overseas regions, or Russia
+    across the date line would span most of the globe, and every FIRMS request
+    for it would cost a large share of the key's transaction limit."""
+    parts = list(getattr(geom, "geoms", [geom]))
+    cells: dict[tuple[int, int], list[float]] = {}
+    for part in parts:
+        if part.is_empty:
+            continue
+        c = part.centroid
+        key = (int(c.x // cell_deg), int(c.y // cell_deg))
+        w, so, e, n = part.bounds
+        box = cells.get(key)
+        cells[key] = [w, so, e, n] if box is None else [min(box[0], w), min(box[1], so), max(box[2], e), max(box[3], n)]
+    return [BBox(round(max(-180, w - pad), 2), round(max(-90, so - pad), 2), round(min(180, e + pad), 2),
+                 round(min(90, n + pad), 2)) for w, so, e, n in cells.values()]
+
+
 def batch_bboxes(batch, regions) -> list[BBox]:
-    """Area-API boxes for a batch: the pilot box, or one box per country."""
+    """Area-API boxes for a batch: the pilot box, or boxes around each country's land."""
     if batch.firms == "area":
         return [PILOT_BBOX]
-    out = []
-    for r in regions[regions["level"] == "country"].itertuples():
-        w, so, e, n = r.geometry.bounds
-        out.append(BBox(round(w - 0.05, 2), round(so - 0.05, 2), round(e + 0.05, 2), round(n + 0.05, 2)))
-    return out
+    return [b for r in regions[regions["level"] == "country"].itertuples() for b in land_boxes(r.geometry)]
+
+
+def country_bboxes(batch, regions) -> list[tuple[str, list[BBox]]]:
+    """(country code, its land boxes) for each country of a batch."""
+    return [(r.country, land_boxes(r.geometry)) for r in regions[regions["level"] == "country"].itertuples()]
 
 
 def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.DataFrame:
@@ -358,13 +382,13 @@ def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.Data
     from odlar.grid.regions import COUNTRIES
     by_code = {m["code"]: m for m in COUNTRIES.values()}
     frames = []
-    for r, box in zip(regions[regions["level"] == "country"].itertuples(), batch_bboxes(batch, regions), strict=True):
-        name = by_code[r.country].get("firms_name")
+    for code, boxes in country_bboxes(batch, regions):
+        name = by_code[code].get("firms_name")
         if not name:  # FIRMS has no file for some microstates: no detections on record
-            print(f"  FIRMS: no country files for {r.country}; skipped", flush=True)
+            print(f"  FIRMS: no country files for {code}; skipped", flush=True)
             continue
-        print(f"  FIRMS {name}: country files + area API {box.as_firms()}", flush=True)
-        frames.append(fetch_country_archive(map_key, name, box, start, end))
+        print(f"  FIRMS {name}: country files + area API {[b.as_firms() for b in boxes]}", flush=True)
+        frames.append(fetch_country_archive(map_key, name, boxes, start, end))
     frames = [f for f in frames if len(f)]
     if not frames:
         raise ValueError(f"no FIRMS detections at all for batch {batch.name}")
