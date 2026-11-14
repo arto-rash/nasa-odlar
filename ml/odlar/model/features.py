@@ -195,18 +195,37 @@ def _weather_rolls(w: pd.DataFrame) -> pd.DataFrame:
                          "tmax_30": _grp_roll(w["tmax"], g, 30, "mean")}, index=w.index)
 
 
-def weather_norms(w: pd.DataFrame) -> pd.DataFrame:
+def weather_norms(w: pd.DataFrame, chunk: int = 60, fill: bool = False) -> pd.DataFrame:
     """Per region × day of year: mean 90-day precipitation and 30-day tmax, the
-    baselines of the ``precip_90d_anom`` and ``tmax_30d_anom`` features."""
-    w = w.sort_values(["region_id", "date"]).reset_index(drop=True)
+    baselines of the ``precip_90d_anom`` and ``tmax_30d_anom`` features.
+
+    Worked out ``chunk`` regions at a time: on 25 years of daily weather for a
+    big batch the whole-table version needed ~1 GB of temporary arrays, which
+    pushed the daily refresh past its memory cap. ``fill`` interpolates missing
+    days within each region first, as the full build's dryness step does."""
     rid = w["region_id"].to_numpy()
-    p_sum, p_n = _block_roll(w["precip"].to_numpy(float), rid, 90)
-    t_sum, t_n = _block_roll(w["tmax"].to_numpy(float), rid, 30)
-    with np.errstate(invalid="ignore", divide="ignore"):
-        r = pd.DataFrame({"region_id": rid, "doy": pd.to_datetime(w["date"]).dt.day_of_year.to_numpy(),
-                          "precip_90": np.where(p_n > 0, p_sum, np.nan),
-                          "tmax_30": np.where(t_n > 0, t_sum / t_n, np.nan)})
-    return r.groupby(["region_id", "doy"], as_index=False)[["precip_90", "tmax_30"]].mean()
+    day = pd.to_datetime(w["date"]).to_numpy().astype("datetime64[D]").astype(np.int64)
+    if len(w) > 1 and not np.all((np.diff(rid) > 0) | ((np.diff(rid) == 0) & (np.diff(day) > 0))):
+        w = w.sort_values(["region_id", "date"])
+        rid = w["region_id"].to_numpy()
+    starts = np.r_[0, np.flatnonzero(rid[1:] != rid[:-1]) + 1, len(rid)]
+    out = []
+    for k in range(0, len(starts) - 1, chunk):
+        part = w.iloc[starts[k]: starts[min(k + chunk, len(starts) - 1)]]
+        if fill and part[["precip", "tmax"]].isna().any().any():
+            part = part.assign(**{c: part.groupby("region_id")[c].transform(
+                lambda x: x.interpolate(limit_direction="both")) for c in ("precip", "tmax")})
+        pid = part["region_id"].to_numpy()
+        p_sum, p_n = _block_roll(part["precip"].to_numpy(float), pid, 90)
+        t_sum, t_n = _block_roll(part["tmax"].to_numpy(float), pid, 30)
+        with np.errstate(invalid="ignore", divide="ignore"):
+            r = pd.DataFrame({"region_id": pid, "doy": pd.to_datetime(part["date"]).dt.day_of_year.to_numpy(),
+                              "precip_90": np.where(p_n > 0, p_sum, np.nan),
+                              "tmax_30": np.where(t_n > 0, t_sum / t_n, np.nan)})
+        out.append(r.groupby(["region_id", "doy"], as_index=False)[["precip_90", "tmax_30"]].mean())
+    if not out:
+        return pd.DataFrame(columns=["region_id", "doy", "precip_90", "tmax_30"])
+    return pd.concat(out, ignore_index=True)
 
 
 def _block_roll(x: np.ndarray, keys: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarray]:

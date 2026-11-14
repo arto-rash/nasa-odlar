@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exceptions\MlRequestException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AoiSummaryRequest;
+use App\Http\Requests\ForecastMapRequest;
 use App\Http\Requests\GridRequest;
 use App\Http\Requests\HotspotsRequest;
 use App\Http\Requests\RegionsGeojsonRequest;
@@ -59,6 +60,18 @@ class AnalyticsController extends Controller
     public function regionRisk(string $slug): Response
     {
         return $this->proxy("/risk/{$slug}");
+    }
+
+    /** The days, weeks and months ahead for one region. */
+    public function forecast(string $slug): Response
+    {
+        return $this->proxy("/forecast/{$slug}");
+    }
+
+    /** Expected and usual activity per province for one week ahead. */
+    public function forecastMap(ForecastMapRequest $request): Response
+    {
+        return $this->proxy('/forecast/map', $request->forwarded());
     }
 
     public function risk(RiskRequest $request): Response

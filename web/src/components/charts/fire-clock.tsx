@@ -4,7 +4,7 @@ import { animate, useReducedMotion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/layout/theme-toggle";
-import { cellState } from "@/lib/calendar-cells";
+import { cellState, weekStart, type AheadCells } from "@/lib/calendar-cells";
 import { heatScale } from "@/lib/colors";
 import { fmtNum, monthShort, weekLabel, type AppLocale } from "@/lib/format";
 import type { Anomaly, Coverage, SeasonProfile } from "@/lib/types";
@@ -13,7 +13,7 @@ import {
   arcPath, clockLayout, hitTest, polar, ringRadii, sectorPath, TAU, weekAngle, WEEKS, windowAngles,
 } from "./fire-clock-geometry";
 import type { CellRef } from "./calendar-heatmap";
-import { cellFill, HatchDefs } from "./cell-style";
+import { aheadOpacity, cellFill, HatchDefs } from "./cell-style";
 
 interface Props {
   years: number[];
@@ -29,13 +29,16 @@ interface Props {
   selected?: CellRef | null;
   /** with this, a tap picks a week (and the parent decides what that does) */
   onCell?: (c: CellRef) => void;
+  /** weeks ahead (by Monday): shown faint in the cells not observed yet */
+  ahead?: AheadCells;
   className?: string;
 }
 
 export function FireClock({
-  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, focusYear, onFocusYear, coverage, selected, onCell, className,
+  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, focusYear, onFocusYear, coverage, selected, onCell, ahead, className,
 }: Props) {
   const t = useTranslations("clock");
+  const ta = useTranslations("ahead");
   const locale = useLocale() as AppLocale;
   const [theme] = useTheme();
   const [wrapRef, { width }] = useSize<HTMLDivElement>();
@@ -57,6 +60,10 @@ export function FireClock({
   const scale = useMemo(() => heatScale(matrix.flat()), [matrix]);
   const anomalous = useMemo(() => new Set(anomalies.map((a) => a.year)), [anomalies]);
   const states = useMemo(() => years.map((y) => Array.from({ length: WEEKS }, (_, w) => cellState(y, w, coverage))), [years, coverage]);
+  const fcast = useMemo(
+    () => years.map((y, yi) => Array.from({ length: WEEKS }, (_, w) => (states[yi][w] === "future" ? ahead?.get(weekStart(y, w)) : undefined))),
+    [years, states, ahead],
+  );
 
   const cells = useMemo(() => {
     if (size < 40) return [];
@@ -82,7 +89,8 @@ export function FireClock({
   const centerVal = hover ? data[hover.yearIndex]?.[hover.week] : centerYear != null ? sum(data[years.indexOf(centerYear)]) : null;
   const curYi = current ? years.indexOf(current.year) : -1;
   const hoverState = hover ? states[hover.yearIndex]?.[hover.week] : undefined;
-  const unseen = hoverState === "nodata" || hoverState === "future";
+  const hoverFc = hover ? fcast[hover.yearIndex]?.[hover.week] : undefined;
+  const unseen = !hoverFc && (hoverState === "nodata" || hoverState === "future");
 
   return (
     <div ref={wrapRef} className={className}>
@@ -155,14 +163,15 @@ export function FireClock({
                 }}
               >
                 {row.map((d, w) => {
-                  const v = data[yi]?.[w] ?? 0;
+                  const fc = fcast[yi]?.[w];
+                  const v = fc ? fc.value : (data[yi]?.[w] ?? 0);
                   const st = states[yi]?.[w] ?? "ok";
                   return (
                     <path
                       key={w}
                       d={d}
                       fill={cellFill(st, v, scale, theme, `hatch-${uid}`)}
-                      fillOpacity={st === "reduced" ? 0.45 : 1}
+                      fillOpacity={st === "reduced" ? 0.45 : aheadOpacity(fc?.kind)}
                       style={{ transition: "fill 700ms var(--ease-out-expo)" }}
                     />
                   );
@@ -263,14 +272,16 @@ export function FireClock({
               {hover ? `${years[hover.yearIndex]} · ${weekLabel(hover.week, locale)}` : centerYear ?? t("annualMean")}
             </text>
             <text x={L.cx} y={L.cy + centre.value * 0.35} className="font-display fill-text tabular" style={{ fontSize: centre.value }}>
-              {unseen
+              {hoverFc
+                ? `~${fmtNum(hoverFc.value, locale, hoverFc.value < 10 ? 1 : 0)}`
+                : unseen
                 ? "—"
                 : centerVal != null
                 ? fmtNum(centerVal, locale, centerVal < 10 ? 1 : 0)
                 : fmtNum(season?.annual_mean ?? 0, locale)}
             </text>
             <text x={L.cx} y={L.cy + centre.gap + centre.label * 0.7} className="fill-dim" style={{ fontSize: centre.label }}>
-              {unseen ? t(hoverState === "future" ? "future" : "legendNoData") : hover ? t("detectionsWeek") : t("detectionsYear")}
+              {hoverFc ? ta(hoverFc.kind === "outlook" ? "forecast" : "usual") : unseen ? t(hoverState === "future" ? "future" : "legendNoData") : hover ? t("detectionsWeek") : t("detectionsYear")}
             </text>
           </g>
         </svg>

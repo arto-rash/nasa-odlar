@@ -16,10 +16,11 @@ export const gatewayMode = Boolean(API_URL);
 
 export function mlPath(path: string): string | null {
   const p = path.replace(/^\/+/, "/");
-  const m = p.match(/^\/regions\/([^/]+)\/(series\/weekly|series\/annual|calendar|risk)$/);
+  const m = p.match(/^\/regions\/([^/]+)\/(series\/weekly|series\/annual|calendar|risk|forecast)$/);
   if (m) {
     const [, slug, kind] = m;
     if (kind === "calendar") return `/calendar/${slug}`;
+    if (kind === "forecast") return `/forecast/${slug}`;
     if (kind === "risk") return `/risk/${slug}`;
     return `/series/${slug}/${kind.split("/")[1]}`;
   }

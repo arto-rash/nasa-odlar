@@ -12,6 +12,7 @@ dataset('proxied routes', [
     'annual series' => ['/api/v1/regions/az-sabirabad/series/annual', '/series/az-sabirabad/annual'],
     'calendar' => ['/api/v1/regions/az-sabirabad/calendar', '/calendar/az-sabirabad'],
     'region risk' => ['/api/v1/regions/az-sabirabad/risk', '/risk/az-sabirabad'],
+    'region forecast' => ['/api/v1/regions/az-sabirabad/forecast', '/forecast/az-sabirabad'],
     'risk map' => ['/api/v1/risk', '/risk'],
     'timeline' => ['/api/v1/timeline', '/timeline'],
     'grid' => ['/api/v1/grid', '/grid'],
@@ -191,3 +192,22 @@ describe('query forwarding and validation', function () {
         Http::assertSent(fn (Request $r) => $r->url() === ml('/harmonization/skill?region=az-qabala'));
     });
 });
+
+it('proxies a forecast week for the map with its view', function () {
+    Http::fake([ml('/forecast/map').'*' => Http::response(['week' => '2026-11-16', 'values' => []])]);
+
+    $this->getJson('/api/v1/forecast/map?week=2026-11-16&bbox=44,38,51,42')
+        ->assertOk()
+        ->assertJsonPath('week', '2026-11-16');
+
+    Http::assertSent(fn (Request $r) => str_starts_with($r->url(), ml('/forecast/map'))
+        && $r['week'] === '2026-11-16' && $r['bbox'] === '44,38,51,42');
+});
+
+it('validates the forecast week', function (string $query) {
+    Http::fake();
+
+    $this->getJson('/api/v1/forecast/map'.$query)->assertUnprocessable();
+
+    Http::assertNothingSent();
+})->with(['missing' => [''], 'not a date' => ['?week=soon'], 'bad bbox' => ['?week=2026-11-16&bbox=1,2']]);

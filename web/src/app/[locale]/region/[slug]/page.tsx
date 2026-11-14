@@ -7,7 +7,8 @@ import {
   AnomaliesPanel, CalendarSection, ChildrenPanel, ExportBar, HistoryPanel, NormalYearPanel, NowPanel, RiskPanel, SeasonPanel,
 } from "@/components/region/region-panels";
 import { api, ApiError } from "@/lib/upstream";
-import type { AnnualSeries, CalendarPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
+import type { AnnualSeries, CalendarPayload, ForecastPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
+import { AheadPanel } from "@/components/region/ahead-panel";
 
 export const revalidate = 600;
 
@@ -21,6 +22,8 @@ async function load(slug: string) {
       api<AnnualSeries>(`/regions/${slug}/series/annual`),
       api<RiskDetail>(`/regions/${slug}/risk`),
       api<Region[]>(`/regions?parent=${slug}`),
+      // the page still works without it (a region with no outlook, or an API not yet updated)
+      api<ForecastPayload>(`/regions/${slug}/forecast`).catch(() => null),
     ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
@@ -42,16 +45,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RegionPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const [region, cal, annual, risk, children] = await load(slug);
+  const [region, cal, annual, risk, children, forecast] = await load(slug);
   return (
     <main>
       <RegionHero region={region} />
       <div className="mx-auto mt-10 grid max-w-[1240px] gap-5 px-5 sm:px-8 lg:grid-cols-[1.55fr_1fr]">
-        <CalendarSection cal={cal} />
+        <CalendarSection cal={cal} forecast={forecast} />
         <div className="grid content-start gap-5">
           <RiskPanel risk={risk} slug={slug} />
           <NowPanel region={region} />
         </div>
+        {forecast && (
+          <div className="lg:col-span-2">
+            <AheadPanel f={forecast} />
+          </div>
+        )}
         <div className="lg:col-span-2 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
           <SeasonPanel cal={cal} />
           <NormalYearPanel cal={cal} />

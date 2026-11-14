@@ -20,13 +20,16 @@ import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { AFTERGLOW_WEEKS, packAreaFor, packPoints, weekPackQuery, yearsFor, type WeekPack } from "@/lib/map-data";
 import { useMediaQuery } from "@/lib/use-media";
-import { fmtNum, regionName, type AppLocale } from "@/lib/format";
-import type { AoiSummary, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
+import { fmtDate, fmtNum, regionName, type AppLocale } from "@/lib/format";
+import type { AoiSummary, ForecastMap, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
+import { FORECAST_STOPS } from "@/components/map/layers";
 import { Timeline } from "./timeline";
 import { RegionPlace } from "@/components/ui/region-place";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z").getTime() + n * 86400000));
+/** weeks the outlook covers after the record's last (filling) week */
+const FORECAST_WEEKS = 13;
 
 export function ExploreClient({
   timeline, initialWeek, initialRegion = null,
@@ -44,7 +47,7 @@ export function ExploreClient({
   const [speed, setSpeed] = useState(1);
   const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off" });
   const [sensors, setSensors] = useState({ M: true, V: true });
-  const [hover, setHover] = useState<{ slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ id?: number; slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRegion);
   const [drawing, setDrawing] = useState(false);
   const [vertices, setVertices] = useState<[number, number][]>([]);
@@ -57,7 +60,17 @@ export function ExploreClient({
   const panelOpen = panelChoice ?? !phone;
   const timelineOpen = timelineChoice ?? !phone;
 
-  const week = timeline[index]?.week ?? initialWeek;
+  // the record, then the weeks ahead: past them the map shows the forecast, not detections
+  const line = useMemo<TimelinePoint[]>(() => {
+    const last = timeline[timeline.length - 1]?.week;
+    if (!last) return timeline;
+    const ahead = Array.from({ length: FORECAST_WEEKS }, (_, k) => ({
+      week: addDays(last, 7 * (k + 1)), modis: 0, viirs: 0, harmonized: 0, lo: 0, hi: 0, forecast: true,
+    }));
+    return [...timeline, ...ahead];
+  }, [timeline]);
+  const isFuture = index >= timeline.length;
+  const week = line[index]?.week ?? initialWeek;
   const range = (w: string) => ({ start: addDays(w, -7 * AFTERGLOW_WEEKS), end: addDays(w, 6) });
   // What the map shows decides what is fetched (see MapViewWatcher): points in
   // view, or per-cell sums when zoomed out.
@@ -76,7 +89,7 @@ export function ExploreClient({
   }, [week, playing]);
   const packResults = useQueries({
     // with no file for the view, the world's (if loaded) shows until the query answers
-    queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y, packArea ?? "world"), enabled: packArea !== null })),
+    queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y, packArea ?? "world"), enabled: packArea !== null && !isFuture })),
   });
   const packs = packResults.every((r) => r.data) ? packResults.map((r) => r.data as WeekPack) : null;
   const packsKey = packResults.map((r) => r.dataUpdatedAt).join();
@@ -89,7 +102,7 @@ export function ExploreClient({
   const { data, isFetching: weekFetching } = useQuery({
     queryKey: ["hotspots", apiWeek, viewQuery],
     queryFn: ({ signal }) => fetchWeek(apiWeek, signal),
-    enabled: view !== null && (packArea === null || packFailed),
+    enabled: view !== null && !isFuture && (packArea === null || packFailed),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
@@ -104,7 +117,7 @@ export function ExploreClient({
 
   // what comes next: the next files at world zoom, nearby weeks when zoomed in
   useEffect(() => {
-    if (!view) return;
+    if (!view || isFuture) return;
     const at = timeline.findIndex((p) => p.week === apiWeek);
     for (const k of [1, 2, 3, -1]) {
       const w = timeline[at + k]?.week;
@@ -140,7 +153,7 @@ export function ExploreClient({
         e.preventDefault();
         setPlaying((p) => !p);
       }
-      if (e.key === "ArrowRight") setIndex((i) => Math.min(timeline.length - 1, i + 1));
+      if (e.key === "ArrowRight") setIndex((i) => Math.min(line.length - 1, i + 1));
       if (e.key === "ArrowLeft") setIndex((i) => Math.max(0, i - 1));
       if (e.key === "Escape") {
         setDrawing(false);
@@ -150,7 +163,7 @@ export function ExploreClient({
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [timeline.length]);
+  }, [line.length]);
 
   useEffect(() => {
     const u = new URL(window.location.href);
@@ -165,6 +178,7 @@ export function ExploreClient({
   );
   const usesPacks = !!worldPoints && (packArea !== null || !data);
   const points: HotspotPoint[] = useMemo(() => {
+    if (isFuture) return [];
     if (usesPacks) return worldPoints;
     if (!data) return [];
     const w0 = new Date(week + "T00:00:00Z").getTime();
@@ -172,7 +186,15 @@ export function ExploreClient({
       lon, lat, sensor: s, frp,
       age: Math.max(0, Math.ceil((w0 - new Date(date + "T00:00:00Z").getTime()) / (7 * 86400000))),
     }));
-  }, [data, week, usesPacks, worldPoints]);
+  }, [data, week, usesPacks, worldPoints, isFuture]);
+  const { data: forecast, isFetching: forecastFetching } = useQuery({
+    queryKey: ["forecast-map", week, view?.bbox ?? null],
+    queryFn: ({ signal }) => http<ForecastMap>(`/forecast/map?week=${week}${view?.bbox ? `&bbox=${view.bbox}` : ""}`, { signal }),
+    enabled: isFuture && view !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 60_000,
+  });
+  const forecastById = useMemo(() => new Map((forecast?.values ?? []).map(([id, e, u]) => [id, [e, u]] as const)), [forecast]);
   // a sampled answer (more points than the map draws) is scaled back to the true count
   const shown = points.filter((p) => p.age === 0 && sensors[p.sensor]).length;
   const currentCount = usesPacks
@@ -210,8 +232,9 @@ export function ExploreClient({
         <NearMeControl onFound={(r) => setSelected(r.slug)} />
         <DensityLayer cells={grid?.cells ?? []} visible={layers.density} />
         <ViewportRegionsLayer
-          mode={layers.regions === "off" ? "outline" : layers.regions}
-          visible={layers.regions !== "off"}
+          mode={isFuture ? "forecast" : layers.regions === "off" ? "outline" : layers.regions}
+          visible={isFuture || layers.regions !== "off"}
+          forecast={isFuture ? forecast : undefined}
           selected={selected}
           onHover={drawing ? undefined : onHover}
           onClick={drawing ? undefined : setSelected}
@@ -244,7 +267,16 @@ export function ExploreClient({
           >
             <p className="font-medium">{regionName(hover, locale)}</p>
             <RegionPlace r={hover} />
-            {hover.risk_level && <RiskBadge level={hover.risk_level as RiskLevel} className="mt-1" />}
+            {isFuture ? (
+              (() => {
+                const fc = hover.id != null ? forecastById.get(hover.id) : undefined;
+                return fc ? (
+                  <p className="mt-1 tabular-nums text-dim">{t("forecastHover", { value: fmtNum(fc[0], locale, fc[0] < 10 ? 1 : 0), usual: fmtNum(fc[1], locale, fc[1] < 10 ? 1 : 0) })}</p>
+                ) : null;
+              })()
+            ) : (
+              hover.risk_level && <RiskBadge level={hover.risk_level as RiskLevel} className="mt-1" />
+            )}
           </motion.div>
         )}
       </AnimatePresence>
@@ -358,10 +390,26 @@ export function ExploreClient({
 
       {/* timeline */}
       <div className="absolute inset-x-3 bottom-3 z-20 sm:inset-x-5 sm:bottom-5">
-        <Timeline points={timeline} index={index} onIndex={setIndex} playing={playing} onPlay={setPlaying} speed={speed} onSpeed={setSpeed}
+        <Timeline points={line} future={line.length - timeline.length} index={index} onIndex={setIndex} playing={playing} onPlay={setPlaying} speed={speed} onSpeed={setSpeed}
           open={timelineOpen} onOpen={setTimelineChoice} />
       </div>
-      {(data || usesPacks) && currentCount === 0 && !isFetching && layers.hotspots && (
+      {isFuture && (
+        <div className="pointer-events-none absolute bottom-[84px] left-1/2 z-10 w-[min(440px,calc(100vw-24px))] -translate-x-1/2 sm:bottom-[104px]">
+          <div className="glass rounded-lg px-3.5 py-2.5 text-[12.5px]">
+            <p className="flex items-center justify-between gap-2 font-medium text-text">
+              <span>{t("forecastLegend", { date: fmtDate(week, locale, { day: "numeric", month: "short" }) })}</span>
+              {forecastFetching && <Loader2 className="size-3.5 animate-spin text-faint" />}
+            </p>
+            <div className="mt-1.5 flex items-center gap-2 tabular-nums text-faint">
+              <span>{FORECAST_STOPS[0][0]}</span>
+              <span className="h-2 flex-1 rounded-full" style={{ background: `linear-gradient(90deg, ${FORECAST_STOPS.map((x) => x[1]).join(",")})` }} />
+              <span>{FORECAST_STOPS[FORECAST_STOPS.length - 1][0]}+</span>
+            </div>
+            <p className="mt-1.5 leading-snug text-dim">{forecast && forecast.values.length === 0 ? t("forecastEmpty") : t("forecastNote")}</p>
+          </div>
+        </div>
+      )}
+      {!isFuture && (data || usesPacks) && currentCount === 0 && !isFetching && layers.hotspots && (
         <p className="pointer-events-none absolute bottom-[84px] left-1/2 z-10 sm:bottom-[100px] -translate-x-1/2 rounded-md bg-panel-solid/80 px-3 py-1 text-[13px] text-dim">{t("noPoints")}</p>
       )}
     </div>

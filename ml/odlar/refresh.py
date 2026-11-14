@@ -29,6 +29,7 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import pyarrow.parquet as pq
 
 from odlar import points, store
 from odlar.calendar.engine import build_calendar
@@ -95,6 +96,17 @@ def annual_update(old: pd.DataFrame, hw: pd.DataFrame, from_year: int) -> pd.Dat
     return out[old.columns].astype(old.dtypes.to_dict())
 
 
+def read_weather(path: Path) -> pd.DataFrame:
+    """The full daily weather record, values as float32 (about half the memory;
+    weather is not measured to more than a few digits anyway)."""
+    parts = []
+    # a slice at a time, each shrunk as it arrives: never a full float64 copy in memory
+    for batch in pq.ParquetFile(path).iter_batches(batch_size=500_000):
+        df = batch.to_pandas()
+        parts.append(df.astype({c: "float32" for c in df.columns if df[c].dtype == "float64"}))
+    return pd.concat(parts, ignore_index=True) if parts else pd.read_parquet(path)
+
+
 def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool,
                    step: float | None = None) -> tuple[pd.DataFrame, pd.DataFrame, str]:
     """Top up observed weather through ``end`` and get the next 7 days of forecast."""
@@ -105,9 +117,11 @@ def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool,
     past = min((date.today() - last).days + 2, 92)
     om = openmeteo.fetch_forecast(leaves, days=8, past_days=past, step=step)
     seen = om[(om["date"] > pd.Timestamp(last) - pd.Timedelta(days=2)) & (om["date"] <= pd.Timestamp(end))]
-    weather = pd.concat([weather[weather["date"] < seen["date"].min()], seen[WEATHER_COLUMNS]], ignore_index=True)
+    weather = pd.concat([weather[weather["date"] < seen["date"].min()], seen[WEATHER_COLUMNS].astype(weather.dtypes.to_dict())],
+                        ignore_index=True)
+    weather = weather.sort_values(["region_id", "date"], ignore_index=True)
     fc = om[om["date"] > pd.Timestamp(end)]
-    return weather.sort_values(["region_id", "date"]).reset_index(drop=True), fc, "open_meteo"
+    return weather, fc, "open_meteo"
 
 
 def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path | None = None,
@@ -168,18 +182,16 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
                                              raw=g[["week", "naive"]].rename(columns={"naive": "value"}))
     log("record and calendars updated", t0)
 
-    weather = pd.read_parquet(state_dir / "weather.parquet")
     elev = pd.read_parquet(state_dir / "elevation.parquet").set_index("region_id")["elevation"]
-    weather, fc, fc_source = update_weather(weather, leaves, end, offline,
+    # loaded straight into the call: the topped-up table replaces it, not sits beside it
+    weather, fc, fc_source = update_weather(read_weather(state_dir / "weather.parquet"), leaves, end, offline,
                                          None if batch in FINE_WEATHER else b.weather_step or REFRESH_STEP)
     end = min(end, pd.Timestamp(weather["date"].max()).date())
     fc_obs = fc[weather.columns.intersection(fc.columns)]
     cols = ["region_id", "date", "precip", "tmax"]
     full = pd.concat([weather.loc[weather["date"] >= pd.Timestamp(MODIS_START), cols], fc_obs[cols]],
-                     ignore_index=True)
-    if full[["precip", "tmax"]].isna().any().any():
-        full = synthetic.add_dryness(full.assign(tmean=0.0, rh=0.0, wind=0.0))[cols]
-    norms = weather_norms(full)
+                     ignore_index=True).sort_values(["region_id", "date"], ignore_index=True)
+    norms = weather_norms(full, fill=True)
     del full
     w_ext = synthetic.add_dryness(pd.concat([weather[weather["date"] >= lo - pd.Timedelta(days=120)], fc_obs],
                                             ignore_index=True))
@@ -209,6 +221,7 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
     risk_now = predict.short_term(models, now_rows)
     outlook_now = now_rows[["region_id", "clim_next13w", "clim_p10_13w", "clim_p90_13w"]].copy()
     outlook_now[["q10", "q50", "q90"]] = models.outlook_q(now_rows).round(1)
+    ow = predict.outlook_weeks(outlook_now, clim, end)
     fwd = predict.fire_weather_daily(fc, weather)
 
     # Risk history: days already scored keep their out-of-sample probability; new
@@ -234,7 +247,7 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
                     skill=json.loads((store_dir / "skill.json").read_text()),
                     model_report=json.loads((store_dir / "model_report.json").read_text()),
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=rh,
-                    meta=meta, weather=weather_recent(w_ext, end))
+                    meta=meta, weather=weather_recent(w_ext, end), outlook_weeks=ow)
     # The build's year files and grid are linked over unchanged; only tails are new.
     points.write_points(tmp, tail, tail_years, tail=True)
     points.carry_over(store_dir, tmp, skip={f"{y}.tail.parquet" for y in tail_years})

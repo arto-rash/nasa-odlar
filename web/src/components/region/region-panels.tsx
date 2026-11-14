@@ -16,14 +16,14 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Segmented } from "@/components/ui/segmented";
 import { Link } from "@/i18n/navigation";
-import { cellState, weekStart } from "@/lib/calendar-cells";
+import { aheadCells, cellState, weekStart, type AheadCells } from "@/lib/calendar-cells";
 import { cn } from "@/lib/cn";
 import { fmtNum, fmtPct, regionName, weekLabel, weekRange, type AppLocale } from "@/lib/format";
-import type { AnnualSeries, CalendarPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
+import type { AnnualSeries, CalendarPayload, ForecastPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
 import { DriverList } from "./drivers";
 import { reasonText } from "./reasons";
 
-export function CalendarSection({ cal }: { cal: CalendarPayload }) {
+export function CalendarSection({ cal, forecast }: { cal: CalendarPayload; forecast?: ForecastPayload | null }) {
   const t = useTranslations("region");
   const tc = useTranslations("common");
   const tcl = useTranslations("clock");
@@ -31,6 +31,7 @@ export function CalendarSection({ cal }: { cal: CalendarPayload }) {
   const [mode, setMode] = useState<"harmonized" | "raw">("harmonized");
   const [focus, setFocus] = useState<number | null>(null);
   const [cell, setCell] = useState<CellRef | null>(null);
+  const ahead = useMemo(() => aheadCells(forecast), [forecast]);
   const current = cal.current ? { year: cal.current.year, woy: cal.current.woy } : null;
   const pick = (c: CellRef) => {
     const same = cell && cell.year === c.year && cell.week === c.week;
@@ -82,13 +83,14 @@ export function CalendarSection({ cal }: { cal: CalendarPayload }) {
             coverage={cal.coverage}
             selected={cell}
             onCell={pick}
+            ahead={ahead}
           />
         ) : (
           <CalendarHeatmap years={cal.years} matrix={cal.matrix} rawMatrix={cal.raw_matrix} mode={mode} season={cal.season} anomalies={cal.anomalies} current={current}
-            coverage={cal.coverage} selected={cell} onCell={pick} />
+            coverage={cal.coverage} selected={cell} onCell={pick} ahead={ahead} />
         )}
       </div>
-      <CellBar cal={cal} cell={cell} mode={mode} />
+      <CellBar cal={cal} cell={cell} mode={mode} ahead={ahead} />
       <div className="mt-4 space-y-1.5">
         <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced") }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
         <p className="text-[12.5px] leading-snug text-faint">{tcl("heatNote")}</p>
@@ -98,8 +100,9 @@ export function CalendarSection({ cal }: { cal: CalendarPayload }) {
 }
 
 // The picked week: its value and a way to the detections behind it on the map.
-function CellBar({ cal, cell, mode }: { cal: CalendarPayload; cell: CellRef | null; mode: "harmonized" | "raw" }) {
+function CellBar({ cal, cell, mode, ahead }: { cal: CalendarPayload; cell: CellRef | null; mode: "harmonized" | "raw"; ahead: AheadCells }) {
   const t = useTranslations("clock");
+  const ta = useTranslations("ahead");
   const locale = useLocale() as AppLocale;
   if (!cell) return <p className="mt-4 text-center text-[13px] text-faint">{t("pickCell")}</p>;
   const yi = cal.years.indexOf(cell.year);
@@ -107,6 +110,7 @@ function CellBar({ cal, cell, mode }: { cal: CalendarPayload; cell: CellRef | nu
   const m = mode === "raw" && cal.raw_matrix ? cal.raw_matrix : cal.matrix;
   const v = m[yi]?.[cell.week] ?? 0;
   const unseen = st === "nodata" || st === "future";
+  const fc = st === "future" ? ahead.get(weekStart(cell.year, cell.week)) : undefined;
   return (
     <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-bg-sunken/60 px-4 py-3 ring-1 ring-line">
       <div className="min-w-0">
@@ -114,7 +118,11 @@ function CellBar({ cal, cell, mode }: { cal: CalendarPayload; cell: CellRef | nu
           {cell.year} · {weekLabel(cell.week, locale)}
         </p>
         <p className="text-[13px] text-dim">
-          {unseen ? t(st === "future" ? "future" : "noData") : `${fmtNum(v, locale, v < 10 ? 1 : 0)} ${t("detectionsWeek")}`}
+          {st === "future" && fc
+            ? fc.kind === "outlook"
+              ? ta("calendarForecast", { value: fmtNum(fc.value, locale, 1), usual: fmtNum(fc.usual, locale, 1) })
+              : ta("calendarTypical", { usual: fmtNum(fc.usual, locale, 1) })
+            : unseen ? t(st === "future" ? "future" : "noData") : `${fmtNum(v, locale, v < 10 ? 1 : 0)} ${t("detectionsWeek")}`}
           {(st === "reduced" || st === "partial") && <> · {t(st)}</>}
         </p>
       </div>

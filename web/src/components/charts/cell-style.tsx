@@ -5,9 +5,15 @@ import type { CellState } from "@/lib/calendar-cells";
 
 const empty = (theme: string) => (theme === "dark" ? "rgb(255 240 225 / 0.035)" : "rgb(40 25 10 / 0.05)");
 
+/** A week not observed yet but forecast: the same colour scale, fainter (fainter
+ *  still for the usual year beyond the outlook). */
+export function aheadOpacity(kind: "outlook" | "typical" | undefined): number {
+  return kind === "outlook" ? 0.5 : kind === "typical" ? 0.22 : 1;
+}
+
 export function cellFill(state: CellState, v: number, scale: (v: number) => number, theme: string, hatchId: string): string {
   if (state === "nodata") return `url(#${hatchId})`;
-  if (state === "future") return "transparent";
+  if (state === "future") return v > 0 && isActiveWeek(v) ? heat(scale(v), theme as "dark" | "light") : "transparent";
   return isActiveWeek(v) ? heat(scale(v), theme as "dark" | "light") : empty(theme);
 }
 

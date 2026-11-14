@@ -80,6 +80,49 @@ def short_term(models, rows: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
+def week_bin(d: pd.Series | pd.DatetimeIndex) -> np.ndarray:
+    """Calendar week bin (0–51) of a date, as in the calendar (odlar.calendar.engine)."""
+    doy = pd.DatetimeIndex(d).day_of_year.to_numpy()
+    return np.minimum((doy - 1) // 7, 51)
+
+
+def outlook_mondays(end, n: int) -> pd.DatetimeIndex:
+    """The ``n`` weeks after the one holding ``end``, as Mondays (the record's weeks)."""
+    e = pd.Timestamp(end).normalize()
+    return pd.date_range(e + pd.Timedelta(days=7 - e.weekday()), periods=n, freq="7D")
+
+
+def spread_outlook(total: dict, mean: np.ndarray, p10: np.ndarray, p90: np.ndarray,
+                   weeks: pd.DatetimeIndex) -> pd.DataFrame:
+    """Spread a 13-week outlook total (q10/q50/q90) over its weeks in the shape of
+    the usual year, next to each week's usual range. The weekly split carries the
+    model's view of the total; how it falls week to week is the climatology's."""
+    w = week_bin(weeks)
+    shape = mean[w] + 0.01
+    share = shape / shape.sum()
+    return pd.DataFrame({"week": weeks, "woy": w,
+                         "q10": total["q10"] * share, "q50": total["q50"] * share, "q90": total["q90"] * share,
+                         "normal": mean[w], "normal_p10": p10[w], "normal_p90": p90[w]})
+
+
+def outlook_weeks(outlook_now: pd.DataFrame, clim: pd.DataFrame, end) -> pd.DataFrame:
+    """The outlook per leaf region and week, for maps of the weeks ahead."""
+    weeks = outlook_mondays(end, 13)
+    mean = clim.pivot_table(index="region_id", columns="woy", values="clim_mean").reindex(columns=range(52))
+    o = outlook_now.set_index("region_id")[["q10", "q50", "q90"]]
+    ids = o.index.intersection(mean.dropna().index)
+    m = mean.loc[ids].to_numpy(dtype=float)[:, week_bin(weeks)]  # regions × 13
+    share = (m + 0.01) / (m + 0.01).sum(axis=1, keepdims=True)
+    n = len(weeks)
+    out = pd.DataFrame({"region_id": np.repeat(ids.to_numpy(dtype=int), n), "week": np.tile(weeks, len(ids))})
+    for col in ("q10", "q50", "q90"):
+        out[col] = (o.loc[ids, col].to_numpy(dtype=float)[:, None] * share).ravel()
+    out["normal"] = m.ravel()
+    for col in ("q10", "q50", "q90", "normal"):
+        out[col] = out[col].astype("float32").round(2)
+    return out
+
+
 def fire_weather_daily(forecast: pd.DataFrame, weather: pd.DataFrame) -> pd.DataFrame:
     """Day-by-day fire-weather danger (0–100) from the forecast, ranked against each
     region's own climate record for that time of year."""

@@ -6,6 +6,7 @@ import { ArrowLeft, ArrowRight, BellPlus, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { AheadChart } from "@/components/charts/ahead-chart";
 import { DailyStrip } from "@/components/charts/daily-strip";
 import { RiskDial } from "@/components/charts/risk-dial";
 import { SeriesChart } from "@/components/charts/series-chart";
@@ -23,7 +24,7 @@ import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { fmtDate, fmtNum, fmtPct, regionName, type AppLocale, type Placed } from "@/lib/format";
 import { matchScore } from "@/lib/search";
-import { RISK_LEVELS, type RiskDetail, type RiskMapItem } from "@/lib/types";
+import { RISK_LEVELS, type ForecastPayload, type RiskDetail, type RiskMapItem } from "@/lib/types";
 import { RegionPlace } from "@/components/ui/region-place";
 import { CountryCombobox } from "@/components/ui/country-combobox";
 
@@ -187,6 +188,8 @@ function RiskDetailView({ slug, onBack }: { slug: string; onBack: () => void }) 
   const tc = useTranslations("common");
   const locale = useLocale() as AppLocale;
   const { data, isLoading } = useQuery({ queryKey: ["risk", slug], queryFn: () => http<RiskDetail>(`/regions/${slug}/risk`) });
+  const { data: ahead } = useQuery({ queryKey: ["forecast", slug], queryFn: () => http<ForecastPayload>(`/regions/${slug}/forecast`), retry: false });
+  const ta = useTranslations("ahead");
   if (isLoading || !data)
     return (
       <div className="space-y-4 p-6">
@@ -254,6 +257,13 @@ function RiskDetailView({ slug, onBack }: { slug: string; onBack: () => void }) 
           <RangeBar label={t("outlookRange")} lo={pct(o.q10)} mid={pct(o.q50)} hi={pct(o.q90)} color="var(--harmonized)" values={[o.q10, o.q50, o.q90]} locale={locale} />
           <RangeBar label={t("normalRange")} lo={pct(o.normal_p10)} mid={pct(o.normal)} hi={pct(o.normal_p90)} color="var(--text-faint)" values={[o.normal_p10, o.normal, o.normal_p90]} locale={locale} />
         </div>
+        {ahead && (
+          <>
+            <p className="mt-5 text-[12.5px] font-semibold text-faint">{ta("title")}</p>
+            <AheadChart f={ahead} height={190} className="mt-1" />
+            <p className="mt-2 text-[12px] leading-snug text-faint">{ta("rTypical")}</p>
+          </>
+        )}
       </div>
 
       <Link

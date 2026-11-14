@@ -15,6 +15,7 @@ from shapely.geometry import mapping, shape
 
 from odlar.calendar.engine import build_calendar
 from odlar.config import OVERLAP_START, risk_level
+from odlar.model.predict import outlook_mondays, spread_outlook, week_bin
 from odlar.store import Store
 
 PRE = pd.Timestamp(OVERLAP_START)
@@ -433,6 +434,83 @@ def risk_detail(s: Store, slug: str) -> dict:
                        "actual7": _f(x.actual, 1), "threshold7": _f(x.threshold, 1), "fires": _f(x.value, 1)}
                       for x in h.itertuples()]
     return out
+
+
+def _next_monday_in_bin(as_of: pd.Timestamp, woy: int | None) -> str | None:
+    """The first Monday after ``as_of`` that falls in calendar week ``woy``."""
+    if woy is None:
+        return None
+    for m in outlook_mondays(as_of, 60):
+        if week_bin(pd.DatetimeIndex([m]))[0] == woy:
+            return m.strftime("%Y-%m-%d")
+    return None
+
+
+def reliability(s: Store) -> dict:
+    """How the forecasts did when tested on years they never saw (model report)."""
+    rep = (s.model_report or {}).get("harmonized", {})
+    ov, ol = rep.get("overall", {}), rep.get("outlook", {})
+    return {"week_auc": ov.get("roc_auc"), "week_auc_season": ov.get("base_roc_auc"),
+            "outlook_coverage80": ol.get("coverage80"), "outlook_coverage80_season": ol.get("coverage80_clim"),
+            "outlook_skill": ol.get("pinball_skill"), "test_years": len(ol.get("by_year", []))}
+
+
+def forecast(s: Store, slug: str) -> dict:
+    """Everything ahead for one region, on one timeline: the 8-day fire weather,
+    the 7-day risk, the 13-week outlook spread over its weeks, and beyond that the
+    usual year (the climatology, not a forecast) up to a year ahead."""
+    r = region_or_404(s, slug)
+    cal = s.calendar(int(r.region_id))
+    if cal is None:
+        raise NotFound("no calendar")
+    rd = risk_detail(s, slug)
+    as_of = pd.Timestamp(s.meta["data_end"])
+    clim = cal["climatology"]
+    mean, p10, p90 = (np.asarray(clim[k], dtype=float) for k in ("mean", "p10", "p90"))
+    weeks = outlook_mondays(as_of, 52)
+    o = rd["outlook"]
+    ahead = spread_outlook({"q10": o["q10"] or 0.0, "q50": o["q50"] or 0.0, "q90": o["q90"] or 0.0},
+                           mean, p10, p90, weeks[:13])
+    rows = [{"week": x.week.strftime("%Y-%m-%d"), "woy": int(x.woy), "kind": "outlook",
+             "q10": _f(x.q10, 2), "q50": _f(x.q50, 2), "q90": _f(x.q90, 2),
+             "normal": _f(x.normal, 2), "normal_p10": _f(x.normal_p10, 2), "normal_p90": _f(x.normal_p90, 2)}
+            for x in ahead.itertuples()]
+    for m, w in zip(weeks[13:], week_bin(weeks[13:]), strict=True):
+        rows.append({"week": m.strftime("%Y-%m-%d"), "woy": int(w), "kind": "typical", "q10": None, "q50": None,
+                     "q90": None, "normal": _f(mean[w], 2), "normal_p10": _f(p10[w], 2), "normal_p90": _f(p90[w], 2)})
+    season = cal.get("season") or {}
+    return {"region": rd["region"], "as_of": rd["as_of"], "forecast_source": rd.get("forecast_source"),
+            "days": rd["daily"], "week": rd["short"], "outlook": o, "weeks": rows,
+            "season": {"start": _next_monday_in_bin(as_of, season.get("start")),
+                       "peak": _next_monday_in_bin(as_of, season.get("peak_week")),
+                       "end": _next_monday_in_bin(as_of, season.get("end"))},
+            "reliability": reliability(s)}
+
+
+def forecast_map(s: Store, week: date, bbox: tuple[float, float, float, float] | None = None) -> dict:
+    """One week ahead for every province in view: [region id, expected, usual]."""
+    paths = s.outlook_week_paths
+    if not paths:
+        return {"week": week.isoformat(), "values": []}
+    df = s.points._con().execute(
+        "SELECT region_id, q50, normal FROM read_parquet(?, union_by_name = true) WHERE week = ?",
+        [paths, pd.Timestamp(week)]).df()
+    reg = s.regions.set_index("region_id")
+    df = df[df["region_id"].isin(reg.index)]
+    df = df.assign(area=reg.loc[df["region_id"], "area_km2"].to_numpy(), top=reg.loc[df["region_id"], "parent_id"].to_numpy())
+    # the outlines a zoomed-out map draws (countries, or the states of a split country)
+    tops = set(s.regions.loc[s.regions["level"] == "country", "region_id"].astype(int))
+    by_country = (df[df["top"].isin(tops)].groupby("top", as_index=False)[["q50", "normal", "area"]].sum()
+                  .rename(columns={"top": "region_id"}))
+    if bbox and len(df):
+        at = reg.loc[df["region_id"], ["lon", "lat"]]
+        keep = ((at["lon"] >= bbox[0] - 2) & (at["lon"] <= bbox[2] + 2)
+                & (at["lat"] >= bbox[1] - 2) & (at["lat"] <= bbox[3] + 2)).to_numpy()
+        df = df[keep]
+    rows = pd.concat([df[["region_id", "q50", "normal", "area"]], by_country[["region_id", "q50", "normal", "area"]]])
+    return {"week": week.isoformat(), "columns": ["id", "expected", "usual", "area_km2"],
+            "values": [[int(a), round(float(b), 2), round(float(c), 2), round(float(d), 1)]
+                       for a, b, c, d in rows.itertuples(index=False)]}
 
 
 def risk_map(s: Store, country: str | None = None, limit: int | None = None) -> list[dict]:

@@ -128,6 +128,19 @@ def calendar(slug: str, s: Store = Depends(store)):
     return service.calendar(s, slug)
 
 
+@app.get("/forecast/map", dependencies=deps)
+def forecast_map(week: date, bbox: str | None = Query(None, description="west,south,east,north"),
+                 s: Store = Depends(store)):
+    """Expected and usual detections per province for one week ahead (13 weeks)."""
+    return service.forecast_map(s, week, parse_bbox(bbox))
+
+
+@app.get("/forecast/{slug}", dependencies=deps)
+def forecast(slug: str, s: Store = Depends(store)):
+    """The days, weeks and months ahead for one region."""
+    return service.forecast(s, slug)
+
+
 @app.get("/risk", dependencies=deps)
 def risk_map(country: str | None = Query(None, max_length=3), limit: int | None = Query(None, ge=1, le=50000),
              s: Store = Depends(store)):

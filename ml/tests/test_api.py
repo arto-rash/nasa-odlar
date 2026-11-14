@@ -72,6 +72,18 @@ def test_risk(client):
     assert m == sorted(m, key=lambda x: -x["probability"])
 
 
+def test_forecast(client):
+    f = client.get("/forecast/az-sabirabad").json()
+    assert len(f["weeks"]) == 52 and len(f["days"]) >= 7
+    ahead = [w for w in f["weeks"] if w["kind"] == "outlook"]
+    assert len(ahead) == 13 and all(w["q10"] <= w["q50"] <= w["q90"] for w in ahead)
+    assert abs(sum(w["q50"] for w in ahead) - f["outlook"]["q50"]) < 0.5
+    assert f["weeks"][0]["week"] > f["as_of"] and 0 < f["reliability"]["week_auc"] <= 1
+    assert client.get("/forecast/az").status_code == 200
+    m = client.get(f"/forecast/map?week={f['weeks'][0]['week']}&bbox=44,38,51,42").json()
+    assert m["week"] == f["weeks"][0]["week"] and isinstance(m["values"], list)
+
+
 def test_hotspots_limits(client):
     h = client.get("/hotspots", params={"start": "2025-08-01", "end": "2025-08-07", "sensor": "VIIRS"}).json()
     assert h["total"] > 0 and all(p[2] == "V" for p in h["points"])

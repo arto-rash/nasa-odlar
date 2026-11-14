@@ -27,7 +27,9 @@ Route::prefix('v1')->group(function () {
         Route::get('regions/{slug}/series/annual', 'annual')->name('regions.annual');
         Route::get('regions/{slug}/calendar', 'calendar')->name('regions.calendar');
         Route::get('regions/{slug}/risk', 'regionRisk')->name('regions.risk');
+        Route::get('regions/{slug}/forecast', 'forecast')->name('regions.forecast');
         Route::get('risk', 'risk')->name('risk');
+        Route::get('forecast/map', 'forecastMap')->name('forecast.map');
         Route::get('hotspots', 'hotspots')->name('hotspots');
         Route::get('timeline', 'timeline')->name('timeline');
         Route::get('week-pack/{year}', 'weekPack')->whereNumber('year')->name('week-pack');

@@ -3,18 +3,18 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useId, useMemo, useState } from "react";
 import { useTheme } from "@/components/layout/theme-toggle";
-import { cellState } from "@/lib/calendar-cells";
+import { cellState, weekStart, type AheadCells } from "@/lib/calendar-cells";
 import { heatScale } from "@/lib/colors";
 import { fmtNum, monthShort, weekLabel, weekMonth, type AppLocale } from "@/lib/format";
 import type { Anomaly, Coverage, SeasonProfile } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
-import { cellFill, HatchDefs } from "./cell-style";
+import { aheadOpacity, cellFill, HatchDefs } from "./cell-style";
 import { ChartTooltip, TipRow } from "./tooltip";
 
 export type CellRef = { year: number; week: number };
 
 export function CalendarHeatmap({
-  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, coverage, selected, onCell,
+  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, coverage, selected, onCell, ahead,
 }: {
   years: number[];
   matrix: number[][];
@@ -26,8 +26,11 @@ export function CalendarHeatmap({
   coverage?: Coverage;
   selected?: CellRef | null;
   onCell?: (c: CellRef) => void;
+  /** weeks ahead (by Monday): shown faint in the cells not observed yet */
+  ahead?: AheadCells;
 }) {
   const t = useTranslations("clock");
+  const ta = useTranslations("ahead");
   const locale = useLocale() as AppLocale;
   const [theme] = useTheme();
   const hatch = `hatch-${useId().replace(/:/g, "")}`;
@@ -72,8 +75,10 @@ export function CalendarHeatmap({
               <text x={left - 8} y={top + yi * ch + ch / 2} textAnchor="end" dominantBaseline="middle" className={`tabular-nums text-[9.5px] ${anomalous.has(y) ? "fill-ember-200" : "fill-faint"}`}>
                 {y}
               </text>
-              {data[yi].map((v, w) => {
+              {data[yi].map((obs, w) => {
                 const st = states[yi][w];
+                const fc = st === "future" ? ahead?.get(weekStart(y, w)) : undefined;
+                const v = fc ? fc.value : obs;
                 const sel = selected && selected.year === y && selected.week === w;
                 return (
                   <g key={w}>
@@ -84,6 +89,7 @@ export function CalendarHeatmap({
                       height={ch - 1}
                       rx={1.5}
                       fill={cellFill(st, v, scale, theme, hatch)}
+                      fillOpacity={aheadOpacity(fc?.kind)}
                       style={{ transition: "fill 600ms var(--ease-out-expo)", cursor: onCell && st !== "future" && st !== "nodata" ? "pointer" : undefined }}
                       stroke={sel ? "var(--ember-200)" : hover && hover.yi === yi && hover.w === w ? "var(--text)" : "none"}
                       strokeWidth={sel ? 1.5 : 1}
@@ -119,7 +125,12 @@ export function CalendarHeatmap({
             <p className="mb-1 font-medium text-text">
               {years[hover.yi]} · {weekLabel(hover.w, locale)}
             </p>
-            {hs === "nodata" || hs === "future" ? (
+            {hs === "future" && ahead?.get(weekStart(years[hover.yi], hover.w)) ? (
+              (() => {
+                const fc = ahead.get(weekStart(years[hover.yi], hover.w))!;
+                return <p className="text-dim">{fc.kind === "outlook" ? ta("calendarForecast", { value: fmtNum(fc.value, locale, 1), usual: fmtNum(fc.usual, locale, 1) }) : ta("calendarTypical", { usual: fmtNum(fc.usual, locale, 1) })}</p>;
+              })()
+            ) : hs === "nodata" || hs === "future" ? (
               <p className="text-dim">{hs === "nodata" ? t("noData") : t("future")}</p>
             ) : (
               <>

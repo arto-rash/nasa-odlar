@@ -231,6 +231,44 @@ export interface RiskDetail {
   history: { date: string; probability: number; actual7: number | null; threshold7: number; fires: number }[];
 }
 
+/** One week on the forecast timeline: the outlook (13 weeks) or, after it, the usual year. */
+export interface ForecastWeek {
+  week: string; // Monday
+  woy: number;
+  kind: "outlook" | "typical";
+  q10: number | null;
+  q50: number | null;
+  q90: number | null;
+  normal: number;
+  normal_p10: number;
+  normal_p90: number;
+}
+
+export interface ForecastPayload {
+  region: RegionRef;
+  as_of: string;
+  forecast_source: string | null;
+  days: RiskDetail["daily"];
+  week: RiskDetail["short"];
+  outlook: RiskDetail["outlook"];
+  weeks: ForecastWeek[];
+  season: { start: string | null; peak: string | null; end: string | null };
+  reliability: {
+    week_auc: number | null;
+    week_auc_season: number | null;
+    outlook_coverage80: number | null;
+    outlook_coverage80_season: number | null;
+    outlook_skill: number | null;
+    test_years: number;
+  };
+}
+
+/** Expected and usual detections per region for one week ahead. */
+export interface ForecastMap {
+  week: string;
+  values: [id: number, expected: number, usual: number, areaKm2: number][];
+}
+
 export interface RiskMapItem {
   id: number;
   slug: string;
@@ -327,6 +365,8 @@ export interface Skill {
 
 export interface TimelinePoint {
   week: string;
+  /** a week ahead (Explore's forecast section), with no detections */
+  forecast?: boolean;
   modis: number;
   viirs: number;
   harmonized: number;

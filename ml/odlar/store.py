@@ -112,7 +112,7 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
               annual: pd.DataFrame, calendars: dict, skill: dict, model_report: dict, risk_now: pd.DataFrame,
               outlook_now: pd.DataFrame, fire_weather: pd.DataFrame, risk_history: pd.DataFrame,
               grid: pd.DataFrame | None, meta: dict, weather: pd.DataFrame, hotspot_years: list[int] | None = None,
-              shapes: bool = True) -> None:
+              shapes: bool = True, outlook_weeks: pd.DataFrame | None = None) -> None:
     """Write a batch store. Detections go to per-year files (odlar.points); with
     ``hotspot_years`` only those years are written (the caller carries the rest over)."""
     store_dir.mkdir(parents=True, exist_ok=True)
@@ -130,6 +130,8 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
     annual.to_parquet(store_dir / "annual.parquet")
     risk_now.assign(drivers=risk_now["drivers"].map(json.dumps)).to_parquet(store_dir / "risk_now.parquet")
     outlook_now.to_parquet(store_dir / "outlook_now.parquet")
+    if outlook_weeks is not None:  # the weeks ahead per leaf region, for forecast maps
+        outlook_weeks.sort_values(["week", "region_id"]).to_parquet(store_dir / "outlook_weeks.parquet", index=False)
     fire_weather.to_parquet(store_dir / "fire_weather.parquet")
     risk_history.sort_values(["region_id", "date"]).to_parquet(store_dir / "risk_history.parquet", index=False,
                                                                row_group_size=50_000)
@@ -201,6 +203,7 @@ class Store:
         self.calendar_files = {name: d / "calendars.json" for name, d in zip(names, dirs, strict=True)}
         self._calendars: OrderedDict[str, dict] = OrderedDict()
         self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
+        self.outlook_week_paths = [str(d / "outlook_weeks.parquet") for d in dirs if (d / "outlook_weeks.parquet").exists()]
         self.shape_paths = [str(d / "regions_geo.parquet") for d in dirs if (d / "regions_geo.parquet").exists()]
         tiers = [ARTIFACTS_DIR / "shape_tiers" / f"{n}.parquet" for n in names]
         self.tier_paths = [str(t) for t in tiers] if all(t.exists() for t in tiers) else []  # all or none

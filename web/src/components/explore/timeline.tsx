@@ -11,9 +11,11 @@ import type { TimelinePoint } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
 
 export function Timeline({
-  points, index, onIndex, playing, onPlay, speed, onSpeed, open = true, onOpen,
+  points, index, onIndex, playing, onPlay, speed, onSpeed, open = true, onOpen, future = 0,
 }: {
   points: TimelinePoint[];
+  /** the last ``future`` points are forecast weeks: drawn as their own end section */
+  future?: number;
   index: number;
   onIndex: (i: number) => void;
   playing: boolean;
@@ -29,7 +31,15 @@ export function Timeline({
   const [ref, { width }] = useSize<HTMLDivElement>();
   const h = width > 0 && width < 420 ? 44 : 64; // shorter chart on phones
   const dragging = useRef(false);
-  const xs = useMemo(() => scaleLinear().domain([0, Math.max(points.length - 1, 1)]).range([0, Math.max(width, 1)]), [points.length, width]);
+  // The forecast weeks get a fixed share of the width, so a few weeks after 25
+  // years of record are still easy to find and grab.
+  const past = points.length - future;
+  const xs = useMemo(() => {
+    const w = Math.max(width, 1);
+    return future > 0
+      ? scaleLinear().domain([0, Math.max(past - 1, 1), Math.max(points.length - 1, 2)]).range([0, w * 0.86, w]).clamp(true)
+      : scaleLinear().domain([0, Math.max(points.length - 1, 1)]).range([0, w]);
+  }, [points.length, past, future, width]);
   const max = useMemo(() => Math.max(...points.map((p) => Math.max(p.viirs, p.harmonized, p.modis)), 1), [points]);
   const ys = scaleLinear().domain([0, Math.sqrt(max)]).range([h, 4]);
   const fold = onOpen && (
@@ -45,7 +55,7 @@ export function Timeline({
   );
   const y = (v: number) => ys(Math.sqrt(Math.max(v, 0)));
   const paths = useMemo(() => {
-    const idx = points.map((_, i) => i);
+    const idx = points.slice(0, past).map((_, i) => i);
     const a = (k: keyof TimelinePoint) =>
       area<number>().x((i) => xs(i)).y0(h).y1((i) => y(points[i][k] as number)).curve(curveMonotoneX)(idx) ?? "";
     return {
@@ -54,7 +64,7 @@ export function Timeline({
       harm: line<number>().x((i) => xs(i)).y((i) => y(points[i].harmonized)).curve(curveMonotoneX)(idx) ?? "",
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, xs, h]);
+  }, [points, xs, h, past]);
   const years = useMemo(() => {
     const out: { i: number; y: number }[] = [];
     points.forEach((p, i) => {
@@ -69,6 +79,7 @@ export function Timeline({
     onIndex(Math.max(0, Math.min(points.length - 1, Math.round(xs.invert(clientX - r.left)))));
   };
   const cur = points[index];
+  const inFuture = future > 0 && index >= past;
   const play = (
     <button
       type="button"
@@ -81,7 +92,7 @@ export function Timeline({
   );
   const date = (
     <div className="shrink-0">
-      <p className="text-[12px] font-semibold text-faint">{t("weekShort")}</p>
+      <p className={cn("text-[12px] font-semibold", inFuture ? "text-ember-300" : "text-faint")}>{inFuture ? t("forecastChip") : t("weekShort")}</p>
       <p className="font-display tabular text-[1rem] leading-tight sm:text-[1.15rem]">
         {cur ? fmtDate(cur.week, locale, { day: "numeric", month: "short", year: "numeric" }) : "—"}
       </p>
@@ -135,6 +146,18 @@ export function Timeline({
                 </text>
               </g>
             ))}
+            {future > 0 && (
+              <g>
+                <defs>
+                  <pattern id="tl-future" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
+                    <line x1="0" y1="0" x2="0" y2="6" stroke="var(--ember-400)" strokeWidth="1.5" opacity={0.35} />
+                  </pattern>
+                </defs>
+                <rect x={xs(past - 0.5)} y={0} width={Math.max(0, width - xs(past - 0.5))} height={h} fill="url(#tl-future)" rx={4} />
+                <line x1={xs(past - 0.5)} x2={xs(past - 0.5)} y1={0} y2={h} stroke="var(--ember-400)" strokeDasharray="3 3" />
+                <text x={xs(past - 0.5) + 4} y={10} className="fill-ember-300 text-[11px] font-semibold">{t("forecastChip")}</text>
+              </g>
+            )}
             <path d={paths.modis} fill="var(--modis)" opacity={0.45} />
             <path d={paths.viirs} fill="var(--viirs)" opacity={0.3} />
             <path d={paths.harm} fill="none" stroke="var(--harmonized)" strokeWidth={1.25} />

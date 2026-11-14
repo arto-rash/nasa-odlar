@@ -174,7 +174,12 @@ export function DensityLayer({ cells, visible }: { cells: [number, number, numbe
   return null;
 }
 
-export type RegionMode = "outline" | "risk" | "density";
+export type RegionMode = "outline" | "risk" | "density" | "forecast";
+
+/** Expected detections per 1,000 km² in a week ahead (feature-state "fd", see ForecastStates). */
+export const FORECAST_STOPS: [number, string][] = [
+  [0.02, "#f6c9a0"], [0.1, "#f39a5a"], [0.5, "#e2562a"], [2, "#b8321c"], [8, "#7a1616"],
+];
 
 export function RegionsLayer({
   geojson, mode, selected, onHover, onClick, visible = true, leafOnly = true,
@@ -205,9 +210,14 @@ export function RegionsLayer({
       filter,
       layout: { visibility: vis },
       paint: {
-        "fill-color": mode === "risk" ? riskColor : "#ff7a2a",
+        "fill-color": mode === "risk" ? riskColor : mode === "forecast"
+          ? ["interpolate", ["linear"], ["coalesce", ["feature-state", "fd"], 0], ...FORECAST_STOPS.flat()] as ExpressionSpecification
+          : "#ff7a2a",
         "fill-opacity":
-          mode === "risk"
+          mode === "forecast"
+            ? ["case", ["<", ["coalesce", ["feature-state", "fd"], 0], 0.01], 0,
+              ["boolean", ["feature-state", "hover"], false], 0.85, 0.66] as ExpressionSpecification
+            : mode === "risk"
             ? ["case", ["boolean", ["feature-state", "hover"], false], 0.62, 0.42]
             : mode === "density"
               ? ["interpolate", ["linear"], ["get", "density"], 0, 0.02, 2, 0.12, 10, 0.4]

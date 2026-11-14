@@ -1,6 +1,6 @@
 // What a calendar cell (year × week-of-year bin) stands for: its dates, whether the
 // satellites were observing, and where the region is in its fire season.
-import type { Coverage, CurrentStatus, SeasonProfile } from "./types";
+import type { Coverage, CurrentStatus, ForecastPayload, SeasonProfile } from "./types";
 
 const DAY = 86400000;
 const iso = (t: number) => new Date(t).toISOString().slice(0, 10);
@@ -48,4 +48,13 @@ export function seasonStatus(season: SeasonProfile | null | undefined, current: 
   }
   const weeks = ahead(w, season.start);
   return weeks <= 8 ? { kind: "soon", weeks } : { kind: "later", startWeek: season.start };
+}
+
+/** The weeks ahead by Monday: the outlook's expected value, or the usual one after it. */
+export type AheadCells = Map<string, { value: number; usual: number; kind: "outlook" | "typical" }>;
+
+export function aheadCells(f: ForecastPayload | null | undefined): AheadCells {
+  const m: AheadCells = new Map();
+  for (const w of f?.weeks ?? []) m.set(w.week, { value: w.kind === "outlook" ? (w.q50 ?? 0) : w.normal, usual: w.normal, kind: w.kind });
+  return m;
 }

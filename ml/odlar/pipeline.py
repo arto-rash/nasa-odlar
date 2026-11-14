@@ -29,7 +29,7 @@ from odlar.harmonize.engine import aggregate_intervals, harmonize
 from odlar.harmonize.validate import loyo, skill_report
 from odlar.ingest import firms, ndvi, openmeteo, power, stream, synthetic
 from odlar.model import predict, train
-from odlar.model.features import build_panel, daily_series
+from odlar.model.features import build_panel, daily_series, weekly_clim
 
 
 def log(msg: str, t0: float) -> None:
@@ -223,6 +223,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     oq = models.outlook_q(now_rows)
     outlook_now = now_rows[["region_id", "clim_next13w", "clim_p10_13w", "clim_p90_13w"]].copy()
     outlook_now[["q10", "q50", "q90"]] = oq.round(1)
+    ow = predict.outlook_weeks(outlook_now, weekly_clim(series_h, clim_years), end)
     fwd = predict.fire_weather_daily(fc, weather)
     # Out-of-sample risk history: last full year scored by a model that never saw it.
     hist_model = train.fit_short(sub[sub["date"].dt.year < end.year - 1])
@@ -251,7 +252,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
                     skill=skill, model_report={"harmonized": report_h, "raw": report_r,
                                                "importance": meta["importance"]},
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=risk_hist,
-                    grid=grid, meta=meta_store, weather=weather_recent(w_ext, end))
+                    grid=grid, meta=meta_store, weather=weather_recent(w_ext, end), outlook_weeks=ow)
     store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells,
                       daily_recent=daily[pd.to_datetime(daily["date"]) >= recent_start(end)], regions=regions)
     log(f"store written to {store_dir}", t0)
