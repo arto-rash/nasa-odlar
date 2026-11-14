@@ -191,7 +191,7 @@
     "annualMean": "İllik orta",
     "detectionsWeek": "aşkarlama, həftə",
     "detectionsYear": "aşkarlama, il",
-    "tableCaption": "İllər üzrə ümumi aşkarlamalar",
+    "tableCaption": "İllik ümumi aşkarlamalar: ODLAR-ın düzəldilmiş qeydi (VIIRS Suomi NPP miqyasında) və xam qeyd (MODIS və VIIRS olduğu kimi birləşdirilib)",
     "year": "İl",
     "total": "Cəmi",
     "raw": "Xam",

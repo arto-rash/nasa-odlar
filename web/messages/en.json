@@ -191,7 +191,7 @@
     "annualMean": "Annual mean",
     "detectionsWeek": "detections, week",
     "detectionsYear": "detections, year",
-    "tableCaption": "Total detections per year",
+    "tableCaption": "Total detections per year: ODLAR's corrected record (on the VIIRS Suomi NPP scale) and the raw record (MODIS and VIIRS joined as they are)",
     "year": "Year",
     "total": "Total",
     "raw": "Raw",

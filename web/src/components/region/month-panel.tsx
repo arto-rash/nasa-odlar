@@ -25,6 +25,9 @@ const TONE: Record<Verdict, string> = {
   quiet: "text-text",
 };
 
+/** 0.15× stays 0.15×, not 0.1×; 2.8× keeps one decimal. */
+const fmtRatio = (r: number, locale: AppLocale) => fmtNum(r, locale, r < 1 ? 2 : 1);
+
 /** Bars against "the usual = 1×", capped so a raw 10× still fits. */
 const CAP = 4;
 
@@ -43,7 +46,7 @@ export function MonthPanel({ m, className }: { m: MonthToDate; className?: strin
       <p className="mt-1 text-[12.5px] text-faint">{t("weeks", { range })}</p>
 
       {m.ratio !== null ? (
-        <div className="mt-5 space-y-3" role="img" aria-label={t("aria", { ratio: fmtNum(m.ratio, locale, 1), raw: raw?.ratio != null ? fmtNum(raw.ratio, locale, 1) : "—" })}>
+        <div className="mt-5 space-y-3" role="img" aria-label={t("aria", { ratio: fmtRatio(m.ratio, locale), raw: raw?.ratio != null ? fmtRatio(raw.ratio, locale) : "—" })}>
           <Bar label={t("odlar")} ratio={m.ratio} tone="bg-text" strong locale={locale} />
           {raw?.ratio != null && <Bar label={t("raw")} ratio={raw.ratio} tone="bg-[var(--text-faint)]" locale={locale} />}
           <div className="grid grid-cols-[64px_1fr_52px] gap-2.5 text-[11px] text-faint">
@@ -72,7 +75,7 @@ export function MonthPanel({ m, className }: { m: MonthToDate; className?: strin
 
       {raw && raw.ratio != null && m.ratio != null && Math.abs(raw.ratio - m.ratio) >= 0.5 && (
         <p className="mt-4 rounded-md bg-bg-sunken/70 px-3 py-2.5 text-[12.5px] leading-snug text-dim ring-1 ring-line">
-          {t("rawNote", { raw: fmtNum(raw.ratio, locale, 1), ours: fmtNum(m.ratio, locale, 1) })}
+          {t("rawNote", { raw: fmtRatio(raw.ratio, locale), ours: fmtRatio(m.ratio, locale) })}
         </p>
       )}
     </Panel>
@@ -90,7 +93,7 @@ function Bar({ label, ratio, tone, strong, locale }: { label: string; ratio: num
       </div>
       <span className={cn("tabular text-right text-[13px]", strong ? "font-medium" : "text-faint")}>
         {ratio > CAP ? "› " : ""}
-        {fmtNum(ratio, locale, 1)}×
+        {fmtRatio(ratio, locale)}×
       </span>
     </div>
   );

@@ -291,14 +291,16 @@ export function FireClock({
         <thead>
           <tr>
             <th>{t("year")}</th>
-            <th>{t("total")}</th>
+            <th>{t("harmonized")}</th>
+            {rawMatrix && <th>{t("raw")}</th>}
           </tr>
         </thead>
         <tbody>
           {years.map((y, i) => (
             <tr key={y}>
               <td>{y}</td>
-              <td>{Math.round(sum(data[i]))}</td>
+              <td>{Math.round(sum(matrix[i]))}</td>
+              {rawMatrix && <td>{Math.round(sum(rawMatrix[i]))}</td>}
             </tr>
           ))}
         </tbody>
