@@ -27,6 +27,8 @@ services:
       ODLAR_INTERNAL_TOKEN: ${ODLAR_INTERNAL_TOKEN}
     volumes: ["/opt/odlar/artifacts:/app/artifacts:ro"]
     mem_limit: 1100m
+    # a guest on Jabish's server: under memory pressure ODLAR goes first
+    oom_score_adj: 500
 
   # Daily data refresh (deploy/refresh.sh, run from cron). Not started by `up`.
   refresh:
@@ -37,7 +39,8 @@ services:
       FIRMS_MAP_KEY: ${FIRMS_MAP_KEY}
     volumes: ["/opt/odlar/artifacts:/app/artifacts"]
     command: ["python", "-m", "odlar.refresh"]
-    mem_limit: 1500m
+    mem_limit: 1200m
+    oom_score_adj: 800
 
   api:
     build: ../api
