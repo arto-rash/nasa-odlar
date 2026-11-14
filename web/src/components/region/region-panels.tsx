@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CircleDot, Download, Grid3x3, MapPinned } from "lucide-react";
+import { ArrowRight, CircleDot, Download, FileText, Grid3x3, MapPinned } from "lucide-react";
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
@@ -422,8 +422,12 @@ export function ChildrenPanel({ items }: { items: Region[] }) {
 
 export function ExportBar({ slug }: { slug: string }) {
   const t = useTranslations("region");
+  const tr = useTranslations("report");
   return (
     <div className="flex flex-wrap items-center gap-2">
+      <Link href={`/region/${slug}/report`} className="mr-3 inline-flex min-h-8 items-center gap-1.5 rounded-md bg-text px-3.5 text-[13px] font-medium text-bg transition hover:scale-[1.02]">
+        <FileText className="size-3.5" /> {tr("link")}
+      </Link>
       <span className="mr-2 text-[13px] text-faint">{t("export")}</span>
       {(
         [

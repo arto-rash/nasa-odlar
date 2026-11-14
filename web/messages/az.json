@@ -601,5 +601,22 @@
     "seeMap": "Xəritədə gör",
     "note": "Buradakı yanğın istilik siqnallarının qrupudur; böyük yanğın bir neçə yanğın kimi görünə bilər, buludlu havada kiçik yanğınlar görünmür.",
     "count": "{count, plural, other {# yanğın}}"
+  },
+  "report": {
+    "link": "Hesabat",
+    "title": "Yanğın hesabatı",
+    "meta": "Məlumat {end} tarixinədək · hazırlanıb {today}",
+    "print": "Çap et və ya PDF kimi saxla",
+    "share": "Paylaş",
+    "copied": "Keçid kopyalandı",
+    "keyNumbers": "Əsas göstəricilər",
+    "calendar": "Yanma təqvimi, həftə-həftə (harmonizə edilmiş aşkarlamalar)",
+    "history": "İllər üzrə",
+    "ahead": "Qarşıda nə var",
+    "about": "Hesabat haqqında",
+    "about1": "Rəqəmlər NASA FIRMS aktiv yanğın aşkarlamalarıdır (MODIS 2000-ci ildən, VIIRS 2012-ci ildən), vahid miqyasa gətirilib (harmonizə edilib), ona görə 2012-dən əvvəlki və sonrakı illəri müqayisə etmək olar.",
+    "about2": "Aşkarlama kosmosdan görünən istilik siqnalıdır; yanmış sahə və ya ayrı yanğınların sayı deyil. Bulud və tüstü bəzi yanğınları gizlədir; ştrixli həftələrdə peyk müşahidəsi olmayıb.",
+    "about3": "Hava: Open-Meteo proqnozu və NASA POWER tarixi məlumatları. Proqnozun etibarlılığı modellərin görmədiyi keçmiş illər üzərində yoxlanılıb.",
+    "source": "Mənbə: ODLAR, {url}"
   }
 }

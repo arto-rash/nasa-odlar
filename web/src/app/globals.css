@@ -301,3 +301,21 @@ body {
     scroll-behavior: auto !important;
   }
 }
+
+/* Printing (region report): paper margins, no page-wide backgrounds or motion. */
+@media print {
+  @page {
+    margin: 14mm 12mm;
+  }
+  html,
+  body {
+    background: #fff !important;
+  }
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .break-inside-avoid {
+    break-inside: avoid;
+  }
+}

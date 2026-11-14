@@ -15,7 +15,7 @@ const approx = (v: number | null | undefined, locale: AppLocale, about = false) 
 const per100 = (v: number | null | undefined) => (v == null ? "—" : String(Math.round(v * 100)));
 
 /** The days, weeks and months ahead in one place, each with how far to trust it. */
-export function AheadPanel({ f }: { f: ForecastPayload }) {
+export function AheadPanel({ f, notesOpen = false }: { f: ForecastPayload; notesOpen?: boolean }) {
   const t = useTranslations("ahead");
   const locale = useLocale() as AppLocale;
   const o = f.outlook;
@@ -68,7 +68,7 @@ export function AheadPanel({ f }: { f: ForecastPayload }) {
       </div>
       <AheadChart f={f} className="mt-2" height={250} />
 
-      <details className="group mt-5 rounded-lg bg-bg-sunken/60 px-4 py-3 ring-1 ring-line">
+      <details open={notesOpen} className="group mt-5 rounded-lg bg-bg-sunken/60 px-4 py-3 ring-1 ring-line">
         <summary className="flex cursor-pointer list-none items-center gap-2 text-[13.5px] font-medium">
           <ShieldQuestion className="size-4 text-ember-400" aria-hidden /> {t("howSure")}
         </summary>

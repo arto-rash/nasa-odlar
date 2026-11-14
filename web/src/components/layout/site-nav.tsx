@@ -46,7 +46,7 @@ export function SiteNav() {
         initial={false}
         animate={{ y: hidden && !open ? -64 : 0 }}
         transition={{ duration: 0.2, ease: "easeOut" }}
-        className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg"
+        className="fixed inset-x-0 top-0 z-50 border-b border-line bg-bg print:hidden"
       >
         <nav aria-label={t("main")} className="mx-auto flex h-14 w-full max-w-[1240px] items-center gap-2 px-5 sm:px-8">
           <Link href="/" className="mr-4 shrink-0" aria-label="ODLAR">

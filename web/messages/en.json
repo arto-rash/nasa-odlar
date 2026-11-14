@@ -601,5 +601,22 @@
     "seeMap": "See on the map",
     "note": "A fire here is a group of heat signals; one large burn can show as several, and small fires under clouds are missed.",
     "count": "{count, plural, one {# fire} other {# fires}}"
+  },
+  "report": {
+    "link": "Report",
+    "title": "Fire report",
+    "meta": "Data through {end} · made {today}",
+    "print": "Print or save as PDF",
+    "share": "Share",
+    "copied": "Link copied",
+    "keyNumbers": "Key numbers",
+    "calendar": "Burning calendar, week by week (harmonized detections)",
+    "history": "Year by year",
+    "ahead": "What's ahead",
+    "about": "About this report",
+    "about1": "Counts are NASA FIRMS active-fire detections (MODIS since 2000, VIIRS since 2012) put on one scale (harmonized), so years before and after 2012 can be compared.",
+    "about2": "A detection is a heat signal seen from space, not burned area or a count of separate fires. Clouds and smoke hide some fires; hatched weeks had no satellite observation.",
+    "about3": "Weather: Open-Meteo forecast and NASA POWER history. Forecast reliability is from tests on past years the models never saw.",
+    "source": "Source: ODLAR, {url}"
   }
 }
