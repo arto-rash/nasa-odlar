@@ -99,6 +99,9 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
     Risk and density properties are current; geometry comes pre-serialized."""
     detail = "z0" if zoom < 4 else "z1" if zoom < 7 else "z2"
     where, params = ["detail = ?"], [detail]
+    if zoom >= 4 and not country:
+        # a zoomed-in map draws provinces only: leave out the (heavy) country outlines
+        where.append("NOT is_country")
     if bbox:
         where.append("maxx >= ? AND minx <= ? AND maxy >= ? AND miny <= ?")
         params += [bbox[0], bbox[2], bbox[1], bbox[3]]
