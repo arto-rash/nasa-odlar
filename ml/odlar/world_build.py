@@ -170,7 +170,7 @@ def main() -> None:
                     pending.append(b)
                 continue
         if not a.no_ship:
-            status[name]["state"] = "uploading"
+            status.setdefault(name, {})["state"] = "uploading"
             save_status(status, name)
             uploads.put(name)
     uploads.put(None)
