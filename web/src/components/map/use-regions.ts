@@ -41,13 +41,14 @@ function viewOf(map: Map): View {
  * grid's cell size (``step``). ``cell`` (per-cell sums) is not used by the maps:
  * centred cell dots read as an artificial grid.
  */
-export type PointView = { cell: number | null; bbox: string | null; step: number };
+export type PointView = { cell: number | null; bbox: string | null; step: number; limit: number };
 
 function pointViewOf(map: Map): PointView {
   const z = map.getZoom();
-  if (z < 3) return { cell: null, bbox: null, step: 1 };
-  if (z < 5) return { cell: null, bbox: snappedBounds(map, 5), step: 0.25 };
-  return { cell: null, bbox: snappedBounds(map, 1), step: 0.1 };
+  // fewer dots when zoomed far out: enough to read the pattern, quick to send
+  if (z < 3) return { cell: null, bbox: null, step: 1, limit: 8000 };
+  if (z < 5) return { cell: null, bbox: snappedBounds(map, 5), step: 0.25, limit: 15000 };
+  return { cell: null, bbox: snappedBounds(map, 1), step: 0.1, limit: 30000 };
 }
 
 /** Reports the PointView whenever the map stops moving. Use inside <BaseMap>. */
@@ -58,7 +59,7 @@ export function MapViewWatcher({ onChange }: { onChange: (v: PointView) => void 
     let last = "";
     const update = () => {
       const v = pointViewOf(map);
-      const key = `${v.cell}|${v.bbox}|${v.step}`;
+      const key = `${v.cell}|${v.bbox}|${v.step}|${v.limit}`;
       if (key !== last) {
         last = key;
         onChange(v);

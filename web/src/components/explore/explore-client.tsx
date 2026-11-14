@@ -51,10 +51,12 @@ export function ExploreClient({
   // What the map shows decides what is fetched (see MapViewWatcher): points in
   // view, or per-cell sums when zoomed out.
   const [view, setView] = useState<PointView | null>(null);
-  const viewQuery = view ? `${view.bbox ? `&bbox=${view.bbox}` : ""}${view.cell ? `&cell=${view.cell}` : ""}` : "";
+  const viewQuery = view
+    ? `&limit=${view.limit}${view.bbox ? `&bbox=${view.bbox}` : ""}${view.cell ? `&cell=${view.cell}` : ""}`
+    : "";
   const fetchWeek = (w: string) => {
     const r = range(w);
-    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}&limit=30000${viewQuery}`);
+    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}${viewQuery}`);
   };
   const { data, isFetching } = useQuery({
     queryKey: ["hotspots", week, viewQuery],
@@ -80,11 +82,19 @@ export function ExploreClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
 
+  // Playback only moves on once the next week's detections are loaded, so every
+  // frame shows its own week (on a slow connection it plays slower, not frozen).
   useEffect(() => {
     if (!playing) return;
-    const id = setInterval(() => setIndex((i) => (i + 1 >= timeline.length ? 0 : i + 1)), 700 / speed);
+    const id = setInterval(() => {
+      setIndex((i) => {
+        const next = i + 1 >= timeline.length ? 0 : i + 1;
+        const w = timeline[next]?.week;
+        return w && qc.getQueryData(["hotspots", w, viewQuery]) ? next : i;
+      });
+    }, 700 / speed);
     return () => clearInterval(id);
-  }, [playing, speed, timeline.length]);
+  }, [playing, speed, timeline, qc, viewQuery]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

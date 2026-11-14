@@ -2,8 +2,8 @@
 
 The detection record does not fit in memory at world scale (hundreds of
 millions of points over 25 years), so the API never loads it. Each batch store
-keeps ``hotspots/<year>.parquet``, rows sorted by a 1° cell and then by date, so
-DuckDB can skip row groups for an area-of-interest query and only reads the
+keeps ``hotspots/<year>.parquet``, rows sorted by date (then by 1° cell), so
+DuckDB skips the row groups outside a weekly map query and only reads the
 columns a query asks for. A query touches only the files of the years it spans.
 
 The full build writes ``<year>.parquet``; the daily refresh only ever writes a
@@ -24,12 +24,14 @@ import pandas as pd
 
 POINTS_DIR = "hotspots"
 COLUMNS = ["sensor", "satellite", "acq_date", "acq_time", "lat", "lon", "frp", "confidence", "region_id"]
-ROW_GROUP = 100_000
+ROW_GROUP = 50_000
 
 
 def _sorted(df: pd.DataFrame) -> pd.DataFrame:
+    """Date first: the map asks for a few weeks at a time, and date-ordered row
+    groups let a weekly query skip the rest of the year. Within a day, by 1° cell."""
     cell = np.floor(df["lat"]).astype(int) * 1000 + np.floor(df["lon"]).astype(int)
-    return df.assign(_cell=cell).sort_values(["_cell", "acq_date", "acq_time"]).drop(columns="_cell")
+    return df.assign(_cell=cell).sort_values(["acq_date", "_cell", "acq_time"]).drop(columns="_cell")
 
 
 def write_points(store_dir: Path, hot: pd.DataFrame, years: list[int] | None = None, tail: bool = False) -> None:
