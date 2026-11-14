@@ -1,0 +1,164 @@
+{
+ "trained_at": "2026-10-30T09:53:05.020339",
+ "data_end": "2026-10-29",
+ "source": "firms",
+ "features": [
+  "lag7",
+  "lag14",
+  "lag30",
+  "lag90",
+  "days_since_fire",
+  "anom7",
+  "anom30",
+  "ytd_ratio",
+  "clim_next7",
+  "clim_p75_next7",
+  "clim_next30",
+  "tmax_7d",
+  "rh_7d",
+  "wind_7d",
+  "precip_7d",
+  "precip_30d",
+  "days_since_rain",
+  "vpd_7d",
+  "fc_tmax",
+  "fc_rh_min",
+  "fc_wind_max",
+  "fc_precip",
+  "fc_vpd_max",
+  "fc_dry_days",
+  "ndvi",
+  "doy_sin",
+  "doy_cos",
+  "elevation",
+  "log_area",
+  "lat",
+  "lon"
+ ],
+ "importance": [
+  {
+   "feature": "lag14",
+   "gain": 0.2018
+  },
+  {
+   "feature": "anom7",
+   "gain": 0.1083
+  },
+  {
+   "feature": "anom30",
+   "gain": 0.0934
+  },
+  {
+   "feature": "clim_p75_next7",
+   "gain": 0.0919
+  },
+  {
+   "feature": "lag7",
+   "gain": 0.0721
+  },
+  {
+   "feature": "clim_next7",
+   "gain": 0.0593
+  },
+  {
+   "feature": "fc_precip",
+   "gain": 0.0577
+  },
+  {
+   "feature": "lag30",
+   "gain": 0.0428
+  },
+  {
+   "feature": "days_since_fire",
+   "gain": 0.0375
+  },
+  {
+   "feature": "fc_dry_days",
+   "gain": 0.0363
+  },
+  {
+   "feature": "ytd_ratio",
+   "gain": 0.0272
+  },
+  {
+   "feature": "fc_vpd_max",
+   "gain": 0.0166
+  },
+  {
+   "feature": "fc_rh_min",
+   "gain": 0.0154
+  },
+  {
+   "feature": "clim_next30",
+   "gain": 0.0145
+  },
+  {
+   "feature": "lat",
+   "gain": 0.0127
+  },
+  {
+   "feature": "doy_cos",
+   "gain": 0.0122
+  },
+  {
+   "feature": "vpd_7d",
+   "gain": 0.0108
+  },
+  {
+   "feature": "lon",
+   "gain": 0.0108
+  },
+  {
+   "feature": "rh_7d",
+   "gain": 0.0085
+  },
+  {
+   "feature": "precip_30d",
+   "gain": 0.0085
+  },
+  {
+   "feature": "lag90",
+   "gain": 0.008
+  },
+  {
+   "feature": "doy_sin",
+   "gain": 0.0079
+  },
+  {
+   "feature": "log_area",
+   "gain": 0.0065
+  },
+  {
+   "feature": "tmax_7d",
+   "gain": 0.0063
+  },
+  {
+   "feature": "ndvi",
+   "gain": 0.0062
+  },
+  {
+   "feature": "days_since_rain",
+   "gain": 0.0059
+  },
+  {
+   "feature": "fc_tmax",
+   "gain": 0.0058
+  },
+  {
+   "feature": "fc_wind_max",
+   "gain": 0.0051
+  },
+  {
+   "feature": "precip_7d",
+   "gain": 0.0051
+  },
+  {
+   "feature": "elevation",
+   "gain": 0.0031
+  },
+  {
+   "feature": "wind_7d",
+   "gain": 0.0018
+  }
+ ]
+}

@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass
 from datetime import date
@@ -11,10 +12,55 @@ ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = Path(os.environ.get("ODLAR_DATA_DIR", ROOT / "data"))
 CACHE_DIR = DATA_DIR / "cache"
 BOUNDARY_DIR = DATA_DIR / "boundaries"
-STORE_DIR = Path(os.environ.get("ODLAR_STORE_DIR", ROOT / "artifacts" / "store"))
-MODEL_DIR = Path(os.environ.get("ODLAR_MODEL_DIR", ROOT / "artifacts" / "models"))
-# Inputs the daily refresh needs that the served store does not keep.
-STATE_DIR = Path(os.environ.get("ODLAR_STATE_DIR", ROOT / "artifacts" / "state"))
+ARTIFACTS_DIR = Path(os.environ.get("ODLAR_ARTIFACTS_DIR", ROOT / "artifacts"))
+
+
+@dataclass(frozen=True)
+class Batch:
+    """A group of countries built, trained and refreshed together.
+
+    Each batch has its own store, models and refresh state under
+    ``artifacts/<name>/``; the API serves the union of all built batches.
+    ``id_offset`` keeps region ids unique and stable across batches.
+    ``firms`` picks the archive source: the 5-day area API (fine for a small
+    area) or FIRMS' yearly per-country files plus the area API for the rest.
+    """
+
+    name: str
+    countries: tuple[str, ...]  # ISO3 keys of odlar.grid.regions.COUNTRIES
+    id_offset: int
+    firms: str = "country_files"  # or "area"
+    stream: bool = False  # too many detections to hold at once: ingest year by year
+
+    @property
+    def store_dir(self) -> Path:
+        return ARTIFACTS_DIR / self.name / "store"
+
+    @property
+    def model_dir(self) -> Path:
+        return ARTIFACTS_DIR / self.name / "models"
+
+    @property
+    def state_dir(self) -> Path:
+        """Inputs the daily refresh needs that the served store does not keep."""
+        return ARTIFACTS_DIR / self.name / "state"
+
+
+BATCHES = {b.name: b for b in (
+    Batch("caucasus", ("AZE", "GEO", "ARM"), 0, firms="area"),
+    Batch("turkey_iran", ("TUR", "IRN"), 10_000),
+)}
+# The rest of the world (odlar.world writes this file)
+WORLD_FILE = DATA_DIR / "world.json"
+if WORLD_FILE.exists():
+    for _b in json.loads(WORLD_FILE.read_text())["batches"]:
+        BATCHES.setdefault(_b["name"], Batch(_b["name"], tuple(_b["countries"]), _b["id_offset"],
+                                             stream=_b.get("stream", False)))
+PRIMARY_BATCH = "caucasus"  # the pilot: headline numbers and the landing page
+
+STORE_DIR = BATCHES[PRIMARY_BATCH].store_dir
+MODEL_DIR = BATCHES[PRIMARY_BATCH].model_dir
+STATE_DIR = BATCHES[PRIMARY_BATCH].state_dir
 
 
 @dataclass(frozen=True)
@@ -28,7 +74,7 @@ class BBox:
         return f"{self.west},{self.south},{self.east},{self.north}"
 
 
-# South Caucasus pilot area: Azerbaijan, Georgia, Armenia.
+# South Caucasus pilot area: Azerbaijan, Georgia, Armenia (the "caucasus" batch).
 PILOT_BBOX = BBox(west=39.5, south=38.2, east=51.0, north=43.8)
 
 # Sensor record boundaries.

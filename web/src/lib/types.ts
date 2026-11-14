@@ -8,7 +8,7 @@ export interface RegionRef {
   slug: string;
   name_en: string;
   name_az: string;
-  country: "az" | "ge" | "am";
+  country: string; // ISO 3166-1 alpha-2, lower case ("az", "ge", "tr", ...)
   level: "country" | "district" | "province";
   kind?: string;
   parent_id?: number | null;

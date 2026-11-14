@@ -1,6 +1,7 @@
 """Daily refresh: new NASA FIRMS detections and weather, current risk re-scored.
 
-    python -m odlar.refresh              # needs FIRMS_MAP_KEY; through yesterday (UTC)
+    python -m odlar.refresh              # every built batch; needs FIRMS_MAP_KEY; through yesterday (UTC)
+    python -m odlar.refresh --batch turkey_iran
 
 The full pipeline (``odlar.pipeline``) fits the harmonization and the models; this
 only moves the record forward. The last ``--lookback`` days are fetched again from
@@ -19,6 +20,8 @@ import argparse
 import json
 import os
 import shutil
+import subprocess
+import sys
 import time
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -26,24 +29,28 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from odlar import store
+from odlar import points, store
 from odlar.calendar.engine import build_calendar
-from odlar.config import MODEL_DIR, MODIS_START, OVERLAP_START, STATE_DIR, STORE_DIR
+from odlar.config import BATCHES, MODIS_START, OVERLAP_START
 from odlar.grid.gridding import daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
 from odlar.ingest import firms, ndvi, openmeteo, synthetic
 from odlar.model import predict, train
 from odlar.model.features import build_panel, daily_series, weather_norms, weekly_clim
-from odlar.pipeline import log, weather_recent
+from odlar.pipeline import log, recent_start, weather_recent
 
 HOT_COLUMNS = ["sensor", "satellite", "acq_date", "acq_time", "lat", "lon", "frp", "confidence", "region_id"]
 WEATHER_COLUMNS = ["region_id", "date", "tmax", "tmean", "rh", "wind", "precip"]
 
 
+class UpToDate(Exception):
+    pass
+
+
 def new_detections(key: str, regions, since: date, end: date, static_cells: pd.DataFrame,
-                   fetch=firms.fetch_recent) -> pd.DataFrame:
+                   fetch=firms.fetch_recent, bboxes=None) -> pd.DataFrame:
     """FIRMS NRT detections for [since, end], cleaned the same way as the archive."""
-    raw = fetch(key, since, end)
+    raw = fetch(key, since, end, bboxes) if bboxes is not None else fetch(key, since, end)
     hot = firms.quality_filter(raw) if len(raw) else raw
     if len(hot):
         hot = hot[~firms.in_cells(hot, static_cells).to_numpy()]
@@ -94,31 +101,49 @@ def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool) -> t
     return weather.sort_values(["region_id", "date"]).reset_index(drop=True), fc, "open_meteo"
 
 
-def run(end: date | None = None, lookback: int = 7, store_dir: Path = STORE_DIR, model_dir: Path = MODEL_DIR,
-        state_dir: Path = STATE_DIR, map_key: str | None = None, offline: bool = False,
-        fetch=firms.fetch_recent) -> dict:
+def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path | None = None,
+        model_dir: Path | None = None, state_dir: Path | None = None, map_key: str | None = None,
+        offline: bool = False, fetch=firms.fetch_recent) -> dict:
     t0 = time.time()
+    b = BATCHES[batch]
+    store_dir, model_dir, state_dir = store_dir or b.store_dir, model_dir or b.model_dir, state_dir or b.state_dir
     meta = json.loads((store_dir / "meta.json").read_text())
     prev_end = date.fromisoformat(meta["data_end"])
     end = end or datetime.now(UTC).date() - timedelta(days=1)
-    since = prev_end - timedelta(days=lookback - 1)
+    # Detections up to the full build's last day live in its year files; the
+    # refresh keeps everything after that in small tail files and re-fetches the
+    # last ``lookback`` days of that tail each run.
+    build_end = date.fromisoformat(meta.get("build_end") or meta["data_end"])
+    meta.setdefault("build_end", build_end.isoformat())
+    meta.setdefault("build_n_hotspots", int(meta.get("n_hotspots", 0)))
+    meta.setdefault("build_by_satellite", dict(meta.get("by_satellite") or {}))
+    since = max(prev_end - timedelta(days=lookback - 1), build_end + timedelta(days=1))
     if end < since:
-        raise SystemExit(f"store already covers {prev_end}; nothing to do for {end}")
-    regions = load_regions()
+        raise UpToDate(f"store already covers {prev_end}; nothing to do for {end}")
+    regions = load_regions(batch)
     leaves = leaf_regions(regions)
+    boxes = firms.batch_bboxes(b, regions)
 
     static_cells = pd.read_parquet(state_dir / "static_cells.parquet")
-    new = new_detections(map_key or os.environ.get("FIRMS_MAP_KEY", ""), regions, since, end, static_cells, fetch)
-    old_hot = pd.read_parquet(store_dir / "hotspots.parquet")
-    hot = pd.concat([old_hot[old_hot["acq_date"] < pd.Timestamp(since)], new], ignore_index=True)
-    hot = hot.astype(old_hot.dtypes.to_dict())
+    new = new_detections(map_key or os.environ.get("FIRMS_MAP_KEY", ""), regions, since, end, static_cells, fetch,
+                         boxes)
+    tail_years = list(range(build_end.year, end.year + 1))
+    old_tail = points.read_points(store_dir, tail_years, tail=True)
+    old_tail["acq_date"] = pd.to_datetime(old_tail["acq_date"])
+    replaced = old_tail[old_tail["acq_date"] >= pd.Timestamp(since)]
+    tail = pd.concat([old_tail[old_tail["acq_date"] < pd.Timestamp(since)], new], ignore_index=True)
+    tail = tail.astype((new if len(new) else old_tail).dtypes.to_dict())
     log(f"FIRMS NRT {since}..{end}: {len(new):,} detections (was "
-        f"{int((old_hot['acq_date'] >= pd.Timestamp(since)).sum()):,} in that window)", t0)
+        f"{len(replaced):,} in that window)", t0)
 
-    # Only the recent window is re-aggregated; older weeks come from the store.
-    lo = pd.Timestamp(date((end - timedelta(days=400)).year - 1, 1, 1))
+    # Region-day counts of the recent window come from the refresh state; only
+    # the re-fetched days are recounted. Older weeks come from the store.
+    lo = recent_start(end)
+    daily = pd.concat([recent_daily(state_dir, store_dir, regions, lo, build_end, since),
+                       daily_counts(new, regions, since, end)], ignore_index=True)
+    daily["date"] = pd.to_datetime(daily["date"])
+    daily = daily[daily["date"] >= lo].sort_values(["region_id", "date"]).reset_index(drop=True)
     from_week = pd.Timestamp(since) - pd.Timedelta(days=since.weekday())
-    daily = daily_counts(hot[hot["acq_date"] >= lo], regions, lo, end)
     hw = harmonized_weekly(pd.read_parquet(store_dir / "weekly.parquet"),
                            weekly_from_daily(daily[daily["date"] >= from_week]), from_week)
     annual = annual_update(pd.read_parquet(store_dir / "annual.parquet"), hw, since.year)
@@ -178,27 +203,60 @@ def run(end: date | None = None, lookback: int = 7, store_dir: Path = STORE_DIR,
     rh = hist[["region_id", "date", "target_sum7", "threshold7", "value"]].merge(
         old_rh[["region_id", "date", "probability", "in_sample"]], on=["region_id", "date"], how="left")
     fresh = rh["probability"].isna().to_numpy()
-    rh.loc[fresh, "probability"] = models.proba(hist[fresh]).round(4)
+    if fresh.any():
+        rh.loc[fresh, "probability"] = models.proba(hist[fresh]).round(4)
     rh["in_sample"] = rh["in_sample"].fillna(False).astype(bool)
     rh = rh.astype(old_rh.dtypes.to_dict())[old_rh.columns].reset_index(drop=True)
     log(f"re-scored: {int((risk_now['level'] != 'low').sum())} regions above low risk", t0)
 
     meta.update({"data_end": end.isoformat(), "built_at": pd.Timestamp.now().isoformat(),
                  "refreshed_at": pd.Timestamp.now(tz="UTC").isoformat(), "forecast_source": fc_source,
-                 "n_hotspots": int(len(hot)), "by_satellite": hot.groupby("satellite").size().to_dict()})
+                 "n_hotspots": int(meta["build_n_hotspots"]) + len(tail),
+                 "by_satellite": satellite_counts(meta["build_by_satellite"], tail.iloc[:0], tail)})
     tmp = store_dir.with_name(store_dir.name + ".new")
     shutil.rmtree(tmp, ignore_errors=True)
-    store.write_all(tmp, regions=regions, hotspots=hot, weekly=hw, annual=annual, calendars=calendars,
+    store.write_all(tmp, regions=regions, hotspots=None, grid=None, weekly=hw, annual=annual, calendars=calendars,
                     skill=json.loads((store_dir / "skill.json").read_text()),
                     model_report=json.loads((store_dir / "model_report.json").read_text()),
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=rh,
-                    grid=grid_cells(hot), meta=meta, weather=weather_recent(w_ext, end))
+                    meta=meta, weather=weather_recent(w_ext, end))
+    # The build's year files and grid are linked over unchanged; only tails are new.
+    points.write_points(tmp, tail, tail_years, tail=True)
+    points.carry_over(store_dir, tmp, skip={f"{y}.tail.parquet" for y in tail_years})
+    points.link(store_dir / "grid.parquet", tmp / "grid.parquet")
+    if len(tail):
+        grid_cells(tail).to_parquet(tmp / "grid_tail.parquet", index=False)
     swap(tmp, store_dir)
-    w_tmp = state_dir / "weather.parquet.new"
-    weather[WEATHER_COLUMNS].to_parquet(w_tmp)
-    os.replace(w_tmp, state_dir / "weather.parquet")
+    for name, df in (("weather", weather[WEATHER_COLUMNS]), ("daily_recent", daily)):
+        part = state_dir / f"{name}.parquet.new"
+        df.to_parquet(part, index=False)
+        os.replace(part, state_dir / f"{name}.parquet")
     log(f"store swapped in: data through {end}", t0)
     return {"data_end": end.isoformat(), "new_detections": len(new), "risk_now": risk_now}
+
+
+def recent_daily(state_dir: Path, store_dir: Path, regions, lo: pd.Timestamp, build_end: date,
+                 since: date) -> pd.DataFrame:
+    """Region-day counts from ``lo`` up to the day before ``since``: from the refresh
+    state, or (once, for a store built before the state kept them) from the points."""
+    path = state_dir / "daily_recent.parquet"
+    if path.exists():
+        d = pd.read_parquet(path)
+        d["date"] = pd.to_datetime(d["date"])
+        return d[(d["date"] >= lo) & (d["date"] < pd.Timestamp(since))]
+    hot = points.read_points(store_dir, list(range(lo.year, since.year + 1)))
+    hot["acq_date"] = pd.to_datetime(hot["acq_date"])
+    hot = hot[(hot["acq_date"] >= lo) & (hot["acq_date"] < pd.Timestamp(since))]
+    return daily_counts(hot, regions, lo.date(), since - timedelta(days=1))
+
+
+def satellite_counts(old: dict, removed: pd.DataFrame, added: pd.DataFrame) -> dict:
+    out = {k: int(v) for k, v in old.items()}
+    for sat, n in removed.groupby("satellite").size().items():
+        out[sat] = out.get(sat, 0) - int(n)
+    for sat, n in added.groupby("satellite").size().items():
+        out[sat] = out.get(sat, 0) + int(n)
+    return out
 
 
 def swap(new: Path, current: Path) -> None:
@@ -215,12 +273,39 @@ def main() -> None:
     ap.add_argument("--end", type=date.fromisoformat, default=None)
     ap.add_argument("--lookback", type=int, default=7)
     ap.add_argument("--offline", action="store_true", help="no weather calls (climatological forecast)")
+    ap.add_argument("--batch", action="append", choices=sorted(BATCHES),
+                    help="batch to refresh (repeatable); default: every batch that has a store")
     a = ap.parse_args()
     if not os.environ.get("FIRMS_MAP_KEY"):
         raise SystemExit("FIRMS_MAP_KEY not set")
-    out = run(end=a.end, lookback=a.lookback, offline=a.offline)
-    print(json.dumps({"data_end": out["data_end"], "new_detections": out["new_detections"],
-                      "levels": out["risk_now"]["level"].value_counts().to_dict()}))
+    names = a.batch or [n for n, b in BATCHES.items() if (b.store_dir / "meta.json").exists()]
+    if len(names) > 1:
+        # one process per batch, so memory is handed back between batches
+        failed = []
+        for name in names:
+            args = [sys.executable, "-m", "odlar.refresh", "--batch", name, "--lookback", str(a.lookback)]
+            args += (["--end", a.end.isoformat()] if a.end else []) + (["--offline"] if a.offline else [])
+            if subprocess.run(args, check=False).returncode:
+                failed.append(name)
+        if failed:
+            raise SystemExit(f"refresh failed for {failed}")
+        return
+    failed = []
+    for name in names:
+        print(f"== {name}", flush=True)
+        try:
+            out = run(name, end=a.end, lookback=a.lookback, offline=a.offline)
+        except UpToDate as exc:
+            print(f"   {exc}", flush=True)
+            continue
+        except Exception as exc:  # noqa: BLE001 — one batch failing must not stop the others
+            print(f"   {name} failed: {exc!r}", flush=True)
+            failed.append(name)
+            continue
+        print(json.dumps({"batch": name, "data_end": out["data_end"], "new_detections": out["new_detections"],
+                          "levels": out["risk_now"]["level"].value_counts().to_dict()}), flush=True)
+    if failed:
+        raise SystemExit(f"refresh failed for {failed}")
 
 
 if __name__ == "__main__":

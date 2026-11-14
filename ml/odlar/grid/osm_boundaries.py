@@ -83,8 +83,46 @@ def fetch_units(iso2: str, level: int | str, client: httpx.Client, bbox=None) ->
         geom = relation_polygon(rel)
         if geom is not None:
             tags = rel.get("tags", {})
-            rows.append({"osm_id": rel["id"], "osm_name": tags.get("name:en", tags.get("name")), "geometry": geom})
-    return gpd.GeoDataFrame(rows, columns=["osm_id", "osm_name", "geometry"], geometry="geometry", crs=4326)
+            rows.append({"osm_id": rel["id"], "osm_name": tags.get("name:en", tags.get("name")),
+                         "name_az": tags.get("name:az"), "geometry": geom})
+    return gpd.GeoDataFrame(rows, columns=["osm_id", "osm_name", "name_az", "geometry"], geometry="geometry",
+                            crs=4326)
+
+
+def geoboundaries(iso3: str, adm: str, client: httpx.Client, boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
+    """geoBoundaries open release (simplified), downloaded once into ``boundary_dir``."""
+    path = boundary_dir / f"{iso3}_{adm}.geojson"
+    if not path.exists():
+        meta = client.get(f"https://www.geoboundaries.org/api/current/gbOpen/{iso3}/{adm}/").json()
+        resp = client.get(meta["simplifiedGeometryGeoJSON"], follow_redirects=True)
+        resp.raise_for_status()
+        path.write_bytes(resp.content)
+    return gpd.read_file(path).to_crs(4326)
+
+
+def build_osm_only(iso3: str, client: httpx.Client) -> gpd.GeoDataFrame:
+    """Countries without a legacy unit list: OSM's units and names as they are,
+    the sea cut off with geoBoundaries' outline as the land reference."""
+    from odlar.grid.regions import COUNTRIES
+    meta = COUNTRIES[iso3]
+    land = geoboundaries(iso3, "ADM0", client).geometry.make_valid().union_all()
+    osm = fetch_units(meta["iso2"], meta["osm_level"], client)
+    coast = fetch_coastline(land.bounds, client)
+    osm["geometry"] = [land_part(g, coast, land) for g in osm.geometry]
+    # a relation that mostly repeats another (an old or duplicate boundary) is dropped
+    eq = osm.to_crs(6933).geometry
+    order = eq.area.sort_values(ascending=False).index
+    keep, covered = [], None
+    for j in order:
+        if covered is not None and eq[j].intersection(covered).area > 0.8 * eq[j].area:
+            print(f"  dropping {osm.at[j, 'osm_name']}: duplicates other units")
+            continue
+        keep.append(j)
+        covered = eq[j] if covered is None else covered.union(eq[j])
+    osm = osm.loc[sorted(keep)]
+    print(f"{iso3}: {len(osm)} OSM units, {osm['name_az'].notna().sum()} with an Azerbaijani name")
+    return gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
+                             "osm_id": osm["osm_id"], "geometry": osm.geometry}, crs=4326)
 
 
 def fetch_coastline(bounds, client: httpx.Client) -> MultiLineString | None:
@@ -219,7 +257,7 @@ def main() -> None:
     with httpx.Client(timeout=400, headers={"User-Agent": USER_AGENT}) as client:
         from odlar.grid.regions import COUNTRIES
         for iso3 in a.countries:
-            gdf = build(iso3, client)
+            gdf = build_osm_only(iso3, client) if COUNTRIES[iso3].get("source") == "osm" else build(iso3, client)
             path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"
             path.write_text(json.dumps(json.loads(gdf.to_json(drop_id=True)), separators=(",", ":")))
             print(f"  wrote {path.name} ({path.stat().st_size / 1e6:.1f} MB)")

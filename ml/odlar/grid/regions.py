@@ -7,15 +7,18 @@ national aggregates and as the hierarchical fallback in harmonization.
 
 from __future__ import annotations
 
+import json
 import re
+import unicodedata
 from functools import lru_cache
 from pathlib import Path
 
 import geopandas as gpd
 import pandas as pd
 from shapely.geometry import Polygon, box
+from shapely.ops import unary_union
 
-from odlar.config import BOUNDARY_DIR
+from odlar.config import BATCHES, BOUNDARY_DIR, PRIMARY_BATCH, WORLD_FILE
 
 COUNTRIES = {
     "AZE": {"code": "az", "iso2": "AZ", "name_en": "Azerbaijan", "name_az": "Azərbaycan", "file": "AZE_ADM2",
@@ -24,7 +27,18 @@ COUNTRIES = {
             "osm_level": 4},
     "ARM": {"code": "am", "iso2": "AM", "name_en": "Armenia", "name_az": "Ermənistan", "file": "ARM_ADM1",
             "osm_level": 4},
+    # OSM-only countries: the unit list and names come from OSM itself
+    # (odlar.grid.osm_boundaries --osm-only), with the Azerbaijani name where OSM has one.
+    "TUR": {"code": "tr", "iso2": "TR", "name_en": "Turkey", "name_az": "Türkiyə", "file": "TUR_ADM1",
+            "osm_level": 4, "source": "osm", "firms_name": "Turkey"},
+    "IRN": {"code": "ir", "iso2": "IR", "name_en": "Iran", "name_az": "İran", "file": "IRN_ADM1",
+            "osm_level": 4, "source": "osm", "firms_name": "Iran"},
 }
+
+# Every other country (odlar.world): OSM units and names, FIRMS country files.
+if WORLD_FILE.exists():
+    for _iso3, _c in json.loads(WORLD_FILE.read_text())["countries"].items():
+        COUNTRIES.setdefault(_iso3, _c)
 
 AZ_NAMES = {
     "Absheron": "Abşeron", "Agdam": "Ağdam", "Agdash": "Ağdaş", "Aghjabadi": "Ağcabədi",
@@ -58,8 +72,13 @@ AZ_NAMES = {
 }
 
 
+_ASCII = str.maketrans({"ı": "i", "İ": "i", "ə": "e", "Ə": "e", "ş": "s", "Ş": "s", "ç": "c", "Ç": "c",
+                        "ğ": "g", "Ğ": "g", "ö": "o", "Ö": "o", "ü": "u", "Ü": "u", "â": "a", "î": "i", "û": "u"})
+
+
 def slugify(text: str) -> str:
-    text = text.replace("–", "-").lower()
+    text = unicodedata.normalize("NFKD", text.replace("–", "-").translate(_ASCII))
+    text = "".join(c for c in text if not unicodedata.combining(c)).lower()
     text = re.sub(r"[^a-z0-9]+", "-", text)
     return text.strip("-")
 
@@ -81,28 +100,51 @@ def _localized(base: str, kind: str) -> tuple[str, str]:
     return base, az
 
 
-def load_regions(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
-    """Return all regions (sub-national + country) with stable integer ids."""
+def _osm_names(r) -> tuple[str, str, str]:
+    """(slug base, English, Azerbaijani) for an OSM-only unit: 'Kerman Province' -> 'Kerman'."""
+    en = re.sub(r"\s+(Province|Region|Governorate|Oblast)$", "", str(r["shapeName"])).strip()
+    az = r.get("name_az")
+    return en, en, az if isinstance(az, str) and az else en
+
+
+def polygonal(geom):
+    """Only the areal part of a geometry: repairs and overlays can leave stray
+    lines or points beside the polygons, which the map and the overlays reject."""
+    if geom is None or geom.geom_type in ("Polygon", "MultiPolygon"):
+        return geom
+    parts = [p for p in getattr(geom, "geoms", []) if p.geom_type in ("Polygon", "MultiPolygon")]
+    return unary_union(parts) if parts else Polygon()
+
+
+def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
+    """All regions (sub-national + country) of one batch, with stable integer ids
+    (``batch.id_offset`` + rank within the batch)."""
+    b = BATCHES[batch]
     rows = []
     taken = None
-    for iso, meta in COUNTRIES.items():
+    for iso in b.countries:
+        meta = COUNTRIES[iso]
         # OSM geometry (see odlar.grid.osm_boundaries) where it has been fetched
         osm = boundary_dir / f"{meta['file']}_OSM.geojson"
         gdf = gpd.read_file(osm if osm.exists() else boundary_dir / f"{meta['file']}.geojson").to_crs(4326)
-        gdf["geometry"] = gdf.geometry.make_valid()
+        gdf["geometry"] = [polygonal(g) for g in gdf.geometry.make_valid()]
         # geoBoundaries ships a few split polygons with the same name (e.g. Lankaran
         # District twice); dissolve them so every name maps to one region.
         gdf = gdf.dissolve(by="shapeName", as_index=False)
         # Ground claimed by two countries' sources (e.g. the Artsvashen exclave)
         # stays with the country listed first, so every point has one region.
         if taken is not None:
-            gdf["geometry"] = gdf.geometry.difference(taken)
+            gdf["geometry"] = [polygonal(g) for g in gdf.geometry.difference(taken)]
             gdf = gdf[~gdf.geometry.is_empty]
         country_union = gdf.geometry.union_all()
         taken = country_union if taken is None else taken.union(country_union)
         for _, r in gdf.iterrows():
-            base, kind = _split_name(r["shapeName"])
-            name_en, name_az = _localized(base, kind)
+            if meta.get("source") == "osm":
+                base, name_en, name_az = _osm_names(r)
+                kind = "province"
+            else:
+                base, kind = _split_name(r["shapeName"])
+                name_en, name_az = _localized(base, kind)
             rows.append({
                 "slug": f"{meta['code']}-{slugify(base)}" + ("-city" if kind == "city" else ""),
                 "name_en": name_en,
@@ -120,7 +162,7 @@ def load_regions(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
 
     regions = gpd.GeoDataFrame(rows, crs=4326)
     regions = regions.sort_values(["country", "level", "slug"]).reset_index(drop=True)
-    regions.insert(0, "region_id", range(1, len(regions) + 1))
+    regions.insert(0, "region_id", range(b.id_offset + 1, b.id_offset + len(regions) + 1))
     parent = {r.country: r.region_id for r in regions.itertuples() if r.level == "country"}
     regions["parent_id"] = [None if r.level == "country" else parent[r.country] for r in regions.itertuples()]
     eq = regions.to_crs(6933)  # equal-area for km²
@@ -131,9 +173,9 @@ def load_regions(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
     return regions
 
 
-@lru_cache(maxsize=1)
-def cached_regions() -> gpd.GeoDataFrame:
-    return load_regions()
+@lru_cache(maxsize=8)
+def cached_regions(batch: str = PRIMARY_BATCH) -> gpd.GeoDataFrame:
+    return load_regions(batch)
 
 
 def leaf_regions(regions: gpd.GeoDataFrame) -> gpd.GeoDataFrame:

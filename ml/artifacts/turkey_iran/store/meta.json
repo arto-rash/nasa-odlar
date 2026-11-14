@@ -1,0 +1,1 @@
+{"source":"firms","weather_source":"nasa_power+open_meteo","forecast_source":"open_meteo","ndvi_source":"climatology","data_start":"2000-11-01","data_end":"2026-10-29","built_at":"2026-10-30T09:53:26.275584","n_hotspots":1887891,"n_boot":200,"overlap_start":"2012-01-23","by_satellite":{"A":169071,"J1":458199,"J2":305865,"N":755556,"T":199200}}

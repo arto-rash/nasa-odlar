@@ -21,7 +21,7 @@ def test_health(client):
 
 def test_overview(client):
     d = client.get("/overview").json()
-    assert d["n_regions"] == 104
+    assert d["n_regions"] >= 104 and {"az", "ge", "am"} <= set(d["countries"])
     assert abs(d["skill"]["bias"]) < 0.15 and d["skill"]["raw_modis_bias"] < -0.4
     assert d["model"]["harmonized"]["brier_skill"] > d["model"]["raw"]["brier_skill"]
     assert d["pilot"] and d["risk_top"]
@@ -29,10 +29,12 @@ def test_overview(client):
 
 def test_regions_and_geojson(client):
     rs = client.get("/regions").json()
-    assert len(rs) == 104 and all("risk" in r for r in rs)
+    pilot = [r for r in rs if r["country"] in ("az", "ge", "am")]
+    assert len(pilot) == 104 and all("risk" in r for r in rs)  # plus any other built batch
+    assert len({r["id"] for r in rs}) == len(rs)
     assert any(r["annual"] for r in rs if r["level"] != "country")
     gj = client.get("/regions/geojson").json()
-    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == 104
+    assert gj["type"] == "FeatureCollection" and len(gj["features"]) == len(rs)
 
 
 def test_region_detail_and_404(client):

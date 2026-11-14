@@ -243,22 +243,34 @@ def risk_map(s: Store) -> list[dict]:
     return sorted(out, key=lambda x: -(x["probability"] or 0))
 
 
+def _leaf_ids(s: Store, r) -> list[int]:
+    return [int(r.region_id)] if r.level != "country" else \
+        s.regions.loc[s.regions["parent_id"] == r.region_id, "region_id"].astype(int).tolist()
+
+
+def _point_filter(s: Store, start: date, end: date, sensor: str | None = None, region: str | None = None,
+                  bbox: tuple[float, float, float, float] | None = None) -> tuple[str, list]:
+    where, params = ["acq_date BETWEEN ? AND ?"], [pd.Timestamp(start), pd.Timestamp(end)]
+    if sensor:
+        where.append("sensor = ?")
+        params.append(sensor.upper())
+    if region:
+        where.append("list_contains(?, region_id)")
+        params.append(_leaf_ids(s, region_or_404(s, region)))
+    if bbox:
+        where.append("lon BETWEEN ? AND ? AND lat BETWEEN ? AND ?")
+        params += [bbox[0], bbox[2], bbox[1], bbox[3]]
+    return " AND ".join(where), params
+
+
 def hotspots(s: Store, start: date, end: date, sensor: str | None = None, region: str | None = None,
-             limit: int = 20000) -> dict:
+             limit: int = 20000, bbox: tuple[float, float, float, float] | None = None) -> dict:
     if (end - start).days > 92:
         raise ValueError("date range is limited to 92 days")
-    h = s.hotspots
-    m = (h["acq_date"] >= pd.Timestamp(start)) & (h["acq_date"] <= pd.Timestamp(end))
-    if sensor:
-        m &= h["sensor"] == sensor.upper()
-    if region:
-        r = region_or_404(s, region)
-        ids = [int(r.region_id)] if r.level != "country" else \
-            s.regions.loc[s.regions["parent_id"] == r.region_id, "region_id"].tolist()
-        m &= h["region_id"].isin(ids)
-    sel = h[m]
-    total = len(sel)
-    sel = sel.head(limit)
+    where, params = _point_filter(s, start, end, sensor, region, bbox)
+    years = range(start.year, end.year + 1)
+    total = s.points.count(where, params, years)
+    sel = s.points.query(where, params, "lon, lat, sensor, satellite, frp, acq_date", years, limit)
     return {"total": total, "truncated": total > limit,
             "columns": ["lon", "lat", "sensor", "satellite", "frp", "date"],
             "points": [[round(float(x.lon), 4), round(float(x.lat), 4), x.sensor[0], x.satellite,
@@ -274,14 +286,13 @@ def timeline(s: Store) -> list[dict]:
 
 
 def grid(s: Store, year: int | None = None, sensor: str | None = None) -> dict:
-    g = s.grid
-    if year:
-        g = g[g["year"] == year]
-    cols = [c for c in ("MODIS", "VIIRS") if c in g]
-    if sensor:
-        cols = [sensor.upper()]
-    agg = g.groupby(["lon", "lat"])[cols].sum().sum(axis=1).reset_index(name="count")
-    agg = agg[agg["count"] > 0]
+    cols = [sensor.upper()] if sensor else ["MODIS", "VIIRS"]
+    total = " + ".join(f'coalesce("{c}", 0)' for c in cols)
+    where = "year = ?" if year else "TRUE"
+    agg = s.points._con().execute(
+        f"SELECT lon, lat, sum({total}) AS count FROM read_parquet(?, union_by_name = true) WHERE {where} "
+        "GROUP BY lon, lat HAVING sum(" + total + ") > 0",
+        [s.grid_paths, *([year] if year else [])]).df()
     return {"cell_deg": 0.1, "cells": [[round(float(r.lon), 3), round(float(r.lat), 3), int(r.count)]
                                        for r in agg.itertuples()]}
 
@@ -299,9 +310,10 @@ def aoi_summary(s: Store, geometry: dict) -> dict:
     area = float(gpd.GeoSeries([poly], crs=4326).to_crs(6933).area.iloc[0] / 1e6)
     if area > 60000:
         raise ValueError("area of interest is limited to 60,000 km²")
-    h = s.hotspots
     minx, miny, maxx, maxy = poly.bounds
-    cand = h[(h["lon"] >= minx) & (h["lon"] <= maxx) & (h["lat"] >= miny) & (h["lat"] <= maxy)]
+    cand = s.points.query("lon BETWEEN ? AND ? AND lat BETWEEN ? AND ?", [minx, maxx, miny, maxy],
+                          "lon, lat, sensor, satellite, region_id, acq_date")
+    cand["week"] = cand["acq_date"] - pd.to_timedelta(cand["acq_date"].dt.day_of_week, unit="D")
     from shapely import contains_xy
     inside = cand[contains_xy(poly, cand["lon"].to_numpy(), cand["lat"].to_numpy())]
     w = s.weekly
@@ -329,19 +341,22 @@ def aoi_summary(s: Store, geometry: dict) -> dict:
 
 
 def harmonization_skill(s: Store, slug: str | None = None) -> dict:
-    sk = {k: v for k, v in s.skill.items() if k not in ("transfer", "loyo_annual")}
-    if slug:
-        r = region_or_404(s, slug)
+    """Skill of the pilot batch, or of the batch a region was harmonized in."""
+    r = region_or_404(s, slug) if slug else None
+    full = s.skill_for(int(r.region_id)) if r is not None else s.skill
+    sk = {k: v for k, v in full.items() if k not in ("transfer", "loyo_annual")}
+    if r is not None:
         rid = int(r.region_id)
-        sk["transfer"] = [t for t in s.skill.get("transfer", []) if t["region_id"] == rid]
-        sk["loyo_annual"] = [t for t in s.skill.get("loyo_annual", []) if t["region_id"] == rid]
+        sk["batch"] = s.batch_of.get(rid)
+        sk["transfer"] = [t for t in full.get("transfer", []) if t["region_id"] == rid]
+        sk["loyo_annual"] = [t for t in full.get("loyo_annual", []) if t["region_id"] == rid]
         if not sk["transfer"]:
             # country: show the pooled curve of its largest district
             kids = s.regions[s.regions["parent_id"] == rid].sort_values("area_km2", ascending=False)
             if len(kids):
                 k = int(kids.iloc[0].region_id)
-                sk["transfer"] = [t for t in s.skill.get("transfer", []) if t["region_id"] == k]
-            la = pd.DataFrame([t for t in s.skill.get("loyo_annual", []) if t["region_id"] in set(kids["region_id"])])
+                sk["transfer"] = [t for t in full.get("transfer", []) if t["region_id"] == k]
+            la = pd.DataFrame([t for t in full.get("loyo_annual", []) if t["region_id"] in set(kids["region_id"])])
             if len(la):
                 sk["loyo_annual"] = la.groupby("year")[["obs", "pred", "modis"]].sum().reset_index().round(1) \
                     .to_dict(orient="records")
@@ -356,11 +371,9 @@ def export(s: Store, slug: str, kind: str, fmt: str, start: date | None, end: da
         df = pd.DataFrame(annual_series(s, slug)["years"])
     elif kind == "hotspots":
         st, en = start or date(2024, 1, 1), end or pd.Timestamp(s.meta["data_end"]).date()
-        h = s.hotspots
-        ids = [int(r.region_id)] if r.level != "country" else \
-            s.regions.loc[s.regions["parent_id"] == r.region_id, "region_id"].tolist()
-        df = h[h["region_id"].isin(ids) & (h["acq_date"] >= pd.Timestamp(st)) & (h["acq_date"] <= pd.Timestamp(en))]
-        df = df.drop(columns=["week"]).assign(acq_date=lambda d: d["acq_date"].dt.strftime("%Y-%m-%d"))
+        where, params = _point_filter(s, st, en, region=slug)
+        df = s.points.query(where, params, "*", range(st.year, en.year + 1), order="acq_date, acq_time")
+        df = df.assign(acq_date=lambda d: pd.to_datetime(d["acq_date"]).dt.strftime("%Y-%m-%d"))
     else:
         raise ValueError("kind must be weekly, annual or hotspots")
     name = f"odlar_{slug}_{kind}"
@@ -383,8 +396,12 @@ def export(s: Store, slug: str, kind: str, fmt: str, start: date | None, end: da
 
 
 def overview(s: Store) -> dict:
-    """Headline numbers for the landing page."""
-    w = s.annual[s.annual["region_id"].isin(s.regions.loc[s.regions["level"] == "country", "region_id"])]
+    """Headline numbers for the landing page. The record chart and skill numbers
+    are the pilot batch's (South Caucasus); risk covers every batch."""
+    primary = s.meta.get("primary_batch")
+    countries = s.regions[(s.regions["level"] == "country")
+                          & s.regions["region_id"].map(lambda i: s.batch_of.get(int(i)) == primary)]
+    w = s.annual[s.annual["region_id"].isin(countries["region_id"])]
     tot = w.groupby("year")[["harmonized", "lo", "hi", "modis", "viirs", "naive"]].sum().reset_index()
     sk = s.skill
     mr = s.model_report
@@ -399,6 +416,7 @@ def overview(s: Store) -> dict:
         "risk_top": risk[:8],
         "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),
         "n_regions": int(len(s.regions)),
+        "countries": sorted(s.regions.loc[s.regions["level"] == "country", "country"].unique().tolist()),
     }
 
 

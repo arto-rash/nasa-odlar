@@ -128,8 +128,18 @@ def risk(slug: str, s: Store = Depends(store)):
 
 @app.get("/hotspots", dependencies=deps)
 def hotspots(start: date, end: date, sensor: Literal["MODIS", "VIIRS", "modis", "viirs"] | None = None,
-             region: str | None = None, limit: int = Query(20000, le=50000), s: Store = Depends(store)):
-    return service.hotspots(s, start, end, sensor, region, limit)
+             region: str | None = None, limit: int = Query(20000, le=50000),
+             bbox: str | None = Query(None, description="west,south,east,north in degrees"),
+             s: Store = Depends(store)):
+    box = None
+    if bbox:
+        try:
+            box = tuple(float(v) for v in bbox.split(","))
+        except ValueError as exc:
+            raise ValueError("bbox must be west,south,east,north") from exc
+        if len(box) != 4:
+            raise ValueError("bbox must be west,south,east,north")
+    return service.hotspots(s, start, end, sensor, region, limit, box)
 
 
 @app.get("/timeline", dependencies=deps)

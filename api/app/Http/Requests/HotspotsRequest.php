@@ -17,6 +17,8 @@ class HotspotsRequest extends ProxyQueryRequest
             'sensor' => ['nullable', 'in:MODIS,VIIRS,modis,viirs'],
             'region' => ['nullable', 'string', 'max:100', self::SLUG],
             'limit' => ['nullable', 'integer', 'min:1', 'max:50000'],
+            // west,south,east,north in degrees, for map-viewport queries
+            'bbox' => ['nullable', 'string', 'max:80', 'regex:/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/'],
         ];
     }
 

@@ -25,6 +25,10 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
   const countries = regions
     .filter((r) => r.level === "country")
     .sort((a, b) => Number(b.country === "az") - Number(a.country === "az") || regionName(a, locale).localeCompare(regionName(b, locale), locale));
+  const countryName = (code: string) => {
+    const c = countries.find((x) => x.country === code);
+    return c ? regionName(c, locale) : code.toUpperCase();
+  };
   const list = useMemo(() => {
     const l = regions
       .filter((r) => r.level !== "country")
@@ -105,7 +109,7 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium">{regionName(r, locale)}</p>
-                    <p className="mt-0.5 text-[12.5px] text-faint">{tc(r.country)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-faint">{countryName(r.country)}</p>
                   </div>
                   {r.risk && (
                     <span className="text-right">

@@ -86,7 +86,9 @@
     "all": "All",
     "az": "Azerbaijan",
     "ge": "Georgia",
-    "am": "Armenia"
+    "am": "Armenia",
+    "tr": "Turkey",
+    "ir": "Iran"
   },
   "home": {
     "eyebrow": "NASA Space Apps 2026 · MODIS & VIIRS Hot Spots",

@@ -3,6 +3,7 @@
     python -m odlar.pipeline --source synthetic          # offline demo world
     python -m odlar.pipeline --source firms              # real NASA FIRMS (needs FIRMS_MAP_KEY)
     python -m odlar.pipeline --quick                     # small bootstrap, for CI
+    python -m odlar.pipeline --source firms --batch turkey_iran
 """
 
 from __future__ import annotations
@@ -10,6 +11,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import time
 from datetime import date, timedelta
 from pathlib import Path
@@ -19,12 +21,12 @@ import pandas as pd
 
 from odlar import store
 from odlar.calendar.engine import build_calendar
-from odlar.config import CACHE_DIR, MODEL_DIR, MODIS_START, OVERLAP_START, STATE_DIR, STORE_DIR
+from odlar.config import BATCHES, CACHE_DIR, MODIS_START, OVERLAP_START, PRIMARY_BATCH
 from odlar.grid.gridding import COUNT_COLUMNS, daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
 from odlar.harmonize.engine import aggregate_intervals, harmonize
 from odlar.harmonize.validate import loyo, skill_report
-from odlar.ingest import firms, ndvi, openmeteo, power, synthetic
+from odlar.ingest import firms, ndvi, openmeteo, power, stream, synthetic
 from odlar.model import predict, train
 from odlar.model.features import build_panel, daily_series
 
@@ -61,12 +63,15 @@ def load_weather(regions, start: date, end: date, offline: bool) -> tuple[pd.Dat
 
 
 def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick: bool = False,
-        end: date | None = None, offline: bool = False, store_dir: Path = STORE_DIR,
-        model_dir: Path = MODEL_DIR, state_dir: Path = STATE_DIR, seed: int = 42) -> dict:
+        end: date | None = None, offline: bool = False, batch: str = PRIMARY_BATCH,
+        store_dir: Path | None = None, model_dir: Path | None = None, state_dir: Path | None = None,
+        seed: int = 42) -> dict:
     t0 = time.time()
+    b = BATCHES[batch]
+    store_dir, model_dir, state_dir = store_dir or b.store_dir, model_dir or b.model_dir, state_dir or b.state_dir
     end = end or date.today() - timedelta(days=1)
     start = MODIS_START
-    regions = load_regions()
+    regions = load_regions(batch)
     leaves = leaf_regions(regions)
     log(f"regions: {len(regions)} ({len(leaves)} leaf)", t0)
 
@@ -76,7 +81,15 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     log(f"weather: {weather_source}, {len(weather):,} rows, through {end}", t0)
 
     truth = None
-    if source == "synthetic":
+    staged = None  # point files written year by year (big batches)
+    if source == "firms" and b.stream:
+        staged = store_dir.with_name(store_dir.name + ".staging")
+        got = stream.ingest(os.environ.get("FIRMS_MAP_KEY", ""), b, regions, start, end, staged)
+        hot, static_cells, daily, grid = None, got["static_cells"], got["daily"], got["grid"]
+        n_hot, by_sat = got["n_kept"], got["by_satellite"]
+        log(f"hotspots: {got['n_raw']:,} raw, {n_hot:,} after quality + static-source filter "
+            f"({got['n_static']:,} static), ingested year by year", t0)
+    elif source == "synthetic":
         # scale 0.55 ≈ 12–14k S-NPP detections a year across the three countries,
         # the order of magnitude FIRMS records for the South Caucasus
         world = synthetic.generate(regions, weather, start, end, elevation=elevation, seed=seed, scale=0.55)
@@ -84,20 +97,20 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
         truth = world
     elif source == "firms":
         key = os.environ.get("FIRMS_MAP_KEY", "")
-        raw_hot = firms.fetch_archive(key, start, end)
+        raw_hot = firms.fetch_batch(key, b, regions, start, end)
     else:
         raise ValueError(source)
-    log(f"hotspots: {len(raw_hot):,} raw detections", t0)
-
-    hot = firms.quality_filter(raw_hot)
-    static_cells = firms.persistent_cells(hot)
-    static = firms.in_cells(hot, static_cells)
-    hot = hot[~static.to_numpy()].reset_index(drop=True)
-    hot["region_id"] = assign_regions(hot, regions)
-    hot = hot.dropna(subset=["region_id"]).astype({"region_id": int})
-    log(f"hotspots: {len(hot):,} after quality + static-source filter ({int(static.sum()):,} static)", t0)
-
-    daily = daily_counts(hot, regions, start, end)
+    if staged is None:
+        log(f"hotspots: {len(raw_hot):,} raw detections", t0)
+        hot = firms.quality_filter(raw_hot)
+        static_cells = firms.persistent_cells(hot)
+        static = firms.in_cells(hot, static_cells)
+        hot = hot[~static.to_numpy()].reset_index(drop=True)
+        hot["region_id"] = assign_regions(hot, regions)
+        hot = hot.dropna(subset=["region_id"]).astype({"region_id": int})
+        log(f"hotspots: {len(hot):,} after quality + static-source filter ({int(static.sum()):,} static)", t0)
+        daily = daily_counts(hot, regions, start, end)
+        grid, n_hot, by_sat = grid_cells(hot), len(hot), hot.groupby("satellite").size().to_dict()
     weekly = weekly_from_daily(daily)
     log(f"aggregated: {len(daily):,} region-days, {len(weekly):,} region-weeks", t0)
 
@@ -195,18 +208,33 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     meta_store = {
         "source": source, "weather_source": weather_source, "forecast_source": fc_source,
         "ndvi_source": "climatology", "data_start": start.isoformat(), "data_end": end.isoformat(),
-        "built_at": pd.Timestamp.now().isoformat(), "n_hotspots": int(len(hot)),
+        "built_at": pd.Timestamp.now().isoformat(), "n_hotspots": int(n_hot),
         "n_boot": n_boot, "overlap_start": OVERLAP_START.isoformat(),
-        "by_satellite": hot.groupby("satellite").size().to_dict(),
+        "by_satellite": {k: int(v) for k, v in by_sat.items()},
+        # what the full build covered; the refresh adds tail files after build_end
+        "build_end": end.isoformat(), "build_n_hotspots": int(n_hot),
+        "build_by_satellite": {k: int(v) for k, v in by_sat.items()},
     }
+    if staged is not None:  # point files are already written; move them into the store
+        shutil.rmtree(store_dir / "hotspots", ignore_errors=True)
+        store_dir.mkdir(parents=True, exist_ok=True)
+        os.replace(staged / "hotspots", store_dir / "hotspots")
+        shutil.rmtree(staged, ignore_errors=True)
     store.write_all(store_dir, regions=regions, hotspots=hot, weekly=hw, annual=annual, calendars=calendars,
                     skill=skill, model_report={"harmonized": report_h, "raw": report_r,
                                                "importance": meta["importance"]},
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=risk_hist,
-                    grid=grid_cells(hot), meta=meta_store, weather=weather_recent(w_ext, end))
-    store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells)
+                    grid=grid, meta=meta_store, weather=weather_recent(w_ext, end))
+    store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells,
+                      daily_recent=daily[pd.to_datetime(daily["date"]) >= recent_start(end)])
     log(f"store written to {store_dir}", t0)
     return {"skill": skill, "report_h": report_h["overall"], "report_r": report_r["overall"]}
+
+
+def recent_start(end: date) -> pd.Timestamp:
+    """First day the refresh's feature panel needs: Jan 1 of the year before the
+    start of the 400-day risk history (lags, year-to-date sums, days since fire)."""
+    return pd.Timestamp(date((end - timedelta(days=400)).year - 1, 1, 1))
 
 
 def weather_recent(w: pd.DataFrame, end: date, days: int = 400) -> pd.DataFrame:
@@ -250,11 +278,12 @@ def main() -> None:
     ap.add_argument("--quick", action="store_true")
     ap.add_argument("--offline", action="store_true")
     ap.add_argument("--end", type=date.fromisoformat, default=None)
+    ap.add_argument("--batch", default=PRIMARY_BATCH, choices=sorted(BATCHES))
     a = ap.parse_args()
     if a.source == "firms" and not os.environ.get("FIRMS_MAP_KEY"):
         raise SystemExit("FIRMS_MAP_KEY not set")
     out = run(source=a.source, n_boot=30 if a.quick else a.boot, loyo_boot=15 if a.quick else 40,
-              quick=a.quick, end=a.end, offline=a.offline)
+              quick=a.quick, end=a.end, offline=a.offline, batch=a.batch)
     print(json.dumps({"bias": out["skill"]["bias"], "harmonized": out["report_h"], "raw": out["report_r"]},
                      indent=1))
 

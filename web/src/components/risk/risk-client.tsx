@@ -36,7 +36,7 @@ export function RiskClient({
   const tl = useTranslations("levels");
   const locale = useLocale() as AppLocale;
   const [selected, setSelected] = useState<string | null>(initial);
-  const [country, setCountry] = useState<"all" | "az" | "ge" | "am">("all");
+  const [country, setCountry] = useState<string>("all");
   const [q, setQ] = useState("");
   const [hover, setHover] = useState<{ name_az: string; name_en: string; probability?: number; x: number; y: number } | null>(null);
 
@@ -53,6 +53,11 @@ export function RiskClient({
         .filter((r) => country === "all" || r.country === country)
         .filter((r) => matchScore(q, r.name_az, r.name_en) > 0),
     [items, country, q],
+  );
+  // Countries present in the data, Azerbaijan first
+  const countryCodes = useMemo(
+    () => [...new Set(items.map((r) => r.country))].sort((a, b) => (a === "az" ? -1 : b === "az" ? 1 : a.localeCompare(b))),
+    [items],
   );
   const counts = useMemo(() => {
     const c: Record<string, number> = {};
@@ -120,12 +125,7 @@ export function RiskClient({
                   size="sm"
                   value={country}
                   onChange={setCountry}
-                  options={[
-                    { value: "all", label: tc("all") },
-                    { value: "az", label: "AZ" },
-                    { value: "ge", label: "GE" },
-                    { value: "am", label: "AM" },
-                  ]}
+                  options={[{ value: "all", label: tc("all") }, ...countryCodes.map((c) => ({ value: c, label: c.toUpperCase() }))]}
                 />
                 <label className="flex h-9 flex-1 items-center gap-2 rounded-md bg-bg-sunken px-3 ring-1 ring-line">
                   <Search className="size-3.5 text-faint" />

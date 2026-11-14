@@ -1,0 +1,1082 @@
+{
+"AND": {
+"iso2": "AD",
+"en": "Andorra",
+"az": "Andorra"
+},
+"SVK": {
+"iso2": "SK",
+"en": "Slovakia",
+"az": "Slovakiya"
+},
+"AUT": {
+"iso2": "AT",
+"en": "Austria",
+"az": "Avstriya"
+},
+"HUN": {
+"iso2": "HU",
+"en": "Hungary",
+"az": "Macarıstan"
+},
+"GEO": {
+"iso2": "GE",
+"en": "Georgia",
+"az": "Gürcüstan"
+},
+"VAT": {
+"iso2": "VA",
+"en": "Vatican City",
+"az": "Vatikan"
+},
+"POL": {
+"iso2": "PL",
+"en": "Poland",
+"az": "Polşa"
+},
+"KHM": {
+"iso2": "KH",
+"en": "Cambodia",
+"az": "Kamboca"
+},
+"LAO": {
+"iso2": "LA",
+"en": "Laos",
+"az": "Laos"
+},
+"VNM": {
+"iso2": "VN",
+"en": "Vietnam",
+"az": "Vyetnam"
+},
+"DNK": {
+"iso2": "DK",
+"en": "Denmark",
+"az": "Danimarka"
+},
+"MMR": {
+"iso2": "MM",
+"en": "Myanmar",
+"az": "Myanma"
+},
+"DEU": {
+"iso2": "DE",
+"en": "Germany",
+"az": "Almaniya"
+},
+"CZE": {
+"iso2": "CZ",
+"en": "Czechia",
+"az": "Çexiya"
+},
+"CHE": {
+"iso2": "CH",
+"en": "Switzerland",
+"az": "İsveçrə"
+},
+"BEL": {
+"iso2": "BE",
+"en": "Belgium",
+"az": "Belçika"
+},
+"SWE": {
+"iso2": "SE",
+"en": "Sweden",
+"az": "İsveç"
+},
+"FRO": {
+"iso2": "FO",
+"en": "Faroe Islands",
+"az": "Farer adaları"
+},
+"ALB": {
+"iso2": "AL",
+"en": "Albania",
+"az": "Albaniya"
+},
+"MKD": {
+"iso2": "MK",
+"en": "North Macedonia",
+"az": null
+},
+"MNE": {
+"iso2": "ME",
+"en": "Montenegro",
+"az": "Monteneqro"
+},
+"FIN": {
+"iso2": "FI",
+"en": "Finland",
+"az": "Finlandiya"
+},
+"SMR": {
+"iso2": "SM",
+"en": "San Marino",
+"az": null
+},
+"MDA": {
+"iso2": "MD",
+"en": "Moldova",
+"az": "Moldova"
+},
+"BLR": {
+"iso2": "BY",
+"en": "Belarus",
+"az": "Belarus"
+},
+"BRA": {
+"iso2": "BR",
+"en": "Brazil",
+"az": "Braziliya"
+},
+"RUS": {
+"iso2": "RU",
+"en": "Russia",
+"az": "Rusiya"
+},
+"UKR": {
+"iso2": "UA",
+"en": "Ukraine",
+"az": "Ukrayna"
+},
+"GBR": {
+"iso2": "GB",
+"en": "United Kingdom",
+"az": "Böyük Britaniya"
+},
+"IMN": {
+"iso2": "IM",
+"en": "Isle of Man",
+"az": "Men adası"
+},
+"IRL": {
+"iso2": "IE",
+"en": "Ireland",
+"az": "İrlandiya"
+},
+"LVA": {
+"iso2": "LV",
+"en": "Latvia",
+"az": "Latviya"
+},
+"LTU": {
+"iso2": "LT",
+"en": "Lithuania",
+"az": "Litva"
+},
+"EST": {
+"iso2": "EE",
+"en": "Estonia",
+"az": "Estoniya"
+},
+"AUS": {
+"iso2": "AU",
+"en": "Australia",
+"az": "Avstraliya"
+},
+"ZAF": {
+"iso2": "ZA",
+"en": "South Africa",
+"az": "Cənub Afrika"
+},
+"SWZ": {
+"iso2": "SZ",
+"en": "Eswatini",
+"az": "Esvatini"
+},
+"ROU": {
+"iso2": "RO",
+"en": "Romania",
+"az": "Rumıniya"
+},
+"ECU": {
+"iso2": "EC",
+"en": "Ecuador",
+"az": "Ekvador"
+},
+"MEX": {
+"iso2": "MX",
+"en": "Mexico",
+"az": "Meksika"
+},
+"COL": {
+"iso2": "CO",
+"en": "Colombia",
+"az": "Kolumbiya"
+},
+"USA": {
+"iso2": "US",
+"en": "United States",
+"az": "Amerika Birləşmiş Ştatları"
+},
+"MNG": {
+"iso2": "MN",
+"en": "Mongolia",
+"az": "Monqolustan"
+},
+"CHL": {
+"iso2": "CL",
+"en": "Chile",
+"az": "Çili"
+},
+"RWA": {
+"iso2": "RW",
+"en": "Rwanda",
+"az": "Ruanda"
+},
+"TUR": {
+"iso2": "TR",
+"en": "Turkey",
+"az": "Türkiyə"
+},
+"KGZ": {
+"iso2": "KG",
+"en": "Kyrgyzstan",
+"az": "Qırğızıstan"
+},
+"BTN": {
+"iso2": "BT",
+"en": "Bhutan",
+"az": "Butan"
+},
+"NPL": {
+"iso2": "NP",
+"en": "Nepal",
+"az": "Nepal"
+},
+"BGD": {
+"iso2": "BD",
+"en": "Bangladesh",
+"az": "Banqladeş"
+},
+"JOR": {
+"iso2": "JO",
+"en": "Jordan",
+"az": "İordaniya"
+},
+"SYR": {
+"iso2": "SY",
+"en": "Syria",
+"az": "Suriya"
+},
+"LBN": {
+"iso2": "LB",
+"en": "Lebanon",
+"az": "Livan"
+},
+"BGR": {
+"iso2": "BG",
+"en": "Bulgaria",
+"az": "Bolqarıstan"
+},
+"GRC": {
+"iso2": "GR",
+"en": "Greece",
+"az": "Yunanıstan"
+},
+"PRK": {
+"iso2": "KP",
+"en": "North Korea",
+"az": "Koreya Xalq Demokratik Respublikası"
+},
+"DZA": {
+"iso2": "DZ",
+"en": "Algeria",
+"az": "Əlcəzair"
+},
+"TUN": {
+"iso2": "TN",
+"en": "Tunisia",
+"az": "Tunis"
+},
+"LBY": {
+"iso2": "LY",
+"en": "Libya",
+"az": "Liviya"
+},
+"MRT": {
+"iso2": "MR",
+"en": "Mauritania",
+"az": "Mavritaniya"
+},
+"GMB": {
+"iso2": "GM",
+"en": "The Gambia",
+"az": "Qambiya"
+},
+"SEN": {
+"iso2": "SN",
+"en": "Senegal",
+"az": "Seneqal"
+},
+"GNB": {
+"iso2": "GW",
+"en": "Guinea-Bissau",
+"az": "Qvineya-Bisau"
+},
+"SLE": {
+"iso2": "SL",
+"en": "Sierra Leone",
+"az": "Syerra-Leone"
+},
+"GIN": {
+"iso2": "GN",
+"en": "Guinea",
+"az": "Qvineya"
+},
+"CIV": {
+"iso2": "CI",
+"en": "Ivory Coast",
+"az": "Fil Dişi Sahili"
+},
+"LBR": {
+"iso2": "LR",
+"en": "Liberia",
+"az": "Liberiya"
+},
+"GHA": {
+"iso2": "GH",
+"en": "Ghana",
+"az": "Qana"
+},
+"TGO": {
+"iso2": "TG",
+"en": "Togo",
+"az": "Toqo"
+},
+"BFA": {
+"iso2": "BF",
+"en": "Burkina Faso",
+"az": "Burkina-Faso"
+},
+"BEN": {
+"iso2": "BJ",
+"en": "Benin",
+"az": "Benin"
+},
+"MLI": {
+"iso2": "ML",
+"en": "Mali",
+"az": "Mali"
+},
+"NER": {
+"iso2": "NE",
+"en": "Niger",
+"az": "Niger"
+},
+"NGA": {
+"iso2": "NG",
+"en": "Nigeria",
+"az": "Nigeriya"
+},
+"SDN": {
+"iso2": "SD",
+"en": "Sudan",
+"az": "Sudan"
+},
+"CAF": {
+"iso2": "CF",
+"en": "Central African Republic",
+"az": "Mərkəzi Afrika Respublikası"
+},
+"GNQ": {
+"iso2": "GQ",
+"en": "Equatorial Guinea",
+"az": "Ekvatorial Qvineya"
+},
+"GAB": {
+"iso2": "GA",
+"en": "Gabon",
+"az": "Qabon"
+},
+"COG": {
+"iso2": "CG",
+"en": "Congo-Brazzaville",
+"az": "Konqo Respublikası"
+},
+"COD": {
+"iso2": "CD",
+"en": "Democratic Republic of the Congo",
+"az": "Konqo Demokratik Respublikası"
+},
+"UGA": {
+"iso2": "UG",
+"en": "Uganda",
+"az": "Uqanda"
+},
+"KEN": {
+"iso2": "KE",
+"en": "Kenya",
+"az": "Keniya"
+},
+"SOM": {
+"iso2": "SO",
+"en": "Somalia",
+"az": "Somali"
+},
+"ETH": {
+"iso2": "ET",
+"en": "Ethiopia",
+"az": "Efiopiya"
+},
+"DJI": {
+"iso2": "DJ",
+"en": "Djibouti",
+"az": "Cibuti"
+},
+"CMR": {
+"iso2": "CM",
+"en": "Cameroon",
+"az": "Kamerun"
+},
+"NAM": {
+"iso2": "NA",
+"en": "Namibia",
+"az": "Namibiya"
+},
+"AGO": {
+"iso2": "AO",
+"en": "Angola",
+"az": "Anqola"
+},
+"BDI": {
+"iso2": "BI",
+"en": "Burundi",
+"az": "Burundi"
+},
+"TZA": {
+"iso2": "TZ",
+"en": "Tanzania",
+"az": "Tanzaniya"
+},
+"ZMB": {
+"iso2": "ZM",
+"en": "Zambia",
+"az": "Zambiya"
+},
+"ZWE": {
+"iso2": "ZW",
+"en": "Zimbabwe",
+"az": "Zimbabve"
+},
+"MOZ": {
+"iso2": "MZ",
+"en": "Mozambique",
+"az": "Mozambik"
+},
+"MWI": {
+"iso2": "MW",
+"en": "Malawi",
+"az": "Malavi"
+},
+"UZB": {
+"iso2": "UZ",
+"en": "Uzbekistan",
+"az": "Özbəkistan"
+},
+"TJK": {
+"iso2": "TJ",
+"en": "Tajikistan",
+"az": "Tacikistan"
+},
+"KAZ": {
+"iso2": "KZ",
+"en": "Kazakhstan",
+"az": "Qazaxıstan"
+},
+"HRV": {
+"iso2": "HR",
+"en": "Croatia",
+"az": "Xorvatiya"
+},
+"SVN": {
+"iso2": "SI",
+"en": "Slovenia",
+"az": "Sloveniya"
+},
+"TKM": {
+"iso2": "TM",
+"en": "Turkmenistan",
+"az": "Türkmənistan"
+},
+"BOL": {
+"iso2": "BO",
+"en": "Bolivia",
+"az": "Boliviya"
+},
+"GGY": {
+"iso2": "GG",
+"en": "Guernsey",
+"az": "Gernsi"
+},
+"CHN": {
+"iso2": "CN",
+"en": "China",
+"az": "Çin"
+},
+"VEN": {
+"iso2": "VE",
+"en": "Venezuela",
+"az": "Venesuela"
+},
+"VGB": {
+"iso2": "VG",
+"en": "British Virgin Islands",
+"az": null
+},
+"ARG": {
+"iso2": "AR",
+"en": "Argentina",
+"az": "Argentina"
+},
+"URY": {
+"iso2": "UY",
+"en": "Uruguay",
+"az": "Uruqvay"
+},
+"PRY": {
+"iso2": "PY",
+"en": "Paraguay",
+"az": "Paraqvay"
+},
+"SUR": {
+"iso2": "SR",
+"en": "Suriname",
+"az": "surinamə"
+},
+"GUY": {
+"iso2": "GY",
+"en": "Guyana",
+"az": "Qayana"
+},
+"NIC": {
+"iso2": "NI",
+"en": "Nicaragua",
+"az": "Nikaraqua"
+},
+"CRI": {
+"iso2": "CR",
+"en": "Costa Rica",
+"az": "Kosta-Rika"
+},
+"PAN": {
+"iso2": "PA",
+"en": "Panama",
+"az": "Panama"
+},
+"HND": {
+"iso2": "HN",
+"en": "Honduras",
+"az": "Honduras"
+},
+"BLZ": {
+"iso2": "BZ",
+"en": "Belize",
+"az": "Beliz"
+},
+"PER": {
+"iso2": "PE",
+"en": "Peru",
+"az": "Peru"
+},
+"PRT": {
+"iso2": "PT",
+"en": "Portugal",
+"az": "Portuqaliya"
+},
+"ERI": {
+"iso2": "ER",
+"en": "Eritrea",
+"az": "Eritreya"
+},
+"ISL": {
+"iso2": "IS",
+"en": "Iceland",
+"az": "İslandiya"
+},
+"AFG": {
+"iso2": "AF",
+"en": "Afghanistan",
+"az": "Əfqanıstan"
+},
+"IND": {
+"iso2": "IN",
+"en": "India",
+"az": "Hindistan"
+},
+"IDN": {
+"iso2": "ID",
+"en": "Indonesia",
+"az": "İndoneziya"
+},
+"IRQ": {
+"iso2": "IQ",
+"en": "Iraq",
+"az": "İrak"
+},
+"IRN": {
+"iso2": "IR",
+"en": "Iran",
+"az": "İran"
+},
+"YEM": {
+"iso2": "YE",
+"en": "Yemen",
+"az": "Yəmən"
+},
+"QAT": {
+"iso2": "QA",
+"en": "Qatar",
+"az": "Qətər"
+},
+"KWT": {
+"iso2": "KW",
+"en": "Kuwait",
+"az": "Küveyt"
+},
+"OMN": {
+"iso2": "OM",
+"en": "Oman",
+"az": "Oman"
+},
+"TLS": {
+"iso2": "TL",
+"en": "East Timor",
+"az": "Şərqi Timor"
+},
+"PAK": {
+"iso2": "PK",
+"en": "Pakistan",
+"az": "Pakistan"
+},
+"SAU": {
+"iso2": "SA",
+"en": "Saudi Arabia",
+"az": "Səudiyyə Ərəbistanı"
+},
+"KOR": {
+"iso2": "KR",
+"en": "South Korea",
+"az": "Cənubi Koreya"
+},
+"ARE": {
+"iso2": "AE",
+"en": "United Arab Emirates",
+"az": "Birləşmiş Ərəb Əmirlikləri"
+},
+"CYP": {
+"iso2": "CY",
+"en": "Cyprus",
+"az": "Kipr"
+},
+"DMA": {
+"iso2": "DM",
+"en": "Dominica",
+"az": "Dominika"
+},
+"DOM": {
+"iso2": "DO",
+"en": "Dominican Republic",
+"az": "Dominikan Respublikası"
+},
+"HTI": {
+"iso2": "HT",
+"en": "Haiti",
+"az": "Haiti Respublikası"
+},
+"CUB": {
+"iso2": "CU",
+"en": "Cuba",
+"az": "Kuba"
+},
+"PNG": {
+"iso2": "PG",
+"en": "Papua New Guinea",
+"az": "Papua-Yeni Qvineya"
+},
+"ARM": {
+"iso2": "AM",
+"en": "Armenia",
+"az": "Ermənistan"
+},
+"AZE": {
+"iso2": "AZ",
+"en": "Azerbaijan",
+"az": "Azərbaycan"
+},
+"MLT": {
+"iso2": "MT",
+"en": "Malta",
+"az": null
+},
+"ITA": {
+"iso2": "IT",
+"en": "Italy",
+"az": "İtaliya"
+},
+"JEY": {
+"iso2": "JE",
+"en": "Jersey",
+"az": "Cersi"
+},
+"BHR": {
+"iso2": "BH",
+"en": "Bahrain",
+"az": "Bəhreyn"
+},
+"JPN": {
+"iso2": "JP",
+"en": "Japan",
+"az": "Yaponiya"
+},
+"PHL": {
+"iso2": "PH",
+"en": "Philippines",
+"az": "Filippin"
+},
+"MDG": {
+"iso2": "MG",
+"en": "Madagascar",
+"az": "Madaqaskar"
+},
+"TWN": {
+"iso2": "TW",
+"en": "Taiwan",
+"az": "Tayvan"
+},
+"CPV": {
+"iso2": "CV",
+"en": "Cape Verde",
+"az": null
+},
+"COM": {
+"iso2": "KM",
+"en": "Comoros",
+"az": "Komor adaları"
+},
+"MUS": {
+"iso2": "MU",
+"en": "Mauritius",
+"az": "Mavriki"
+},
+"STP": {
+"iso2": "ST",
+"en": "São Tomé and Príncipe",
+"az": null
+},
+"SYC": {
+"iso2": "SC",
+"en": "Seychelles",
+"az": "Seyşel adaları"
+},
+"MDV": {
+"iso2": "MV",
+"en": "Maldives",
+"az": "Maldiv"
+},
+"SGP": {
+"iso2": "SG",
+"en": "Singapore",
+"az": "Sinqapur"
+},
+"LKA": {
+"iso2": "LK",
+"en": "Sri Lanka",
+"az": "Şri-Lanka"
+},
+"KNA": {
+"iso2": "KN",
+"en": "Saint Kitts and Nevis",
+"az": null
+},
+"ATG": {
+"iso2": "AG",
+"en": "Antigua and Barbuda",
+"az": "Antiqua və Barbuda"
+},
+"MSR": {
+"iso2": "MS",
+"en": "Montserrat",
+"az": "Montserrat"
+},
+"BHS": {
+"iso2": "BS",
+"en": "Bahamas",
+"az": "Baham adaları"
+},
+"TCA": {
+"iso2": "TC",
+"en": "Turks and Caicos Islands",
+"az": "Türk və Kaykos Adaları"
+},
+"BRB": {
+"iso2": "BB",
+"en": "Barbados",
+"az": "Barbados"
+},
+"VCT": {
+"iso2": "VC",
+"en": "Saint Vincent and the Grenadines",
+"az": "Seynt Vinsent və Qrenada"
+},
+"GRD": {
+"iso2": "GD",
+"en": "Grenada",
+"az": null
+},
+"LCA": {
+"iso2": "LC",
+"en": "Saint Lucia",
+"az": "Seynt Lusiya"
+},
+"JAM": {
+"iso2": "JM",
+"en": "Jamaica",
+"az": null
+},
+"TTO": {
+"iso2": "TT",
+"en": "Trinidad and Tobago",
+"az": "Trinidan və Tobaqo"
+},
+"NZL": {
+"iso2": "NZ",
+"en": "New Zealand",
+"az": "Yeni Zelandiya"
+},
+"KIR": {
+"iso2": "KI",
+"en": "Kiribati",
+"az": "Kiribati"
+},
+"FJI": {
+"iso2": "FJ",
+"en": "Fiji",
+"az": "Fici"
+},
+"MHL": {
+"iso2": "MH",
+"en": "Marshall Islands",
+"az": "Marşall adaları"
+},
+"FSM": {
+"iso2": "FM",
+"en": "Federated States of Micronesia",
+"az": "Mikroneziya Federativ Ştatları"
+},
+"NRU": {
+"iso2": "NR",
+"en": "Nauru",
+"az": null
+},
+"PLW": {
+"iso2": "PW",
+"en": "Palau",
+"az": "Palau"
+},
+"MCO": {
+"iso2": "MC",
+"en": "Monaco",
+"az": "Monako"
+},
+"LIE": {
+"iso2": "LI",
+"en": "Liechtenstein",
+"az": null
+},
+"GIB": {
+"iso2": "GI",
+"en": "Gibraltar",
+"az": "Cəbəli-Tariq"
+},
+"ESP": {
+"iso2": "ES",
+"en": "Spain",
+"az": "İspaniya"
+},
+"CAN": {
+"iso2": "CA",
+"en": "Canada",
+"az": "Kanada"
+},
+"ISR": {
+"iso2": "IL",
+"en": "Israel",
+"az": "İsrail"
+},
+"EGY": {
+"iso2": "EG",
+"en": "Egypt",
+"az": "Misir"
+},
+"SLV": {
+"iso2": "SV",
+"en": "El Salvador",
+"az": "Salvador"
+},
+"GTM": {
+"iso2": "GT",
+"en": "Guatemala",
+"az": "Qvatemala"
+},
+"NIU": {
+"iso2": "NU",
+"en": "Niue",
+"az": null
+},
+"SSD": {
+"iso2": "SS",
+"en": "South Sudan",
+"az": "Cənubi Sudan"
+},
+"SRB": {
+"iso2": "RS",
+"en": "Serbia",
+"az": "Serbiya"
+},
+"SLB": {
+"iso2": "SB",
+"en": "Solomon Islands",
+"az": "Solomon adaları"
+},
+"WSM": {
+"iso2": "WS",
+"en": "Samoa",
+"az": null
+},
+"BWA": {
+"iso2": "BW",
+"en": "Botswana",
+"az": "Botsvana"
+},
+"SHN": {
+"iso2": "SH",
+"en": "Saint Helena, Ascension and Tristan da Cunha",
+"az": null
+},
+"SGS": {
+"iso2": "GS",
+"en": "South Georgia and the South Sandwich Islands",
+"az": "Cənubi Georgiya və Cənubi Sandviç adaları"
+},
+"BMU": {
+"iso2": "BM",
+"en": "Bermuda",
+"az": "Bermud adaları"
+},
+"IOT": {
+"iso2": "IO",
+"en": "British Indian Ocean Territory",
+"az": "Britaniya-Hindistan Okeanik territoriyası"
+},
+"THA": {
+"iso2": "TH",
+"en": "Thailand",
+"az": "Tailand"
+},
+"XKK": {
+"iso2": "XK",
+"en": "Kosovo",
+"az": "Kosovo"
+},
+"LSO": {
+"iso2": "LS",
+"en": "Lesotho",
+"az": "Lesoto"
+},
+"BRN": {
+"iso2": "BN",
+"en": "Brunei",
+"az": "Bruney"
+},
+"MYS": {
+"iso2": "MY",
+"en": "Malaysia",
+"az": "Malayziya"
+},
+"LUX": {
+"iso2": "LU",
+"en": "Luxembourg",
+"az": "Lüksemburq"
+},
+"AIA": {
+"iso2": "AI",
+"en": "Anguilla",
+"az": "Angilya"
+},
+"VUT": {
+"iso2": "VU",
+"en": "Vanuatu",
+"az": null
+},
+"TUV": {
+"iso2": "TV",
+"en": "Tuvalu",
+"az": "Tuvalu"
+},
+"GRL": {
+"iso2": "GL",
+"en": "Greenland",
+"az": "Qrenlandiya"
+},
+"COK": {
+"iso2": "CK",
+"en": "Cook Islands",
+"az": "Kuk adaları"
+},
+"CYM": {
+"iso2": "KY",
+"en": "Cayman Islands",
+"az": "Kayman Adaları"
+},
+"FLK": {
+"iso2": "FK",
+"en": "Falkland Islands",
+"az": "Folkland Adaları"
+},
+"PCN": {
+"iso2": "PN",
+"en": "Pitcairn Islands",
+"az": "Pitkern adaları"
+},
+"TKL": {
+"iso2": "TK",
+"en": "Tokelau",
+"az": "Tokelau"
+},
+"TON": {
+"iso2": "TO",
+"en": "Tonga",
+"az": "Tonqa"
+},
+"FRA": {
+"iso2": "FR",
+"en": "France",
+"az": "Fransa"
+},
+"NLD": {
+"iso2": "NL",
+"en": "Netherlands",
+"az": "Niderland"
+},
+"TCD": {
+"iso2": "TD",
+"en": "Chad",
+"az": "Çad"
+},
+"BIH": {
+"iso2": "BA",
+"en": "Bosnia and Herzegovina",
+"az": "Bosniya və Herseqovina"
+},
+"NOR": {
+"iso2": "NO",
+"en": "Norway",
+"az": "Norveç"
+},
+"MAR": {
+"iso2": "MA",
+"en": "Morocco",
+"az": "Mərakeş"
+}
+}

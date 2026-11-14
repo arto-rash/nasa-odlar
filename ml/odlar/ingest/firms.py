@@ -132,7 +132,7 @@ class FirmsClient:
         self.min_interval = min_interval
         self._last = 0.0
 
-    def _get(self, url: str, retries: int = 5) -> str:
+    def _get(self, url: str, retries: int = 12) -> str:
         for attempt in range(retries):
             wait = self.min_interval - (time.monotonic() - self._last)
             if wait > 0:
@@ -140,6 +140,12 @@ class FirmsClient:
             self._last = time.monotonic()
             try:
                 resp = self.client.get(url)
+                if "exceeding allowed transaction limit" in resp.text[:200].lower():
+                    # 5,000 transactions per 10 minutes per key (large areas cost more):
+                    # wait for the window to roll over instead of failing the build
+                    print("  FIRMS transaction limit reached; waiting 2 min", flush=True)
+                    time.sleep(120)
+                    continue
                 if resp.status_code == 429 or resp.status_code >= 500:
                     raise httpx.HTTPStatusError("retryable", request=resp.request, response=resp)
                 resp.raise_for_status()
@@ -154,7 +160,9 @@ class FirmsClient:
         raise RuntimeError("unreachable")
 
     def area_csv(self, source: str, bbox: BBox, start: date, days: int) -> pd.DataFrame:
-        path = self.cache_dir / source / f"{start:%Y%m%d}_{days}.csv"
+        # the pilot box predates per-box caching; any other box gets its own folder
+        sub = source if bbox == PILOT_BBOX else f"{source}/{bbox.as_firms()}"
+        path = self.cache_dir / sub / f"{start:%Y%m%d}_{days}.csv"
         if path.exists():
             text = path.read_text()
         else:
@@ -207,7 +215,7 @@ def fetch_archive(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX)
 NRT_SOURCES = ("MODIS_NRT", "VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
 
 
-def fetch_recent(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX,
+def fetch_recent(map_key: str, start: date, end: date, bbox: BBox | list[BBox] = PILOT_BBOX,
                  cache_dir: Path | None = None) -> pd.DataFrame:
     """Near-real-time detections (all satellites) for a short recent window.
 
@@ -217,9 +225,90 @@ def fetch_recent(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX,
     import tempfile
     with tempfile.TemporaryDirectory() as tmp:
         client = FirmsClient(map_key, cache_dir=cache_dir or Path(tmp))
-        frames = [client.fetch(src, start, end, bbox) for src in NRT_SOURCES]
+        boxes = bbox if isinstance(bbox, list) else [bbox]
+        frames = [client.fetch(src, start, end, b) for b in boxes for src in NRT_SOURCES]
     frames = [f for f in frames if not f.empty]
     if not frames:
         return pd.DataFrame(columns=COLUMNS)
     df = pd.concat(frames, ignore_index=True)
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"])
+
+
+# FIRMS yearly per-country archive files (science quality, with the ``type`` column).
+COUNTRY_FILES = {"modis": "MODIS_SP", "viirs-snpp": "VIIRS_SNPP_SP", "viirs-jpss1": "VIIRS_NOAA20_SP"}
+COUNTRY_URL = FIRMS_BASE + "/data/country/{kind}/{year}/{kind}_{year}_{country}.csv"
+
+
+def country_file(kind: str, year: int, country: str, client: httpx.Client,
+                 cache_dir: Path = CACHE_DIR / "firms_country") -> pd.DataFrame:
+    """One yearly country file, cached on disk; an empty frame if FIRMS has none."""
+    path = cache_dir / kind / f"{year}_{country}.csv"
+    missing = path.with_suffix(".missing")
+    if missing.exists():
+        return pd.DataFrame()
+    if not path.exists():
+        for attempt in range(5):
+            try:
+                resp = client.get(COUNTRY_URL.format(kind=kind, year=year, country=country.replace(" ", "_")))
+            except httpx.TransportError:
+                time.sleep(5 * (attempt + 1))
+                continue
+            if resp.status_code == 404:
+                missing.parent.mkdir(parents=True, exist_ok=True)
+                missing.touch()
+                return pd.DataFrame()
+            if resp.status_code < 500:
+                break
+            time.sleep(5 * (attempt + 1))
+        resp.raise_for_status()
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(resp.content)
+    raw = pd.read_csv(path)
+    return normalize(raw, COUNTRY_FILES[kind]) if len(raw) else pd.DataFrame()
+
+
+def fetch_country_archive(map_key: str, country: str, bbox: BBox, start: date, end: date) -> pd.DataFrame:
+    """Yearly country files through last year, then the area API (science quality
+    where FIRMS has it, NRT after) for this year. NOAA-21 has no country files, so
+    its whole record comes from the area API."""
+    last_file_year = end.year - 1
+    frames = []
+    with httpx.Client(timeout=300) as http:
+        for kind, source in COUNTRY_FILES.items():
+            first = max(start.year, SOURCES[source][2].year)
+            for year in range(first, last_file_year + 1):
+                frames.append(country_file(kind, year, country, http))
+    frames.append(fetch_archive(map_key, date(end.year, 1, 1), end, bbox))
+    client = FirmsClient(map_key)
+    n21_start = SOURCES["VIIRS_NOAA21_NRT"][2]
+    if n21_start.year <= last_file_year:
+        frames.append(client.fetch("VIIRS_NOAA21_NRT", n21_start, date(last_file_year, 12, 31), bbox))
+    df = pd.concat([f for f in frames if len(f)], ignore_index=True)
+    df = df[(pd.to_datetime(df["acq_date"]) >= pd.Timestamp(start)) & (pd.to_datetime(df["acq_date"]) <= pd.Timestamp(end))]
+    return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
+
+
+def batch_bboxes(batch, regions) -> list[BBox]:
+    """Area-API boxes for a batch: the pilot box, or one box per country."""
+    if batch.firms == "area":
+        return [PILOT_BBOX]
+    out = []
+    for r in regions[regions["level"] == "country"].itertuples():
+        w, so, e, n = r.geometry.bounds
+        out.append(BBox(round(w - 0.05, 2), round(so - 0.05, 2), round(e + 0.05, 2), round(n + 0.05, 2)))
+    return out
+
+
+def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.DataFrame:
+    """The full detection record for a batch's countries."""
+    if batch.firms == "area":
+        return fetch_archive(map_key, start, end)
+    from odlar.grid.regions import COUNTRIES
+    by_code = {m["code"]: m for m in COUNTRIES.values()}
+    frames = []
+    for r, box in zip(regions[regions["level"] == "country"].itertuples(), batch_bboxes(batch, regions), strict=True):
+        name = by_code[r.country]["firms_name"]
+        print(f"  FIRMS {name}: country files + area API {box.as_firms()}", flush=True)
+        frames.append(fetch_country_archive(map_key, name, box, start, end))
+    df = pd.concat(frames, ignore_index=True)
+    return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
