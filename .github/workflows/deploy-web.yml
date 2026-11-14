@@ -1,4 +1,4 @@
-# Build the web app (web/) on every push to master that touches it, and ship to our own server (replaces Vercel).
+# Build the web app (web/) on every push to main that touches it, and ship to our own server (replaces Vercel).
 # The server installs the build as a new release and rolls back by itself if
 # it does not answer. Settings: repo variable BUILD_ENV (the NEXT_PUBLIC_*
 # values, one per line) and secrets DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and
@@ -7,7 +7,7 @@ name: Deploy
 
 on:
   push:
-    branches: [master]
+    branches: [main]
     paths: ["web/**", ".github/workflows/deploy-web.yml"]
   workflow_dispatch:
 
