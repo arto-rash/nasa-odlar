@@ -36,8 +36,10 @@ def prefetch(name: str, key: str, end: date) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--ahead", type=int, default=4, help="how many batches to keep ready ahead of the build")
+    ap.add_argument("--ahead", type=int, default=6, help="how many batches to keep ready ahead of the build")
+    ap.add_argument("--worker", default="0/1", help="i/n: with n workers, this one takes every n-th batch from i")
     a = ap.parse_args()
+    me, n_workers = (int(x) for x in a.worker.split("/"))
     key = os.environ.get("FIRMS_MAP_KEY", "")
     if not key:
         raise SystemExit("FIRMS_MAP_KEY not set")
@@ -48,11 +50,16 @@ def main() -> None:
                 if b["name"] in BATCHES and status.get(b["name"], {}).get("state") not in ("live", "built", "failed",
                                                                                               "uploading", "building")
                 and not (BATCHES[b["name"]].store_dir / "meta.json").exists()]
-        nxt = [b for b in todo if b["name"] not in done and boundaries_ready(b, COUNTRIES)][: a.ahead]
+        window = todo[: a.ahead * n_workers]
+        nxt = [b for i, b in enumerate(window) if i % n_workers == me
+               and b["name"] not in done and boundaries_ready(b, COUNTRIES)]
         if not todo:
             print("prefetch: nothing left", flush=True)
             return
         if not nxt:
+            if all(b["name"] in done for i, b in enumerate(todo) if i % n_workers == me):
+                print("prefetch: my batches are all fetched", flush=True)
+                return
             time.sleep(60)
             continue
         b = nxt[0]

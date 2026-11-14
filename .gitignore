@@ -29,3 +29,4 @@ ml/data/world_logs/
 ml/data/world_status.json
 ml/data/my_batches.txt
 ml/data/world_prefetch.log
+ml/data/world_prefetch_*.log
