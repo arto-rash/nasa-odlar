@@ -37,11 +37,11 @@ def log(msg: str, t0: float) -> None:
 
 
 def _wait_for_heavy_turn(alone: bool) -> list:
-    """Take a slot of the memory-hungry part of a build: three ordinary batches may
+    """Take a slot of the memory-hungry part of a build: four ordinary batches may
     run it at once, a streamed (very large) batch takes every slot. The OS releases
     the locks when this process ends, however it ends."""
     print("  waiting for the memory-heavy step to be free", flush=True)
-    locks = [(DATA_DIR / name).open("w") for name in ("heavy.lock", "heavy2.lock", "heavy3.lock")]
+    locks = [(DATA_DIR / name).open("w") for name in ("heavy.lock", "heavy2.lock", "heavy3.lock", "heavy4.lock")]
     if alone:
         for lock in locks:
             fcntl.flock(lock, fcntl.LOCK_EX)
