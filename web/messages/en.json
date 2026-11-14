@@ -204,7 +204,8 @@
     "legendReduced": "Satellite outage",
     "seeOnMap": "See these detections on the map",
     "pickCell": "Tap a week to see the detections behind it.",
-    "heatNote": "A detection is a heat signal seen from space, not burned area or a count of separate fires."
+    "heatNote": "A detection is a heat signal seen from space, not burned area or a count of separate fires.",
+    "legendLessCertain": "Lighter: less certain (mostly the MODIS years, before 2012)"
   },
   "climatology": {
     "aria": "The normal year: weekly range of fire activity, with the current year",

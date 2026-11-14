@@ -8,16 +8,18 @@ import { heatScale } from "@/lib/colors";
 import { fmtNum, monthShort, weekLabel, weekMonth, type AppLocale } from "@/lib/format";
 import type { Anomaly, Coverage, SeasonProfile } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
-import { aheadOpacity, cellFill, HatchDefs } from "./cell-style";
+import { aheadOpacity, cellFill, HatchDefs, spreadOpacity } from "./cell-style";
 import { ChartTooltip, TipRow } from "./tooltip";
 
 export type CellRef = { year: number; week: number };
 
 export function CalendarHeatmap({
-  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, coverage, selected, onCell, ahead,
+  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, coverage, selected, onCell, ahead, spread,
 }: {
   years: number[];
   matrix: number[][];
+  /** per cell: half-width of the range over the value (harmonized record only) */
+  spread?: number[][];
   rawMatrix?: number[][];
   mode?: "harmonized" | "raw";
   season?: SeasonProfile | null;
@@ -89,7 +91,7 @@ export function CalendarHeatmap({
                       height={ch - 1}
                       rx={1.5}
                       fill={cellFill(st, v, scale, theme, hatch)}
-                      fillOpacity={aheadOpacity(fc?.kind)}
+                      fillOpacity={fc ? aheadOpacity(fc.kind) : mode === "harmonized" ? spreadOpacity(spread?.[yi]?.[w]) : 1}
                       style={{ transition: "fill 600ms var(--ease-out-expo)", cursor: onCell && st !== "future" && st !== "nodata" ? "pointer" : undefined }}
                       stroke={sel ? "var(--ember-200)" : hover && hover.yi === yi && hover.w === w ? "var(--text)" : "none"}
                       strokeWidth={sel ? 1.5 : 1}

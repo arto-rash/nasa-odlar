@@ -102,9 +102,9 @@ export function RegionReport({
         <h2 className="text-[13px] font-semibold text-faint">{t("calendar")}</h2>
         <div className="mt-3">
           <CalendarHeatmap years={cal.years} matrix={cal.matrix} season={cal.season} anomalies={cal.anomalies}
-            current={cal.current ? { year: cal.current.year, woy: cal.current.woy } : null} coverage={cal.coverage} ahead={ahead} />
+            current={cal.current ? { year: cal.current.year, woy: cal.current.woy } : null} coverage={cal.coverage} ahead={ahead} spread={cal.spread} />
         </div>
-        <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced") }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
+        <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced"), lessCertain: cal.spread?.length ? tcl("legendLessCertain") : undefined }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
       </section>
 
       <section className="mt-8 break-inside-avoid">

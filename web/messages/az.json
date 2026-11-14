@@ -204,7 +204,8 @@
     "legendReduced": "Peyk fasiləsi",
     "seeOnMap": "Bu aşkarlamaları xəritədə gör",
     "pickCell": "Arxasındakı aşkarlamaları görmək üçün həftəyə toxunun.",
-    "heatNote": "Aşkarlama kosmosdan görünən istilik siqnalıdır; yanmış sahə və ya ayrı yanğınların sayı deyil."
+    "heatNote": "Aşkarlama kosmosdan görünən istilik siqnalıdır; yanmış sahə və ya ayrı yanğınların sayı deyil.",
+    "legendLessCertain": "Açıq rəng: daha az dəqiq (əsasən 2012-dən əvvəlki MODIS illəri)"
   },
   "climatology": {
     "aria": "Normal il: həftəlik yanğın aktivliyinin diapazonu və cari il",

@@ -84,15 +84,16 @@ export function CalendarSection({ cal, forecast }: { cal: CalendarPayload; forec
             selected={cell}
             onCell={pick}
             ahead={ahead}
+            spread={cal.spread}
           />
         ) : (
           <CalendarHeatmap years={cal.years} matrix={cal.matrix} rawMatrix={cal.raw_matrix} mode={mode} season={cal.season} anomalies={cal.anomalies} current={current}
-            coverage={cal.coverage} selected={cell} onCell={pick} ahead={ahead} />
+            coverage={cal.coverage} selected={cell} onCell={pick} ahead={ahead} spread={cal.spread} />
         )}
       </div>
       <CellBar cal={cal} cell={cell} mode={mode} ahead={ahead} />
       <div className="mt-4 space-y-1.5">
-        <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced") }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
+        <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced"), lessCertain: mode === "harmonized" && cal.spread?.length ? tcl("legendLessCertain") : undefined }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
         <p className="text-[12.5px] leading-snug text-faint">{tcl("heatNote")}</p>
       </div>
     </Panel>

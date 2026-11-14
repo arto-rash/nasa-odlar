@@ -13,12 +13,14 @@ import {
   arcPath, clockLayout, hitTest, polar, ringRadii, sectorPath, TAU, weekAngle, WEEKS, windowAngles,
 } from "./fire-clock-geometry";
 import type { CellRef } from "./calendar-heatmap";
-import { aheadOpacity, cellFill, HatchDefs } from "./cell-style";
+import { aheadOpacity, cellFill, HatchDefs, spreadOpacity } from "./cell-style";
 
 interface Props {
   years: number[];
   matrix: number[][];
   rawMatrix?: number[][];
+  /** per cell: half-width of the range over the value (harmonized record only) */
+  spread?: number[][];
   mode?: "harmonized" | "raw";
   season?: SeasonProfile | null;
   anomalies?: Anomaly[];
@@ -35,7 +37,7 @@ interface Props {
 }
 
 export function FireClock({
-  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, focusYear, onFocusYear, coverage, selected, onCell, ahead, className,
+  years, matrix, rawMatrix, mode = "harmonized", season, anomalies = [], current, focusYear, onFocusYear, coverage, selected, onCell, ahead, spread, className,
 }: Props) {
   const t = useTranslations("clock");
   const ta = useTranslations("ahead");
@@ -171,7 +173,7 @@ export function FireClock({
                       key={w}
                       d={d}
                       fill={cellFill(st, v, scale, theme, `hatch-${uid}`)}
-                      fillOpacity={st === "reduced" ? 0.45 : aheadOpacity(fc?.kind)}
+                      fillOpacity={st === "reduced" ? 0.45 : fc ? aheadOpacity(fc.kind) : mode === "harmonized" ? spreadOpacity(spread?.[yi]?.[w]) : 1}
                       style={{ transition: "fill 700ms var(--ease-out-expo)" }}
                     />
                   );

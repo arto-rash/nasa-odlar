@@ -155,3 +155,12 @@ def test_static_sources(client):
     assert r["total"] >= r["in_view"] > 0 and len(r["cells"]) == r["in_view"]
     lon, lat = r["cells"][0]
     assert 44 <= lon <= 51 and 38 <= lat <= 42
+
+
+def test_calendar_spread(client):
+    c = client.get("/calendar/az").json()
+    sp = c["spread"]
+    assert len(sp) == len(c["years"]) and len(sp[0]) == 52
+    i2005, i2020 = c["years"].index(2005), c["years"].index(2020)
+    # MODIS years carry a range, Suomi NPP years are exact
+    assert max(sp[i2005]) > 0 and max(sp[i2020]) == 0

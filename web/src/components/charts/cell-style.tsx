@@ -11,6 +11,13 @@ export function aheadOpacity(kind: "outlook" | "typical" | undefined): number {
   return kind === "outlook" ? 0.5 : kind === "typical" ? 0.22 : 1;
 }
 
+/** Lighter where the record is less certain: the half-width of a cell's range
+ *  over its value (0 exact … 1 as wide as the value, more is wider). Never below half. */
+export function spreadOpacity(spread: number | undefined): number {
+  if (!spread || spread <= 0) return 1;
+  return Math.max(0.5, 1 - 0.25 * Math.log2(1 + spread));
+}
+
 export function cellFill(state: CellState, v: number, scale: (v: number) => number, theme: string, hatchId: string): string {
   if (state === "nodata") return `url(#${hatchId})`;
   if (state === "future") return v > 0 && isActiveWeek(v) ? heat(scale(v), theme as "dark" | "light") : "transparent";
@@ -27,9 +34,18 @@ export function HatchDefs({ id }: { id: string }) {
   );
 }
 
-export function CellLegend({ labels, reduced }: { labels: { noData: string; reduced: string }; reduced: boolean }) {
+export function CellLegend({ labels, reduced }: { labels: { noData: string; reduced: string; lessCertain?: string }; reduced: boolean }) {
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[12.5px] text-faint">
+      {labels.lessCertain && (
+        <span className="inline-flex items-center gap-1.5">
+          <span className="flex" aria-hidden>
+            <span className="size-3 rounded-l-[2px] bg-ember-500" />
+            <span className="size-3 rounded-r-[2px] bg-ember-500 opacity-50" />
+          </span>
+          {labels.lessCertain}
+        </span>
+      )}
       <span className="inline-flex items-center gap-1.5">
         <svg width="12" height="12" aria-hidden>
           <defs>

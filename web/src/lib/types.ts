@@ -157,6 +157,8 @@ export interface CalendarPayload {
   coverage?: Coverage;
   /** the month so far against the same weeks of earlier years */
   month?: MonthToDate | null;
+  /** per cell (years × 52): half-width of its range over its value; 0 on Suomi NPP years */
+  spread?: number[][];
 }
 
 export interface MonthTotals {

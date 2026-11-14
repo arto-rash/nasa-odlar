@@ -407,7 +407,24 @@ def calendar(s: Store, slug: str) -> dict:
     if cal is None:
         raise NotFound("no calendar")
     return {"region": _region_dict(r, s), **cal, "coverage": coverage(s),
-            "month": month_to_date(cal, s.meta["data_end"])}
+            "month": month_to_date(cal, s.meta["data_end"]),
+            "spread": cell_spread(s.rows("weekly", [int(r.region_id)]), cal["years"])}
+
+
+def cell_spread(w: pd.DataFrame, years: list[int]) -> list[list[float]]:
+    """How uncertain each calendar cell is: half the width of its 80-90 % range
+    over its value (0 = exact, as on the S-NPP years; 1 = the range is as wide
+    as the value). Cells under one detection count as one, so empty weeks with
+    a small range are not called uncertain. Same bins as the matrix."""
+    if w.empty:
+        return []
+    wk = pd.to_datetime(w["week"])
+    g = pd.DataFrame({"year": wk.dt.year, "woy": np.minimum((wk.dt.day_of_year - 1) // 7, 51),
+                      "v": w["harmonized"].astype(float), "lo": w["lo"].astype(float), "hi": w["hi"].astype(float)})
+    b = g.groupby(["year", "woy"])[["v", "lo", "hi"]].sum()
+    rel = ((b["hi"] - b["lo"]) / 2 / np.maximum(b["v"], 1.0)).clip(0, 9.99)
+    m = rel.unstack("woy").reindex(index=years, columns=range(52)).fillna(0.0)
+    return np.round(m.to_numpy(), 2).tolist()
 
 
 GAP_WINDOW = 9        # weeks in the running median a week is compared with

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { spreadOpacity } from "@/components/charts/cell-style";
 import { cellState, seasonStatus, weekStart } from "@/lib/calendar-cells";
 import type { Coverage, CurrentStatus, SeasonProfile } from "@/lib/types";
 
@@ -53,5 +54,16 @@ describe("seasonStatus", () => {
     expect(seasonStatus(winter, now(44))).toEqual({ kind: "soon", weeks: 4 });
     expect(seasonStatus({ ...season, annual_mean: 0.2 }, now(20))).toEqual({ kind: "none" });
     expect(seasonStatus(season, now(20, 1, 0.1))).toEqual({ kind: "peak", ratio: null });
+  });
+});
+
+
+describe("spreadOpacity", () => {
+  it("is full where exact and fades with a wider range, never below half", () => {
+    expect(spreadOpacity(0)).toBe(1);
+    expect(spreadOpacity(undefined)).toBe(1);
+    expect(spreadOpacity(1)).toBeCloseTo(0.75);
+    expect(spreadOpacity(1.8)).toBeLessThan(0.65);
+    expect(spreadOpacity(50)).toBe(0.5);
   });
 });
