@@ -10,6 +10,7 @@ import { api, ApiError } from "@/lib/upstream";
 import type { AnnualSeries, CalendarPayload, ForecastPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
 import { AheadPanel } from "@/components/region/ahead-panel";
 import { RegionFires } from "@/components/region/region-fires";
+import { MonthPanel } from "@/components/region/month-panel";
 
 export const revalidate = 600;
 
@@ -53,6 +54,7 @@ export default async function RegionPage({ params }: Props) {
       <div className="mx-auto mt-10 grid max-w-[1240px] gap-5 px-5 sm:px-8 lg:grid-cols-[1.55fr_1fr]">
         <CalendarSection cal={cal} forecast={forecast} />
         <div className="grid content-start gap-5">
+          {cal.month && <MonthPanel m={cal.month} />}
           <RiskPanel risk={risk} slug={slug} />
           <NowPanel region={region} />
         </div>

@@ -153,6 +153,28 @@ export interface CalendarPayload {
   anomalies: Anomaly[];
   current: CurrentStatus;
   coverage?: Coverage;
+  /** the month so far against the same weeks of earlier years */
+  month?: MonthToDate | null;
+}
+
+export interface MonthTotals {
+  value: number;
+  median: number;
+  /** value / median; null when these weeks usually have no detections */
+  ratio: number | null;
+  /** 1 = highest of `n_years` */
+  rank: number;
+  n_years: number;
+}
+
+/** "Is this month normal here?" Whole weeks from `start` (a Monday, may be in the
+ *  month before) to `end` (a Sunday); `month` is YYYY-MM. */
+export interface MonthToDate extends MonthTotals {
+  start: string;
+  end: string;
+  month: string;
+  weeks: number;
+  raw: MonthTotals | null;
 }
 
 /** When the record has observations (global): weeks are Mondays, `end` is the data end. */

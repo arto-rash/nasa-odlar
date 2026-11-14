@@ -626,5 +626,26 @@
     "about2": "A detection is a heat signal seen from space, not burned area or a count of separate fires. Clouds and smoke hide some fires; hatched weeks had no satellite observation.",
     "about3": "Weather: Open-Meteo forecast and NASA POWER history. Forecast reliability is from tests on past years the models never saw.",
     "source": "Source: ODLAR, {url}"
+  },
+  "month": {
+    "eyebrow": "{month} vs a usual year",
+    "weeks": "Weeks of {range}, compared with the same weeks of every year since 2001",
+    "verdict": {
+      "record": "One of the highest on record",
+      "above": "Above normal",
+      "normal": "About normal",
+      "below": "Below normal",
+      "unusual": "Fires where there usually are none",
+      "quiet": "Quiet, as usual"
+    },
+    "odlar": "ODLAR",
+    "raw": "Raw data",
+    "usual": "usual = 1×",
+    "thisMonth": "This month",
+    "median": "Usual (median)",
+    "rankLabel": "Rank",
+    "rank": "{rank} of {n}",
+    "rawNote": "Raw satellite data would say {raw}× the usual, because it joins MODIS and VIIRS as they are and VIIRS sees far more small fires. Corrected, it is {ours}×.",
+    "aria": "This month is {ratio} times the usual on ODLAR's record; raw data would say {raw} times."
   }
 }

@@ -626,5 +626,26 @@
     "about2": "Aşkarlama kosmosdan görünən istilik siqnalıdır; yanmış sahə və ya ayrı yanğınların sayı deyil. Bulud və tüstü bəzi yanğınları gizlədir; ştrixli həftələrdə peyk müşahidəsi olmayıb.",
     "about3": "Hava: Open-Meteo proqnozu və NASA POWER tarixi məlumatları. Proqnozun etibarlılığı modellərin görmədiyi keçmiş illər üzərində yoxlanılıb.",
     "source": "Mənbə: ODLAR, {url}"
+  },
+  "month": {
+    "eyebrow": "{month} adi ilə müqayisədə",
+    "weeks": "{range} həftələri, 2001-ci ildən bəri hər ilin eyni həftələri ilə müqayisədə",
+    "verdict": {
+      "record": "Qeydə alınmış ən yüksəklərdən biri",
+      "above": "Normadan yuxarı",
+      "normal": "Təxminən norma",
+      "below": "Normadan aşağı",
+      "unusual": "Adətən yanğın olmayan yerdə yanğın",
+      "quiet": "Sakit, həmişəki kimi"
+    },
+    "odlar": "ODLAR",
+    "raw": "Xam data",
+    "usual": "adi = 1×",
+    "thisMonth": "Bu ay",
+    "median": "Adi (median)",
+    "rankLabel": "Yer",
+    "rank": "{n} ildən {rank}",
+    "rawNote": "Xam peyk məlumatı adidən {raw} dəfə çox deyərdi, çünki MODIS və VIIRS-i olduğu kimi birləşdirir, VIIRS isə xeyli çox kiçik yanğın görür. Düzəldilmiş qeyddə bu {ours} dəfədir.",
+    "aria": "ODLAR qeydinə görə bu ay adidən {ratio} dəfədir; xam data {raw} dəfə deyərdi."
   }
 }

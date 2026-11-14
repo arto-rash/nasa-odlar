@@ -306,3 +306,59 @@ def _records(df: pd.DataFrame) -> list[dict]:
             elif isinstance(v, np.generic):
                 r[k] = v.item()
     return recs
+
+
+def month_to_date(cal: dict, end, first_year: int = 2001) -> dict | None:
+    """"Is this month normal here?": the month so far against the same weeks of
+    every earlier year (median, ratio, rank), on the harmonized and the raw record.
+
+    Only complete weeks count, so a half-finished week is never set against full
+    ones. A month without a complete week yet falls back to the month before.
+    Weeks are the calendar's bins (Monday's day of year), as in the matrix.
+    """
+    end = pd.Timestamp(end).normalize()
+    last_full_sunday = end - pd.Timedelta(days=(end.dayofweek + 1) % 7)  # end itself if a Sunday
+    month = last_full_sunday.replace(day=1)
+    mondays = pd.date_range(month - pd.Timedelta(days=month.dayofweek), last_full_sunday - pd.Timedelta(days=6),
+                            freq="7D")
+    mondays = mondays[mondays + pd.Timedelta(days=6) >= month]  # weeks reaching into the month
+    if len(mondays) == 0:
+        return None
+    years = cal["years"]
+    year = int(last_full_sunday.year)
+    if year not in years:
+        return None
+    # a week starting in the previous December sits in last year's row
+    cross = [m for m in mondays if m.year != year]
+    own = [m for m in mondays if m.year == year]
+
+    def totals(matrix: list[list[float]]) -> dict | None:
+        m = np.asarray(matrix, dtype=float)
+        idx = {y: i for i, y in enumerate(years)}
+
+        def year_total(y: int) -> float:
+            v = m[idx[y], [_bin(d) for d in own]].sum() if own else 0.0
+            if cross:
+                v += m[idx[y - 1], [_bin(d) for d in cross]].sum()
+            return float(v)
+
+        cur = year_total(year)
+        hist = [year_total(y) for y in years if first_year <= y < year and (not cross or (y - 1) in idx)]
+        if len(hist) < 5:
+            return None
+        med = float(np.median(hist))
+        return {"value": round(cur, 1), "median": round(med, 1),
+                "ratio": round(cur / med, 2) if med > 0 else None,
+                "rank": int(sum(h > cur for h in hist) + 1), "n_years": len(hist) + 1}
+
+    out = totals(cal["matrix"])
+    if out is None:
+        return None
+    raw = totals(cal["raw_matrix"]) if "raw_matrix" in cal else None
+    return {"start": mondays[0].strftime("%Y-%m-%d"),  # whole weeks: may begin in the month before
+            "end": last_full_sunday.strftime("%Y-%m-%d"), "month": month.strftime("%Y-%m"), "weeks": len(mondays),
+            **out, "raw": raw}
+
+
+def _bin(d: pd.Timestamp) -> int:
+    return min((d.dayofyear - 1) // 7, 51)

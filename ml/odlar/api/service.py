@@ -13,7 +13,7 @@ import shapely
 from scipy.stats import kendalltau, theilslopes
 from shapely.geometry import mapping, shape
 
-from odlar.calendar.engine import build_calendar
+from odlar.calendar.engine import build_calendar, month_to_date
 from odlar.config import OVERLAP_START, risk_level
 from odlar.model.predict import outlook_mondays, spread_outlook, week_bin
 from odlar.store import Store
@@ -355,7 +355,8 @@ def calendar(s: Store, slug: str) -> dict:
     cal = s.calendar(int(r.region_id))
     if cal is None:
         raise NotFound("no calendar")
-    return {"region": _region_dict(r, s), **cal, "coverage": coverage(s)}
+    return {"region": _region_dict(r, s), **cal, "coverage": coverage(s),
+            "month": month_to_date(cal, s.meta["data_end"])}
 
 
 GAP_WINDOW = 9        # weeks in the running median a week is compared with

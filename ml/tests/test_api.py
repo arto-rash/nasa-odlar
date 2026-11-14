@@ -60,6 +60,8 @@ def test_calendar(client):
     c = client.get("/calendar/az").json()
     assert c["years"][0] == 2001 and len(c["matrix"][0]) == 52
     assert len(c["raw_matrix"]) == len(c["matrix"])
+    m = c["month"]
+    assert m["end"] <= c["coverage"]["end"] and 1 <= m["rank"] <= m["n_years"] and m["raw"]["value"] >= 0
 
 
 def test_risk(client):

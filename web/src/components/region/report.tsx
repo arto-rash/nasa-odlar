@@ -12,6 +12,7 @@ import { aheadCells } from "@/lib/calendar-cells";
 import { fmtDate, fmtNum, fmtPct, regionName, weekRange, type AppLocale } from "@/lib/format";
 import type { AnnualSeries, CalendarPayload, ForecastPayload, RegionDetail } from "@/lib/types";
 import { AheadPanel } from "./ahead-panel";
+import { MonthPanel } from "./month-panel";
 import { HistoryPanel } from "./region-panels";
 import { SeasonStatusChip } from "./season-status";
 
@@ -79,6 +80,12 @@ export function RegionReport({
         <RegionPlace r={region} className="mt-1 text-[14px]" />
         <SeasonStatusChip season={region.season} current={region.current} className="mt-4" />
       </header>
+
+      {cal.month && (
+        <section className="mt-6 break-inside-avoid">
+          <MonthPanel m={cal.month} />
+        </section>
+      )}
 
       <section className="mt-6 break-inside-avoid">
         <h2 className="text-[13px] font-semibold text-faint">{t("keyNumbers")}</h2>
