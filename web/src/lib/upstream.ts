@@ -51,11 +51,16 @@ export class ApiError extends Error {
   }
 }
 
-/** Server-side JSON fetch with ISR-style caching. */
-export async function api<T>(path: string, opts: { revalidate?: number; search?: string } = {}): Promise<T> {
+/**
+ * Server-side JSON fetch. Always asks the gateway, which caches every answer for
+ * 10 minutes and is cleared after each data refresh. Next's own data cache is not
+ * used: it outlives deployments, cannot hold answers over 2 MB, and kept serving
+ * pre-refresh data after new countries were added.
+ */
+export async function api<T>(path: string, opts: { search?: string } = {}): Promise<T> {
   const res = await upstream(path, {
     search: opts.search,
-    next: { revalidate: opts.revalidate ?? 600 },
+    cache: "no-store",
   } as RequestInit & { search?: string });
   if (!res.ok) {
     let message = res.statusText;

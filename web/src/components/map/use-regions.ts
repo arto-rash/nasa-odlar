@@ -29,8 +29,8 @@ function viewOf(map: NonNullable<ReturnType<typeof useMap>>): View {
   return { zoom: z < 7 ? 5 : 8, bbox: `${w},${s},${e},${n}` };
 }
 
-/** Regions in view. Must be used inside <BaseMap>. */
-export function useViewportRegions(): FeatureCollection | null {
+/** Regions in view, and whether they are countries (zoomed out) or provinces. Use inside <BaseMap>. */
+export function useViewportRegions(): { geojson: FeatureCollection | null; countries: boolean } {
   const map = useMap();
   const [view, setView] = useState<View | null>(null);
   useEffect(() => {
@@ -52,7 +52,9 @@ export function useViewportRegions(): FeatureCollection | null {
     staleTime: 10 * 60_000,
     placeholderData: keepPreviousData,
   });
-  return data ?? null;
+  // decided by what is shown (the previous answer stays up while a new zoom loads)
+  const countries = !!data && data.features.length > 0 && data.features.every((f) => f.properties?.level === "country");
+  return { geojson: data ?? null, countries };
 }
 
 /** One country's outline and provinces (~500 m detail), e.g. Azerbaijan's signature glow. */
