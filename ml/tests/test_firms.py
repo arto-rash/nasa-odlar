@@ -61,7 +61,7 @@ def test_persistent_source_mask_flags_flare():
 
 def test_date_windows_cover_range_exactly():
     wins = list(firms.date_windows(date(2020, 1, 1), date(2020, 1, 25)))
-    assert wins == [(date(2020, 1, 1), 10), (date(2020, 1, 11), 10), (date(2020, 1, 21), 5)]
+    assert wins == [(date(2020, 1, d), 5) for d in (1, 6, 11, 16, 21)]
     assert sum(n for _, n in wins) == 25
 
 
@@ -76,9 +76,9 @@ def test_client_caches_and_retries(tmp_path):
         side_effect=[httpx.Response(500), httpx.Response(200, text=VIIRS_CSV)])
     client = firms.FirmsClient("KEY", cache_dir=tmp_path, min_interval=0)
     bbox = BBox(46, 39, 48, 41)
-    df = client.fetch("VIIRS_SNPP_SP", date(2016, 7, 15), date(2016, 7, 20), bbox)
+    df = client.fetch("VIIRS_SNPP_SP", date(2016, 7, 15), date(2016, 7, 19), bbox)
     assert len(df) == 3 and route.call_count == 2
-    df2 = client.fetch("VIIRS_SNPP_SP", date(2016, 7, 15), date(2016, 7, 20), bbox)
+    df2 = client.fetch("VIIRS_SNPP_SP", date(2016, 7, 15), date(2016, 7, 19), bbox)
     assert len(df2) == 3 and route.call_count == 2  # served from cache
 
 

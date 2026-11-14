@@ -1,7 +1,7 @@
 """NASA FIRMS active-fire archive client and record normalization.
 
 Uses the FIRMS area API (``/api/area/csv/{key}/{source}/{bbox}/{days}/{date}``),
-which returns at most 10 days per call. Each call is cached on disk as raw CSV so
+which returns at most 5 days per call. Each call is cached on disk as raw CSV so
 a long archive pull can be stopped and resumed without spending transactions.
 """
 
@@ -20,7 +20,7 @@ import pandas as pd
 from odlar.config import CACHE_DIR, PILOT_BBOX, BBox
 
 FIRMS_BASE = "https://firms.modaps.eosdis.nasa.gov"
-MAX_DAYS_PER_CALL = 10
+MAX_DAYS_PER_CALL = 5  # FIRMS area API now rejects day ranges above 5
 
 # FIRMS source -> (sensor, satellite code, first date of record)
 SOURCES: dict[str, tuple[str, str, date]] = {

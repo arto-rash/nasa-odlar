@@ -1,7 +1,7 @@
 {
- "trained_at": "2026-10-25T14:16:58.688738",
- "data_end": "2026-10-24",
- "source": "synthetic",
+ "trained_at": "2026-10-27T09:01:30.864489",
+ "data_end": "2026-10-25",
+ "source": "firms",
  "features": [
   "lag7",
   "lag14",
@@ -38,127 +38,127 @@
  "importance": [
   {
    "feature": "clim_next7",
-   "gain": 0.3355
-  },
-  {
-   "feature": "clim_p75_next7",
-   "gain": 0.1416
-  },
-  {
-   "feature": "lag7",
-   "gain": 0.0928
-  },
-  {
-   "feature": "days_since_fire",
-   "gain": 0.0548
+   "gain": 0.2038
   },
   {
    "feature": "lag14",
-   "gain": 0.0506
+   "gain": 0.1752
+  },
+  {
+   "feature": "lag7",
+   "gain": 0.1387
+  },
+  {
+   "feature": "clim_p75_next7",
+   "gain": 0.079
+  },
+  {
+   "feature": "days_since_fire",
+   "gain": 0.0547
   },
   {
    "feature": "fc_precip",
-   "gain": 0.041
-  },
-  {
-   "feature": "fc_dry_days",
-   "gain": 0.0327
-  },
-  {
-   "feature": "days_since_rain",
-   "gain": 0.0315
-  },
-  {
-   "feature": "anom7",
-   "gain": 0.0292
-  },
-  {
-   "feature": "lag30",
-   "gain": 0.0173
-  },
-  {
-   "feature": "log_area",
-   "gain": 0.0162
-  },
-  {
-   "feature": "lon",
-   "gain": 0.0148
+   "gain": 0.0438
   },
   {
    "feature": "fc_rh_min",
-   "gain": 0.0139
+   "gain": 0.0366
   },
   {
-   "feature": "doy_sin",
-   "gain": 0.0136
+   "feature": "anom7",
+   "gain": 0.0265
   },
   {
-   "feature": "ytd_ratio",
-   "gain": 0.0134
+   "feature": "fc_dry_days",
+   "gain": 0.0247
   },
   {
-   "feature": "doy_cos",
-   "gain": 0.0131
+   "feature": "lag30",
+   "gain": 0.024
   },
   {
    "feature": "clim_next30",
-   "gain": 0.0129
+   "gain": 0.02
+  },
+  {
+   "feature": "lon",
+   "gain": 0.0163
   },
   {
    "feature": "anom30",
-   "gain": 0.0127
+   "gain": 0.0152
   },
   {
-   "feature": "lat",
-   "gain": 0.0099
+   "feature": "tmax_7d",
+   "gain": 0.0145
   },
   {
-   "feature": "precip_30d",
-   "gain": 0.009
+   "feature": "fc_vpd_max",
+   "gain": 0.0138
+  },
+  {
+   "feature": "doy_cos",
+   "gain": 0.0133
+  },
+  {
+   "feature": "log_area",
+   "gain": 0.0111
+  },
+  {
+   "feature": "doy_sin",
+   "gain": 0.01
+  },
+  {
+   "feature": "fc_wind_max",
+   "gain": 0.0091
   },
   {
    "feature": "lag90",
    "gain": 0.008
   },
   {
+   "feature": "precip_30d",
+   "gain": 0.008
+  },
+  {
    "feature": "fc_tmax",
-   "gain": 0.0071
-  },
-  {
-   "feature": "precip_7d",
-   "gain": 0.0053
-  },
-  {
-   "feature": "fc_vpd_max",
-   "gain": 0.0047
-  },
-  {
-   "feature": "ndvi",
-   "gain": 0.0043
-  },
-  {
-   "feature": "tmax_7d",
-   "gain": 0.0026
-  },
-  {
-   "feature": "elevation",
-   "gain": 0.0026
-  },
-  {
-   "feature": "fc_wind_max",
-   "gain": 0.0026
+   "gain": 0.0076
   },
   {
    "feature": "vpd_7d",
-   "gain": 0.0023
+   "gain": 0.0073
+  },
+  {
+   "feature": "lat",
+   "gain": 0.0067
+  },
+  {
+   "feature": "ytd_ratio",
+   "gain": 0.0066
+  },
+  {
+   "feature": "days_since_rain",
+   "gain": 0.0061
+  },
+  {
+   "feature": "precip_7d",
+   "gain": 0.0055
+  },
+  {
+   "feature": "elevation",
+   "gain": 0.0053
+  },
+  {
+   "feature": "ndvi",
+   "gain": 0.0041
   },
   {
    "feature": "wind_7d",
-   "gain": 0.0022
+   "gain": 0.0026
   },
   {
    "feature": "rh_7d",
-   "gain": 0.0018
+   "gain": 0.0022
   }
  ]
 }
