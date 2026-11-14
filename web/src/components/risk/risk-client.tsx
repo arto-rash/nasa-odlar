@@ -9,7 +9,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DailyStrip } from "@/components/charts/daily-strip";
 import { RiskDial } from "@/components/charts/risk-dial";
 import { SeriesChart } from "@/components/charts/series-chart";
-import { BaseMap, useMap } from "@/components/map/base-map";
+import { BaseMap } from "@/components/map/base-map";
+import { FlyTo } from "@/components/map/fly-to";
+import { NearMeControl } from "@/components/map/near-me-control";
 import { SignatureLayer } from "@/components/map/layers";
 import { useCountryShape } from "@/components/map/use-regions";
 import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
@@ -85,6 +87,7 @@ export function RiskClient({
           <ViewportRegionsLayer mode="risk" selected={selected} onHover={onHover} onClick={setSelected} />
           <SignatureLayer geojson={signature} />
           <FlyTo slug={selected} />
+          <NearMeControl position="bottom-left" onFound={(r) => setSelected(r.slug)} />
         </BaseMap>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-bg/90 to-transparent" />
         <div className="pointer-events-none absolute left-4 top-20 z-10 max-w-[520px] sm:left-6 sm:top-24">
@@ -177,23 +180,6 @@ export function RiskClient({
       </aside>
     </div>
   );
-}
-
-// Fly to the selected region: its centre, zoomed by its size (shapes are loaded by view).
-function FlyTo({ slug }: { slug: string | null }) {
-  const map = useMap();
-  const { data } = useQuery({
-    queryKey: ["region", slug],
-    enabled: !!slug,
-    queryFn: () => http<{ lat?: number; lon?: number; area_km2?: number }>(`/regions/${slug}`),
-  });
-  useEffect(() => {
-    if (!map || !slug || data?.lat == null || data?.lon == null) return;
-    const span = Math.sqrt(Math.max(data.area_km2 ?? 1000, 1));
-    const zoom = Math.max(3.5, Math.min(8.5, 11.2 - Math.log2(span)));
-    map.flyTo({ center: [data.lon, data.lat], zoom, duration: 1400 });
-  }, [map, slug, data]);
-  return null;
 }
 
 function RiskDetailView({ slug, onBack }: { slug: string; onBack: () => void }) {

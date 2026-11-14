@@ -4,7 +4,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { BellRing, Check, Flame, LocateFixed, Loader2, MapPin, Phone, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 import { DailyStrip } from "@/components/charts/daily-strip";
 import { DriverList } from "@/components/region/drivers";
@@ -16,7 +16,9 @@ import { useCountryRegions, useRegionSearch } from "@/lib/queries";
 import { matchScore } from "@/lib/search";
 import { useAuth, useUi } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
+import { useNearMe } from "@/lib/use-near-me";
 import type { RegionDetail, RegionRef, RiskDetail, Subscription } from "@/lib/types";
+import { SeasonStatusChip } from "@/components/region/season-status";
 import { RegionPlace } from "@/components/ui/region-place";
 
 type Prefetched = { slug: string; region: RegionDetail; risk: RiskDetail };
@@ -52,7 +54,6 @@ function Picker({ onPick }: { onPick: (slug: string) => void }) {
   const { data: found } = useRegionSearch(q, 30);
   const { data: home } = useCountryRegions("az", true);
   const regions = q.trim() ? found : home;
-  const [locating, setLocating] = useState(false);
   const list = useMemo(
     () =>
       (regions ?? [])
@@ -63,27 +64,7 @@ function Picker({ onPick }: { onPick: (slug: string) => void }) {
         .slice(0, q ? 20 : 12),
     [regions, q, locale],
   );
-  const locate = () => {
-    if (!navigator.geolocation) return toast.error(t("locateFail"));
-    setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        try {
-          const res = await http<{ region: RegionRef }>(`/regions/locate?lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
-          onPick(res.region.slug);
-        } catch {
-          toast.error(t("locateFail"));
-        } finally {
-          setLocating(false);
-        }
-      },
-      () => {
-        setLocating(false);
-        toast.error(t("locateFail"));
-      },
-      { timeout: 10000 },
-    );
-  };
+  const { locate, locating } = useNearMe(useCallback((r: RegionRef) => onPick(r.slug), [onPick]));
   return (
     <div className="mx-auto max-w-[560px] px-4 pb-16 pt-28 sm:pt-36">
       <h1 className="font-display text-[2.6rem] leading-[1.02]">{t("pick")}</h1>
@@ -214,6 +195,7 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
         <section className="mt-5 rounded-lg bg-panel p-6 ring-1 ring-line">
           <h2 className="text-[13px] font-semibold text-faint">{t("season")}</h2>
           <p className="mt-3 text-[17px] leading-relaxed">{t("seasonText", { range: weekRange(crit.start, crit.end, locale) })}</p>
+          <SeasonStatusChip season={region.season} current={region.current} className="mt-3" />
           <SeasonBar start={crit.start} end={crit.end} now={c?.woy ?? null} />
         </section>
       )}

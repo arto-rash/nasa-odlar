@@ -1,10 +1,11 @@
 "use client";
 
-import { ArrowRight, CircleDot, Download, Grid3x3 } from "lucide-react";
+import { ArrowRight, CircleDot, Download, Grid3x3, MapPinned } from "lucide-react";
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
-import { CalendarHeatmap } from "@/components/charts/calendar-heatmap";
+import { CalendarHeatmap, type CellRef } from "@/components/charts/calendar-heatmap";
+import { CellLegend } from "@/components/charts/cell-style";
 import { ClimatologyChart } from "@/components/charts/climatology-chart";
 import { DailyStrip } from "@/components/charts/daily-strip";
 import { FireClock } from "@/components/charts/fire-clock";
@@ -15,6 +16,7 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Segmented } from "@/components/ui/segmented";
 import { Link } from "@/i18n/navigation";
+import { cellState, weekStart } from "@/lib/calendar-cells";
 import { cn } from "@/lib/cn";
 import { fmtNum, fmtPct, regionName, weekLabel, weekRange, type AppLocale } from "@/lib/format";
 import type { AnnualSeries, CalendarPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
@@ -24,10 +26,17 @@ import { reasonText } from "./reasons";
 export function CalendarSection({ cal }: { cal: CalendarPayload }) {
   const t = useTranslations("region");
   const tc = useTranslations("common");
+  const tcl = useTranslations("clock");
   const [view, setView] = useState<"radial" | "linear">("radial");
   const [mode, setMode] = useState<"harmonized" | "raw">("harmonized");
   const [focus, setFocus] = useState<number | null>(null);
+  const [cell, setCell] = useState<CellRef | null>(null);
   const current = cal.current ? { year: cal.current.year, woy: cal.current.woy } : null;
+  const pick = (c: CellRef) => {
+    const same = cell && cell.year === c.year && cell.week === c.week;
+    setCell(same ? null : c);
+    setFocus(same ? null : c.year);
+  };
   return (
     <Panel className="p-5 sm:p-7">
       <PanelHeader
@@ -70,12 +79,54 @@ export function CalendarSection({ cal }: { cal: CalendarPayload }) {
             current={current}
             focusYear={focus}
             onFocusYear={setFocus}
+            coverage={cal.coverage}
+            selected={cell}
+            onCell={pick}
           />
         ) : (
-          <CalendarHeatmap years={cal.years} matrix={cal.matrix} rawMatrix={cal.raw_matrix} mode={mode} season={cal.season} anomalies={cal.anomalies} current={current} />
+          <CalendarHeatmap years={cal.years} matrix={cal.matrix} rawMatrix={cal.raw_matrix} mode={mode} season={cal.season} anomalies={cal.anomalies} current={current}
+            coverage={cal.coverage} selected={cell} onCell={pick} />
         )}
       </div>
+      <CellBar cal={cal} cell={cell} mode={mode} />
+      <div className="mt-4 space-y-1.5">
+        <CellLegend labels={{ noData: tcl("legendNoData"), reduced: tcl("legendReduced") }} reduced={!!cal.coverage?.gaps.some((g) => g.level === "reduced")} />
+        <p className="text-[12.5px] leading-snug text-faint">{tcl("heatNote")}</p>
+      </div>
     </Panel>
+  );
+}
+
+// The picked week: its value and a way to the detections behind it on the map.
+function CellBar({ cal, cell, mode }: { cal: CalendarPayload; cell: CellRef | null; mode: "harmonized" | "raw" }) {
+  const t = useTranslations("clock");
+  const locale = useLocale() as AppLocale;
+  if (!cell) return <p className="mt-4 text-center text-[13px] text-faint">{t("pickCell")}</p>;
+  const yi = cal.years.indexOf(cell.year);
+  const st = cellState(cell.year, cell.week, cal.coverage);
+  const m = mode === "raw" && cal.raw_matrix ? cal.raw_matrix : cal.matrix;
+  const v = m[yi]?.[cell.week] ?? 0;
+  const unseen = st === "nodata" || st === "future";
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg bg-bg-sunken/60 px-4 py-3 ring-1 ring-line">
+      <div className="min-w-0">
+        <p className="text-[13.5px] font-medium">
+          {cell.year} · {weekLabel(cell.week, locale)}
+        </p>
+        <p className="text-[13px] text-dim">
+          {unseen ? t(st === "future" ? "future" : "noData") : `${fmtNum(v, locale, v < 10 ? 1 : 0)} ${t("detectionsWeek")}`}
+          {(st === "reduced" || st === "partial") && <> · {t(st)}</>}
+        </p>
+      </div>
+      {!unseen && (
+        <Link
+          href={`/explore?w=${weekStart(cell.year, cell.week)}&r=${cal.region.slug}`}
+          className="inline-flex min-h-9 items-center gap-2 rounded-md bg-text px-3.5 py-1.5 text-[13px] font-medium text-bg transition hover:scale-[1.02]"
+        >
+          <MapPinned className="size-4" /> {t("seeOnMap")}
+        </Link>
+      )}
+    </div>
   );
 }
 

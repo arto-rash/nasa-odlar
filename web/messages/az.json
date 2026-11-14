@@ -88,7 +88,11 @@
     "ge": "Gürcüstan",
     "am": "Ermənistan",
     "tr": "Türkiyə",
-    "ir": "İran"
+    "ir": "İran",
+    "nearMe": "Yanımda",
+    "nearMeHint": "Olduğunuz ərazini açın",
+    "locating": "Yer müəyyən edilir…",
+    "locateFail": "Yeriniz müəyyən edilmədi."
   },
   "home": {
     "eyebrow": "NASA Space Apps 2026 · MODIS & VIIRS Hot Spots",
@@ -191,7 +195,16 @@
     "year": "İl",
     "total": "Cəmi",
     "raw": "Xam",
-    "harmonized": "Harmonizə edilmiş"
+    "harmonized": "Harmonizə edilmiş",
+    "noData": "Bu həftə peyk müşahidəsi yoxdur",
+    "reduced": "Peyklərdən biri qismən işləmirdi: az sayıla bilər",
+    "partial": "Həftə hələ davam edir",
+    "future": "Hələ müşahidə olunmayıb",
+    "legendNoData": "Müşahidə yoxdur",
+    "legendReduced": "Peyk fasiləsi",
+    "seeOnMap": "Bu aşkarlamaları xəritədə gör",
+    "pickCell": "Arxasındakı aşkarlamaları görmək üçün həftəyə toxunun.",
+    "heatNote": "Aşkarlama kosmosdan görünən istilik siqnalıdır; yanmış sahə və ya ayrı yanğınların sayı deyil."
   },
   "climatology": {
     "aria": "Normal il: həftəlik yanğın aktivliyinin diapazonu və cari il",
@@ -262,7 +275,7 @@
     "trendHint": "Theil–Sen meyli, Mann–Kendall testi ilə",
     "fakeTrend": "xam məlumatla: {value}",
     "clockTitle": "Yanğın saatı",
-    "clockLead": "Halqa — il, dilim — həftə. İli seçmək üçün klikləyin.",
+    "clockLead": "Halqa — il, dilim — həftə. Həftəyə toxunun, yanğınlarını xəritədə görün.",
     "nowTitle": "İndi",
     "thisWeek": "Bu həftə",
     "weekPercentile": "Bu həftə tarixi həftələrin {pct}%-indən aktivdir",
@@ -291,7 +304,12 @@
     "export": "Məlumatı ixrac et",
     "notFound": "Bölgə tapılmadı",
     "inCountry": "{country}",
-    "metaDescription": "{name}: 2001-ci ildən bəri harmonizasiya olunmuş yanğın təqvimi, mövsümün kritik həftələri, qeyri-adi illər və növbəti 7 günün yanğın riski."
+    "metaDescription": "{name}: 2001-ci ildən bəri harmonizasiya olunmuş yanğın təqvimi, mövsümün kritik həftələri, qeyri-adi illər və növbəti 7 günün yanğın riski.",
+    "seasonPeak": "İndi yanğınların pik dövrüdür",
+    "seasonIn": "{weeks, plural, =0 {Yanğın mövsümü: son həftə} other {Yanğın mövsümü: təxminən # həftə qalıb}}",
+    "seasonSoon": "{weeks, plural, =0 {Yanğın mövsümü bu həftə başlayır} other {Yanğın mövsümü təxminən # həftəyə başlayır}}",
+    "seasonLater": "İndi sakitdir. Mövsüm adətən {when} başlayır",
+    "seasonRatio": "bu həftə üçün adi səviyyənin {ratio} misli"
   },
   "reasons": {
     "high_total": "illik aktivlik normadan {value}× çox",

@@ -152,6 +152,15 @@ export interface CalendarPayload {
   year_metrics: YearMetric[];
   anomalies: Anomaly[];
   current: CurrentStatus;
+  coverage?: Coverage;
+}
+
+/** When the record has observations (global): weeks are Mondays, `end` is the data end. */
+export interface Coverage {
+  start: string;
+  end: string;
+  viirs_start: string | null;
+  gaps: { week: string; level: "none" | "reduced" }[];
 }
 
 export interface WeeklyPoint {

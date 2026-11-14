@@ -9,6 +9,7 @@ import { Ticker } from "@/components/ui/ticker";
 import { Link } from "@/i18n/navigation";
 import { fmtNum, fmtPct, regionName, weekRange, type AppLocale } from "@/lib/format";
 import type { RegionDetail } from "@/lib/types";
+import { SeasonStatusChip } from "./season-status";
 
 export function RegionHero({ region }: { region: RegionDetail }) {
   const t = useTranslations("region");
@@ -47,6 +48,7 @@ export function RegionHero({ region }: { region: RegionDetail }) {
             </div>
           )}
         </div>
+        <SeasonStatusChip season={region.season} current={region.current} className="mt-5" />
 
         <dl className="mt-10 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line ring-1 ring-line lg:grid-cols-4">
           <Stat label={t("annualMean")} hint={t("annualMeanHint")}>

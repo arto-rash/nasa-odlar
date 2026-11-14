@@ -9,6 +9,8 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FireClock } from "@/components/charts/fire-clock";
 import { BaseMap, useMap } from "@/components/map/base-map";
+import { FlyTo } from "@/components/map/fly-to";
+import { NearMeControl } from "@/components/map/near-me-control";
 import { MapViewWatcher, useCountryShape, type PointView } from "@/components/map/use-regions";
 import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
 import { DensityLayer, HotspotLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
@@ -27,10 +29,11 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z").getTime() + n * 86400000));
 
 export function ExploreClient({
-  timeline, initialWeek,
+  timeline, initialWeek, initialRegion = null,
 }: {
   timeline: TimelinePoint[];
   initialWeek: string;
+  initialRegion?: string | null;
 }) {
   const t = useTranslations("explore");
   const locale = useLocale() as AppLocale;
@@ -42,7 +45,7 @@ export function ExploreClient({
   const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off" });
   const [sensors, setSensors] = useState({ M: true, V: true });
   const [hover, setHover] = useState<{ slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selected, setSelected] = useState<string | null>(initialRegion);
   const [drawing, setDrawing] = useState(false);
   const [vertices, setVertices] = useState<[number, number][]>([]);
   const [aoiClosed, setAoiClosed] = useState(false);
@@ -203,6 +206,8 @@ export function ExploreClient({
     <div className="fixed inset-0 bg-bg">
       <BaseMap className="absolute inset-0 [&_.maplibregl-ctrl-top-right]:!top-[84px] [&_.maplibregl-ctrl-top-right]:!right-2 sm:[&_.maplibregl-ctrl-top-right]:!right-3" controlsPosition="top-right" options={{ doubleClickZoom: false }}>
         <MapViewWatcher onChange={setView} />
+        <FlyTo slug={initialRegion} duration={0} />
+        <NearMeControl onFound={(r) => setSelected(r.slug)} />
         <DensityLayer cells={grid?.cells ?? []} visible={layers.density} />
         <ViewportRegionsLayer
           mode={layers.regions === "off" ? "outline" : layers.regions}

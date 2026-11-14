@@ -88,7 +88,11 @@
     "ge": "Georgia",
     "am": "Armenia",
     "tr": "Turkey",
-    "ir": "Iran"
+    "ir": "Iran",
+    "nearMe": "Near me",
+    "nearMeHint": "Open the area you are in",
+    "locating": "Locating…",
+    "locateFail": "Could not find your location."
   },
   "home": {
     "eyebrow": "NASA Space Apps 2026 · MODIS & VIIRS Hot Spots",
@@ -191,7 +195,16 @@
     "year": "Year",
     "total": "Total",
     "raw": "Raw",
-    "harmonized": "Harmonized"
+    "harmonized": "Harmonized",
+    "noData": "No satellite observation this week",
+    "reduced": "A satellite was partly offline: may be undercounted",
+    "partial": "Week still in progress",
+    "future": "Not observed yet",
+    "legendNoData": "No observation",
+    "legendReduced": "Satellite outage",
+    "seeOnMap": "See these detections on the map",
+    "pickCell": "Tap a week to see the detections behind it.",
+    "heatNote": "A detection is a heat signal seen from space, not burned area or a count of separate fires."
   },
   "climatology": {
     "aria": "The normal year: weekly range of fire activity, with the current year",
@@ -262,7 +275,7 @@
     "trendHint": "Theil–Sen slope with a Mann–Kendall test",
     "fakeTrend": "on raw data: {value}",
     "clockTitle": "Fire clock",
-    "clockLead": "Ring = year, slice = week. Click a ring to focus that year.",
+    "clockLead": "Ring = year, slice = week. Tap a week to see its fires on the map.",
     "nowTitle": "Right now",
     "thisWeek": "This week",
     "weekPercentile": "This week is more active than {pct}% of past years at this time",
@@ -291,7 +304,12 @@
     "export": "Export data",
     "notFound": "Region not found",
     "inCountry": "{country}",
-    "metaDescription": "{name}: harmonized fire calendar since 2001, critical weeks of the season, unusual years and fire risk for the next 7 days."
+    "metaDescription": "{name}: harmonized fire calendar since 2001, critical weeks of the season, unusual years and fire risk for the next 7 days.",
+    "seasonPeak": "Peak fire period now",
+    "seasonIn": "{weeks, plural, =0 {Fire season: last week} one {Fire season: about # week left} other {Fire season: about # weeks left}}",
+    "seasonSoon": "{weeks, plural, =0 {Fire season starts this week} one {Fire season starts in about # week} other {Fire season starts in about # weeks}}",
+    "seasonLater": "Quiet now. The season usually starts {when}",
+    "seasonRatio": "{ratio}× the usual for this week"
   },
   "reasons": {
     "high_total": "{value}× the normal annual activity",

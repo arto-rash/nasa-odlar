@@ -1,14 +1,15 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import { Bell, Menu, Search, X } from "lucide-react";
+import { Bell, Loader2, LocateFixed, Menu, Search, X } from "lucide-react";
 import { motion, useMotionValueEvent, useScroll } from "motion/react";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
-import { Link, usePathname } from "@/i18n/navigation";
+import { useCallback, useState } from "react";
+import { Link, usePathname, useRouter } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { useAuth, useUi } from "@/lib/store";
+import { useNearMe } from "@/lib/use-near-me";
 import { LocaleSwitch } from "./locale-switch";
 import { Wordmark } from "./logo";
 import { ThemeToggle } from "./theme-toggle";
@@ -79,6 +80,7 @@ export function SiteNav() {
               <Search className="size-4" />
               <span>{t("search")}</span>
             </button>
+            <NearMe />
             <AlertsBell />
             <ThemeToggle />
             <LocaleSwitch className="hidden sm:flex" />
@@ -122,6 +124,27 @@ export function SiteNav() {
         </div>
       )}
     </>
+  );
+}
+
+// Opens the region the device is in (explore and risk have their own, which keep you on the map).
+function NearMe() {
+  const tc = useTranslations("common");
+  const router = useRouter();
+  const pathname = usePathname();
+  const { locate, locating } = useNearMe(useCallback((r) => router.push(`/region/${r.slug}`), [router]));
+  if (pathname.startsWith("/explore") || pathname.startsWith("/risk") || pathname.startsWith("/simple")) return null;
+  return (
+    <button
+      type="button"
+      onClick={locate}
+      disabled={locating}
+      aria-label={tc("nearMeHint")}
+      title={tc("nearMeHint")}
+      className="grid size-9 place-items-center rounded-md text-dim transition-colors hover:bg-panel-hover hover:text-text disabled:opacity-70"
+    >
+      {locating ? <Loader2 className="size-[18px] animate-spin" /> : <LocateFixed className="size-[18px]" />}
+    </button>
   );
 }
 

@@ -354,7 +354,45 @@ def calendar(s: Store, slug: str) -> dict:
     cal = s.calendar(int(r.region_id))
     if cal is None:
         raise NotFound("no calendar")
-    return {"region": _region_dict(r, s), **cal}
+    return {"region": _region_dict(r, s), **cal, "coverage": coverage(s)}
+
+
+GAP_WINDOW = 9        # weeks in the running median a week is compared with
+GAP_MIN_MEDIAN = 200  # ignore quiet stretches, where a low week is just chance
+GAP_REDUCED = 0.5     # under half the usual detections: a satellite was (partly) offline
+GAP_NONE = 0.1        # almost nothing: no usable observation that week
+
+
+def find_gaps(weeks: pd.DataFrame, viirs_start: pd.Timestamp) -> list[dict]:
+    """Weeks when the satellites the record leans on were offline. Before VIIRS
+    the record is MODIS alone; after it VIIRS sets the scale, so a MODIS outage
+    then costs nothing. A week is compared with the running median of the weeks
+    around it, worldwide, so the season cannot pass for an outage."""
+    w = weeks.sort_values("week").reset_index(drop=True)
+    base = np.where(pd.to_datetime(w["week"]) < viirs_start, w["modis"], w["viirs"]).astype(float)
+    med = pd.Series(base).rolling(GAP_WINDOW, center=True, min_periods=5).median().to_numpy()
+    ratio = np.divide(base, med, out=np.ones_like(base), where=med > 0)
+    out = []
+    for i in range(len(w) - 1):  # the newest week is still filling up: that is "partial", not a gap
+        if med[i] >= GAP_MIN_MEDIAN and ratio[i] < GAP_REDUCED:
+            out.append({"week": pd.Timestamp(w.loc[i, "week"]).strftime("%Y-%m-%d"),
+                        "level": "none" if ratio[i] < GAP_NONE else "reduced"})
+    return out
+
+
+def coverage(s: Store) -> dict:
+    """When the record has observations: first week, data end, and the weeks a
+    satellite outage left empty or thin. Global, so worked out once per store."""
+    cached = getattr(s, "_coverage", None)
+    if cached is not None:
+        return cached
+    t = pd.DataFrame(timeline(s))
+    viirs = t.loc[t["viirs"] > 0, "week"]
+    viirs_start = pd.Timestamp(viirs.min()) if len(viirs) else pd.Timestamp.max
+    s._coverage = {"start": t["week"].min(), "end": s.meta["data_end"],
+                   "viirs_start": viirs_start.strftime("%Y-%m-%d") if len(viirs) else None,
+                   "gaps": find_gaps(t, viirs_start)}
+    return s._coverage
 
 
 def risk_detail(s: Store, slug: str) -> dict:
