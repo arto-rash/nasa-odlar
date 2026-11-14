@@ -237,8 +237,11 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
     if zoom < 3 and bbox is None and country is None:
         return _world_outlines(s)
     detail = "z0" if zoom < 4 else "z1" if zoom < 7 else "z2"
+    paths = s.shape_paths
+    if provinces_only and not country and zoom < 7 and s.tier_paths:  # regional views: see odlar.shape_tiers
+        detail, paths = ("t4" if zoom < 5 else "t6"), s.tier_paths
     where, params = ["detail = ?"], [detail]
-    if zoom >= 4 and not country and provinces_only:
+    if zoom >= 4 and not country and provinces_only and paths is s.shape_paths:
         # a zoomed-in map draws provinces only: leave out the (heavy) country outlines
         where.append("NOT is_country")
     if bbox:
@@ -250,10 +253,10 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
         params.append(ids)
     if not s.shape_paths:
         raise NotFound("no region shapes built")
+    order = "region_id" if paths is s.tier_paths else "is_country DESC, region_id"  # countries first (provinces reference them)
     rows = s.points._con().execute(
-        f"SELECT region_id, geometry FROM read_parquet(?) WHERE {' AND '.join(where)} "
-        "ORDER BY is_country DESC, region_id",  # countries first (provinces reference them)
-        [s.shape_paths, *params]).fetchall()
+        f"SELECT region_id, geometry FROM read_parquet(?) WHERE {' AND '.join(where)} ORDER BY {order}",
+        [paths, *params]).fetchall()
     recent_year = int(pd.Timestamp(s.meta["data_end"]).year)
     ann = s.annual[(s.annual["year"] >= 2003) & (s.annual["year"] < recent_year)]
     ids = [int(r[0]) for r in rows]

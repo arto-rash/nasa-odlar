@@ -13,7 +13,7 @@ import numpy as np
 import pandas as pd
 import shapely
 
-from odlar.config import STORE_DIR
+from odlar.config import ARTIFACTS_DIR, STORE_DIR
 from odlar.points import Points, write_points
 
 
@@ -202,6 +202,8 @@ class Store:
         self._calendars: OrderedDict[str, dict] = OrderedDict()
         self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
         self.shape_paths = [str(d / "regions_geo.parquet") for d in dirs if (d / "regions_geo.parquet").exists()]
+        tiers = [ARTIFACTS_DIR / "shape_tiers" / f"{n}.parquet" for n in names]
+        self.tier_paths = [str(t) for t in tiers] if all(t.exists() for t in tiers) else []  # all or none
         batch_of = {}
         for name, d in zip(names, dirs, strict=True):
             for t in _TABLES:
@@ -296,7 +298,7 @@ _lock = threading.Lock()
 
 def built_batches() -> list[tuple[str, Path]]:
     """(name, store dir) of every configured batch that has a store, primary first."""
-    from odlar.config import ARTIFACTS_DIR, BATCHES, PRIMARY_BATCH
+    from odlar.config import BATCHES, PRIMARY_BATCH
     root = Path(os.environ.get("ODLAR_ARTIFACTS_DIR", ARTIFACTS_DIR))
     order = [PRIMARY_BATCH] + [n for n in BATCHES if n != PRIMARY_BATCH]
     built = {n for n in order if (root / n / "store" / "meta.json").exists()}

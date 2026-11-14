@@ -9,9 +9,9 @@ import { regionsViewQuery } from "@/lib/map-data";
  * Region polygons are loaded by the browser, never during server rendering, and
  * only for what is on screen: with the whole world they add up to tens of MB.
  * The API answers by zoom level, like map tiles:
- *   zoom < 3  country outlines (the whole world, one small request)
- *   zoom < 5  provinces simplified to ~2 km in the visible area
- *   zoom < 7  provinces simplified to ~500 m in the visible area
+ *   zoom < 4  country outlines (the whole world, one small request)
+ *   zoom < 5  provinces simplified to ~3 km in the visible area
+ *   zoom < 7  provinces simplified to ~1 km in the visible area
  *   zoom ≥ 7  provinces at full map detail in the visible area
  * The visible area is snapped to a grid (10° / 5° / 1°) so panning reuses cached answers.
  */
@@ -32,7 +32,7 @@ function snappedBounds(map: Map, step: number): string {
 
 function viewOf(map: Map): View {
   const z = map.getZoom();
-  if (z < 3) return { zoom: 2, bbox: null };
+  if (z < 4) return { zoom: 2, bbox: null };
   if (z < 5) return { zoom: 4, bbox: snappedBounds(map, 10) };
   if (z < 7) return { zoom: 6, bbox: snappedBounds(map, 5) };
   return { zoom: 8, bbox: snappedBounds(map, 1) };
