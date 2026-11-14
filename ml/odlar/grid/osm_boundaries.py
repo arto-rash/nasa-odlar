@@ -177,6 +177,13 @@ def level_counts(iso2: str, client: httpx.Client) -> dict[int, int]:
     return counts
 
 
+def pick_levels(counts: dict[int, int], n_adm1: int, land_km2: float) -> list[int]:
+    """Candidate levels, best-sized first (see pick_level)."""
+    target = float(np.clip(land_km2 / KM2_PER_UNIT, 3, MAX_UNITS))
+    ok = {lvl: n for lvl, n in counts.items() if max(2, 0.6 * n_adm1) <= n <= MAX_UNITS}
+    return sorted(ok, key=lambda lvl: (abs(np.log(ok[lvl] / target)), abs(lvl - 5)))
+
+
 def pick_level(counts: dict[int, int], n_adm1: int, land_km2: float) -> int | None:
     """The OSM level giving province-sized units: closest (on a log scale) to one
     unit per ~3,000 km² of land, never coarser than the official top level
@@ -230,9 +237,9 @@ def still_right(iso3: str, path: Path, client: httpx.Client) -> str | None:
 
 
 def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]:
-    """Provinces of one country: OSM at the level matching geoBoundaries' ADM1,
-    or geoBoundaries' full-resolution ADM1 when OSM is too big, has no such level,
-    fails, or covers under 90% of the country's land. Returns (units, source)."""
+    """Provinces of one country: the best-sized OSM level that covers at least 90%
+    of its land (trying up to three), or geoBoundaries' full-resolution ADM1 when
+    OSM is too big, has no usable level or fails. Returns (units, source)."""
     from odlar.grid.regions import COUNTRIES
     meta = COUNTRIES[iso3]
     gb_dir = (BOUNDARY_DIR / meta["file"]).parent
@@ -240,10 +247,12 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
     land_km2 = gpd.GeoSeries([land], crs=4326).to_crs(6933).area.iloc[0] / 1e6
     if iso3 not in GEOBOUNDARIES_ONLY and meta.get("n_adm1", 0) > 1:
         try:
-            level = pick_level(level_counts(meta["iso2"], client), int(meta.get("n_adm1", 10)), land_km2)
-            if level is not None:
+            levels = pick_levels(level_counts(meta["iso2"], client), int(meta.get("n_adm1", 10)), land_km2)
+            coast = None
+            for level in levels[:3]:  # a level may cover only part of the country (Sweden's level 8)
                 osm = fetch_units(meta["iso2"], level, client)
-                coast = fetch_coastline(land.bounds, client)
+                if coast is None:
+                    coast = fetch_coastline(land.bounds, client)
                 osm["geometry"] = [land_part(g, coast, land) for g in osm.geometry]
                 osm = osm[~osm.geometry.is_empty]
                 cover = gpd.GeoSeries([osm.geometry.union_all().intersection(land)], crs=4326) \
@@ -252,7 +261,9 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
                     out = gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
                                             "osm_id": osm["osm_id"], "geometry": osm.geometry}, crs=4326)
                     return fill_gaps(out, land, geoboundaries(iso3, "ADM1", client, gb_dir)), f"osm level {level}"
-                print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land; using geoBoundaries")
+                print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land", flush=True)
+            if levels:
+                print(f"  {iso3}: no OSM level covers the country; using geoBoundaries", flush=True)
         except Exception as exc:  # noqa: BLE001 — any OSM trouble falls back to geoBoundaries
             print(f"  {iso3}: OSM failed ({exc!r:.120}); using geoBoundaries")
     try:
