@@ -36,7 +36,7 @@ class RiskAlertMail extends Mailable
                 'level' => __('odlar.levels.'.$this->alert->level->value, [], $this->locale),
                 'probability' => $this->alert->probability !== null ? round($this->alert->probability * 100) : null,
                 'asOf' => $this->alert->as_of->toDateString(),
-                'url' => config('odlar.frontend_url').'/regions/'.$this->alert->region->slug,
+                'url' => $this->alert->regionUrl(),
             ],
         );
     }

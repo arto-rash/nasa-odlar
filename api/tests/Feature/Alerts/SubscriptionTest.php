@@ -66,7 +66,7 @@ it('rejects invalid thresholds and channels', function (array $body, string $fie
 })->with([
     'low threshold' => [['threshold' => 'low'], 'threshold'],
     'unknown threshold' => [['threshold' => 'apocalyptic'], 'threshold'],
-    'unknown channel' => [['channels' => ['email', 'telegram']], 'channels.1'],
+    'unknown channel' => [['channels' => ['email', 'pigeon']], 'channels.1'],
     'duplicate channel' => [['channels' => ['email', 'email']], 'channels.0'],
     'empty channels' => [['channels' => []], 'channels'],
     'channels not array' => [['channels' => 'email'], 'channels'],

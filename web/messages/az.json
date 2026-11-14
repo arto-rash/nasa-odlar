@@ -517,7 +517,14 @@
     "previews": "Kanalların görünüşü",
     "previewsLead": "SMS və push bildirişləri dizayn prototipidir. Belə görünəcək:",
     "smsText": "ODLAR: {region} üçün yanğın riski {level}. Küləş yandırmayın. Təcili: 112",
-    "gatewayMissing": "Bildiriş sistemi üçün ODLAR serveri tələb olunur."
+    "gatewayMissing": "Bildiriş sistemi üçün ODLAR serveri tələb olunur.",
+    "telegram": "Telegram",
+    "telegramConnect": "Telegram-ı qoş",
+    "telegramWaiting": "Telegram-da botu açın və «Start» basın. Gözlənilir…",
+    "telegramLinked": "Telegram qoşulub",
+    "telegramDisconnect": "Ayır",
+    "telegramDone": "Telegram qoşuldu: bildirişlər ora da gedə bilər.",
+    "telegramHint": "Bildirişləri Telegram mesajı kimi alın."
   },
   "auth": {
     "login": "Daxil ol",

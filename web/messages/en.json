@@ -517,7 +517,14 @@
     "previews": "Channel previews",
     "previewsLead": "SMS and push alerts are a design prototype. This is how they will look:",
     "smsText": "ODLAR: fire risk in {region} is {level}. Do not burn stubble. Emergency: 112",
-    "gatewayMissing": "The alert system needs the ODLAR server."
+    "gatewayMissing": "The alert system needs the ODLAR server.",
+    "telegram": "Telegram",
+    "telegramConnect": "Connect Telegram",
+    "telegramWaiting": "Open the bot in Telegram and press Start. Waiting…",
+    "telegramLinked": "Telegram connected",
+    "telegramDisconnect": "Disconnect",
+    "telegramDone": "Telegram connected: alerts can go there now.",
+    "telegramHint": "Get alerts as Telegram messages."
   },
   "auth": {
     "login": "Sign in",

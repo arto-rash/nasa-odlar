@@ -91,6 +91,7 @@ describe('me and logout', function () {
 
         $this->getJson('/api/v1/auth/me')->assertOk()->assertExactJson([
             'id' => $user->id, 'name' => 'Rashid', 'email' => $user->email, 'locale' => 'en',
+            'telegram_linked' => false, 'telegram_available' => false,
             'created_at' => $user->created_at->toIso8601String(),
         ]);
     });

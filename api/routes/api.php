@@ -7,6 +7,7 @@ use App\Http\Controllers\Api\ExportController;
 use App\Http\Controllers\Api\RegionLocateController;
 use App\Http\Controllers\Api\StatusController;
 use App\Http\Controllers\Api\SubscriptionController;
+use App\Http\Controllers\Api\TelegramController;
 use Illuminate\Support\Facades\Route;
 
 Route::pattern('slug', '[a-z0-9][a-z0-9-]*');
@@ -42,6 +43,9 @@ Route::prefix('v1')->group(function () {
         Route::get('model/report', 'modelReport')->name('model.report');
     });
 
+    // Telegram calls this; the secret is in the path and in a header.
+    Route::post('telegram/webhook/{secret}', [TelegramController::class, 'webhook'])->middleware('throttle:120,1')->name('telegram.webhook');
+
     Route::get('export/{slug}', ExportController::class)->middleware('throttle:export')->name('export');
 
     // Auth (Sanctum personal access tokens).
@@ -64,5 +68,8 @@ Route::prefix('v1')->group(function () {
         Route::post('alerts/read-all', [AlertController::class, 'readAll'])->name('alerts.read-all');
         Route::post('alerts/evaluate', [AlertController::class, 'evaluate'])->middleware('throttle:evaluate')->name('alerts.evaluate');
         Route::post('alerts/{alert}/read', [AlertController::class, 'read'])->name('alerts.read');
+
+        Route::post('telegram/link', [TelegramController::class, 'link'])->middleware('throttle:auth')->name('telegram.link');
+        Route::delete('telegram/link', [TelegramController::class, 'unlink'])->name('telegram.unlink');
     });
 });

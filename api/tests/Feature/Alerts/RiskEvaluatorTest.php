@@ -137,7 +137,7 @@ it('renders localized html and text bodies', function () {
     $mail->assertSeeInHtml('Hello Leyla,')
         ->assertSeeInHtml('is now extreme (as of 2026-10-20)')
         ->assertSeeInHtml('81%')
-        ->assertSeeInText('Open the region in ODLAR: http://localhost:3000/regions/az-sabirabad');
+        ->assertSeeInText('Open the region in ODLAR: http://localhost:3000/en/region/az-sabirabad');
 
     $sub->user->update(['locale' => 'az']);
     (new RiskAlertMail($alert->fresh()->load('user', 'region')))->assertSeeInText('Salam, Leyla!');

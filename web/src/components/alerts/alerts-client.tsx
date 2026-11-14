@@ -1,11 +1,11 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BellOff, BellRing, CheckCheck, Flame, Loader2, LogOut, Mail, MessageSquare, Plus, Radar, Smartphone, Trash2 } from "lucide-react";
+import { BellOff, BellRing, CheckCheck, Flame, Loader2, LogOut, Mail, MessageSquare, Plus, Radar, Send, Smartphone, Trash2 } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { DriverList } from "@/components/region/drivers";
 import { Button } from "@/components/ui/button";
@@ -17,13 +17,14 @@ import { fmtDate, fmtPct, regionName, type AppLocale } from "@/lib/format";
 import { RegionCombobox } from "@/components/ui/region-combobox";
 import { useAuth } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
-import type { Alert, Channel, RiskLevel, Subscription } from "@/lib/types";
+import type { Alert, Channel, RiskLevel, Subscription, User } from "@/lib/types";
 import { RegionPlace } from "@/components/ui/region-place";
 
 const THRESHOLDS: Exclude<RiskLevel, "low">[] = ["moderate", "high", "very_high", "extreme"];
 const CHANNELS: { id: Channel; icon: React.ComponentType<{ className?: string }>; live: boolean }[] = [
   { id: "in_app", icon: BellRing, live: true },
   { id: "email", icon: Mail, live: true },
+  { id: "telegram", icon: Send, live: true }, // live once the user has linked a chat
   { id: "sms", icon: MessageSquare, live: false },
   { id: "push", icon: Smartphone, live: false },
 ];
@@ -212,6 +213,7 @@ function SubscriptionsPanel({ subs, onChange }: { subs: Subscription[]; onChange
           )
         }
       />
+      <TelegramConnect />
       <AnimatePresence initial={false}>
         {adding && (
           <motion.form
@@ -307,11 +309,72 @@ function ThresholdPicker({ value, onChange }: { value: Exclude<RiskLevel, "low">
   );
 }
 
+/** Link a Telegram chat: a one-time t.me link, then wait until the bot has seen it. */
+function TelegramConnect() {
+  const t = useTranslations("alerts");
+  const user = useAuth((s) => s.user);
+  const setUser = useAuth((s) => s.setUser);
+  const [waiting, setWaiting] = useState(false);
+  const waitingRef = useRef(false);
+  useEffect(() => {
+    waitingRef.current = waiting;
+  }, [waiting]);
+  const me = useQuery({
+    queryKey: ["me-telegram"],
+    queryFn: async () => {
+      const u = await http<User>("/auth/me");
+      setUser(u);
+      if (waitingRef.current && u.telegram_linked) {
+        setWaiting(false);
+        toast.success(t("telegramDone"));
+      }
+      return u;
+    },
+    refetchInterval: waiting ? 3000 : false,
+  });
+  useEffect(() => {
+    if (!waiting) return;
+    const id = setTimeout(() => setWaiting(false), 3 * 60_000); // the code is good for 30 min; stop polling sooner
+    return () => clearTimeout(id);
+  }, [waiting]);
+  const link = useMutation({
+    mutationFn: () => http<{ url: string }>("/telegram/link", { method: "POST" }),
+    onSuccess: (r) => {
+      window.open(r.url, "_blank", "noopener");
+      setWaiting(true);
+    },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const unlink = useMutation({
+    mutationFn: () => http<{ telegram_linked: boolean }>("/telegram/link", { method: "DELETE" }),
+    onSuccess: () => me.refetch(),
+  });
+  if (!user?.telegram_available) return null;
+  return (
+    <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-lg px-4 py-3 ring-1 ring-line">
+      <span className="flex items-center gap-2 text-[13.5px]">
+        <Send className="size-4 text-viirs" aria-hidden />
+        {user.telegram_linked ? t("telegramLinked") : waiting ? t("telegramWaiting") : t("telegramHint")}
+      </span>
+      {user.telegram_linked ? (
+        <Button size="sm" variant="ghost" onClick={() => unlink.mutate()} disabled={unlink.isPending}>{t("telegramDisconnect")}</Button>
+      ) : (
+        <Button size="sm" variant="outline" onClick={() => link.mutate()} disabled={link.isPending}>
+          {(link.isPending || waiting) && <Loader2 className="size-3.5 animate-spin" />} {t("telegramConnect")}
+        </Button>
+      )}
+    </div>
+  );
+}
+
 function ChannelPicker({ value, onToggle }: { value: Channel[]; onToggle: (c: Channel) => void }) {
   const t = useTranslations("alerts");
+  const user = useAuth((s) => s.user);
   return (
     <div className="flex flex-wrap gap-1.5">
-      {CHANNELS.map(({ id, icon: Icon, live }) => (
+      {CHANNELS.filter((c) => c.id !== "telegram" || user?.telegram_available)
+        .map((c) => (c.id === "telegram" ? { ...c, live: !!user?.telegram_linked } : c))
+        .map(({ id, icon: Icon, live }) => (
         <button
           type="button"
           key={id}
@@ -326,7 +389,7 @@ function ChannelPicker({ value, onToggle }: { value: Channel[]; onToggle: (c: Ch
         >
           <Icon className="size-3.5" />
           {t(id)}
-          {!live && <span className="text-[12px] text-faint">· {t("soon")}</span>}
+          {!live && id !== "telegram" && <span className="text-[12px] text-faint">· {t("soon")}</span>}
         </button>
       ))}
     </div>

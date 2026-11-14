@@ -43,6 +43,14 @@ class Alert extends Model
         return $this->belongsTo(Region::class);
     }
 
+    /** The region's page on the site, in the user's language. */
+    public function regionUrl(): string
+    {
+        $locale = $this->user?->preferredLocale() ?? 'az';
+
+        return config('odlar.frontend_url')."/{$locale}/region/".$this->region->slug;
+    }
+
     public function notificationLogs(): HasMany
     {
         return $this->hasMany(NotificationLog::class);

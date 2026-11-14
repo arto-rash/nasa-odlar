@@ -424,10 +424,13 @@ export interface User {
   name: string;
   email: string;
   locale: "az" | "en";
+  telegram_linked?: boolean;
+  /** the server has a Telegram bot configured */
+  telegram_available?: boolean;
   created_at: string;
 }
 
-export type Channel = "in_app" | "email" | "sms" | "push";
+export type Channel = "in_app" | "email" | "sms" | "push" | "telegram";
 
 export interface Subscription {
   id: number;

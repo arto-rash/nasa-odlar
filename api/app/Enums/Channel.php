@@ -8,6 +8,7 @@ enum Channel: string
     case Email = 'email';
     case Sms = 'sms';
     case Push = 'push';
+    case Telegram = 'telegram';
 
     public static function values(): array
     {

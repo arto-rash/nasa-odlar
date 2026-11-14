@@ -27,7 +27,7 @@ class RiskEvaluator
     /** @var array<string, array|null> per-run memo of ML risk by region slug */
     private array $risk = [];
 
-    public function __construct(private readonly MlClient $ml) {}
+    public function __construct(private readonly MlClient $ml, private readonly TelegramClient $telegram) {}
 
     /**
      * @param  Builder<Subscription>|null  $subscriptions  defaults to every subscription
@@ -104,6 +104,7 @@ class RiskEvaluator
         return match ($channel) {
             Channel::InApp => [NotificationLog::DELIVERED, null],
             Channel::Email => $this->email($alert),
+            Channel::Telegram => $this->telegram($alert),
             // SMS and push are designed but not wired up in the prototype.
             Channel::Sms, Channel::Push => [NotificationLog::NOT_AVAILABLE, null],
         };
@@ -117,6 +118,31 @@ class RiskEvaluator
             return [NotificationLog::SENT, null];
         } catch (Throwable $e) {
             Log::warning('Risk alert email failed', ['alert_id' => $alert->id, 'error' => $e->getMessage()]);
+
+            return [NotificationLog::FAILED, mb_substr($e->getMessage(), 0, 500)];
+        }
+    }
+
+    private function telegram(Alert $alert): array
+    {
+        $chat = $alert->user->telegram_chat_id;
+        if ($chat === null || ! $this->telegram->enabled()) {
+            return [NotificationLog::NOT_AVAILABLE, null];
+        }
+        $locale = $alert->user->preferredLocale();
+        $region = $locale === 'en' ? $alert->region->name_en : $alert->region->name_az;
+        $text = __('odlar.telegram.alert', [
+            'region' => $region,
+            'level' => __('odlar.levels.'.$alert->level->value, [], $locale),
+            'probability' => $alert->probability !== null ? round($alert->probability * 100) : '—',
+            'date' => $alert->as_of->toDateString(),
+        ], $locale);
+        try {
+            $this->telegram->send($chat, $text, ['text' => __('odlar.mail.cta', [], $locale), 'url' => $alert->regionUrl()]);
+
+            return [NotificationLog::SENT, null];
+        } catch (Throwable $e) {
+            Log::warning('Risk alert Telegram message failed', ['alert_id' => $alert->id, 'error' => $e->getMessage()]);
 
             return [NotificationLog::FAILED, mb_substr($e->getMessage(), 0, 500)];
         }

@@ -1,5 +1,15 @@
 # ODLAR app roadmap (Nov 2026)
 
+## Status (11 Nov 2026)
+- Batch 1 done (ed57de3): calendar → evidence, no-data marks, season countdown, near me.
+- Batches 2–3 done (8b462b6): /forecast, outlook by week, "What's ahead", forecast
+  cells in the calendars, Explore forecast weeks, chart in the Risk view. Not done:
+  the Risk map's horizon switch and the home "this week & ahead" card.
+- Batch 4 done (0b149b7): Fires now (events, Explore layer/list/detail, region list).
+- Batch 5 done: region report (aa445d9); Telegram alerts built and tested, **off
+  until the bot token is set** (see "Needs from the user").
+- Also fixed: refresh OOM on big batches; alert e-mail links went to a 404.
+
 Goal: stand apart from other MODIS/VIIRS entries by being a working app you
 can act on: evidence behind every number, honest gaps, and clear forecasts from
 tomorrow to a year ahead.
@@ -107,8 +117,10 @@ weekly on a coarse grid. Verify limits before building.
   manual run. Watch server memory (swap already 1.6–1.9 GB of 2 GB).
 
 ## Needs from the user
-- Telegram bot token (Batch 5) — create with @BotFather, put it in the server
-  env yourself.
+- Telegram: create a bot with @BotFather, then in /opt/odlar/deploy/.env set
+  TELEGRAM_BOT_TOKEN, TELEGRAM_BOT_USERNAME (without @) and TELEGRAM_WEBHOOK_SECRET
+  (any long random string), restart the api container, and run
+  `php artisan odlar:telegram-webhook https://odlar-api.46-224-126-66.sslip.io`.
 - OK on the stretch seasonal-weather source once limits are checked.
 
 ## Known issues to fold in when touched
