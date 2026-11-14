@@ -210,7 +210,10 @@ def fetch_archive(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX)
             nrt_start = max(sp_end + timedelta(days=1), pd.to_datetime(avail.loc[nrt, "min_date"]).date())
             if nrt_start <= end:
                 frames.append(client.fetch(nrt, nrt_start, end, bbox, progress=True))
-    df = pd.concat([f for f in frames if not f.empty], ignore_index=True)
+    frames = [f for f in frames if not f.empty]
+    if not frames:  # e.g. a small island group with no fires in the period
+        return pd.DataFrame(columns=COLUMNS)
+    df = pd.concat(frames, ignore_index=True)
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"])
 
 
@@ -338,7 +341,10 @@ def fetch_country_archive(map_key: str, country: str, bbox: BBox | list[BBox], s
     if NOAA21_HISTORY and n21_start.year <= last_file_year:
         for box in boxes:
             frames.append(client.fetch("VIIRS_NOAA21_NRT", n21_start, date(last_file_year, 12, 31), box))
-    df = pd.concat([f for f in frames if len(f)], ignore_index=True)
+    frames = [f for f in frames if len(f)]
+    if not frames:
+        return pd.DataFrame(columns=COLUMNS)
+    df = pd.concat(frames, ignore_index=True)
     df = df[(pd.to_datetime(df["acq_date"]) >= pd.Timestamp(start)) & (pd.to_datetime(df["acq_date"]) <= pd.Timestamp(end))]
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
 
