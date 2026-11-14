@@ -149,13 +149,22 @@ def hotspots(start: date, end: date, sensor: Literal["MODIS", "VIIRS", "modis", 
     return service.hotspots(s, start, end, sensor, region, limit, parse_bbox(bbox), cell)
 
 
+def _pack(path) -> FileResponse:
+    if not path.is_file():
+        raise service.NotFound("no week pack for that year")
+    return FileResponse(path, media_type="application/octet-stream")
+
+
 @app.get("/week-pack/{year}", dependencies=deps)
 def week_pack(year: int):
     """A year of sampled detections for the world view (see odlar.week_packs)."""
-    path = PACK_DIR / f"{year}.bin"
-    if not path.is_file():
-        raise service.NotFound(f"no week pack for {year}")
-    return FileResponse(path, media_type="application/octet-stream")
+    return _pack(PACK_DIR / f"{year}.bin")
+
+
+@app.get("/week-pack/home/{year}", dependencies=deps)
+def week_pack_home(year: int):
+    """A year of every detection in the area Explore opens on."""
+    return _pack(PACK_DIR / "home" / f"{year}.bin")
 
 
 @app.get("/timeline", dependencies=deps)

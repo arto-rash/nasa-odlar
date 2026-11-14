@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { packPoints, parsePack, yearsFor } from "./map-data";
+import { packAreaFor, packPoints, parsePack, yearsFor } from "@/lib/map-data";
 
 function pack() {
   // rate 250, one week (Monday 2023-07-03, day 19541), two detections
@@ -34,5 +34,13 @@ describe("week packs", () => {
     expect(yearsFor("2023-07-03")).toEqual([2023]);
     expect(yearsFor("2024-01-08")).toEqual([2023, 2024]);
     expect(yearsFor("2024-12-30")).toEqual([2024, 2025]);
+  });
+});
+
+describe("packAreaFor", () => {
+  it("picks the file that can draw a view", () => {
+    expect(packAreaFor(null)).toBe("world");
+    expect(packAreaFor("37,37,54,45")).toBe("home");
+    expect(packAreaFor("10,37,54,45")).toBeNull();
   });
 });

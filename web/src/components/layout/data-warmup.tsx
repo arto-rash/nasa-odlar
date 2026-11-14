@@ -20,9 +20,13 @@ export function DataWarmup() {
     const run = async () => {
       void import("maplibre-gl");
       await qc.prefetchQuery(regionsViewQuery(2, null));
-      for (const year of warmYears(!window.matchMedia("(max-width: 639px)").matches)) {
-        if (stopped) return;
-        await qc.prefetchQuery(weekPackQuery(year));
+      const years = warmYears(!window.matchMedia("(max-width: 639px)").matches);
+      // the home files first: they are small and Explore opens on them
+      for (const area of ["home", "world"] as const) {
+        for (const year of years) {
+          if (stopped) return;
+          await qc.prefetchQuery(weekPackQuery(year, area));
+        }
       }
     };
     const idle = window.requestIdleCallback ?? ((f: () => void) => window.setTimeout(f, 1200));

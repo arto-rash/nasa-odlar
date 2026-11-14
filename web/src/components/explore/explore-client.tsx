@@ -16,7 +16,7 @@ import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
-import { AFTERGLOW_WEEKS, packPoints, weekPackQuery, yearsFor, type WeekPack } from "@/lib/map-data";
+import { AFTERGLOW_WEEKS, packAreaFor, packPoints, weekPackQuery, yearsFor, type WeekPack } from "@/lib/map-data";
 import { useMediaQuery } from "@/lib/use-media";
 import { fmtNum, regionName, type AppLocale } from "@/lib/format";
 import type { AoiSummary, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
@@ -62,17 +62,18 @@ export function ExploreClient({
   const viewQuery = view
     ? `&limit=${view.limit}${view.bbox ? `&bbox=${view.bbox}` : ""}${view.cell ? `&cell=${view.cell}` : ""}`
     : "";
-  // The whole-world view reads weeks from the year files, so moving along the
-  // timeline costs nothing. Zoomed in, each week is a query for the visible area:
-  // a dragged timeline asks only once it pauses, and the last request is cancelled.
-  const worldView = view?.bbox === null;
+  // The whole world and the home area read weeks from the year files, so moving
+  // along the timeline costs nothing. Elsewhere each week is a query for the visible
+  // area: a dragged timeline asks only once it pauses, and the last request is cancelled.
+  const packArea = view ? packAreaFor(view.bbox) : null;
   const [apiWeek, setApiWeek] = useState(week);
   useEffect(() => {
     const id = setTimeout(() => setApiWeek(week), playing ? 0 : 140);
     return () => clearTimeout(id);
   }, [week, playing]);
   const packResults = useQueries({
-    queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y), enabled: worldView })),
+    // with no file for the view, the world's (if loaded) shows until the query answers
+    queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y, packArea ?? "world"), enabled: packArea !== null })),
   });
   const packs = packResults.every((r) => r.data) ? packResults.map((r) => r.data as WeekPack) : null;
   const packsKey = packResults.map((r) => r.dataUpdatedAt).join();
@@ -85,11 +86,11 @@ export function ExploreClient({
   const { data, isFetching: weekFetching } = useQuery({
     queryKey: ["hotspots", apiWeek, viewQuery],
     queryFn: ({ signal }) => fetchWeek(apiWeek, signal),
-    enabled: view !== null && (!worldView || packFailed),
+    enabled: view !== null && (packArea === null || packFailed),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
-  const isFetching = weekFetching || (worldView && !packs && !packFailed);
+  const isFetching = weekFetching || (packArea !== null && !packs && !packFailed);
   const { data: grid } = useQuery({
     queryKey: ["grid", view?.step, view?.bbox],
     queryFn: () => http<{ cells: [number, number, number][] }>(`/grid?step=${view!.step}${view!.bbox ? `&bbox=${view!.bbox}` : ""}`),
@@ -105,11 +106,11 @@ export function ExploreClient({
     for (const k of [1, 2, 3, -1]) {
       const w = timeline[at + k]?.week;
       if (!w) continue;
-      if (worldView) yearsFor(w).forEach((y) => void qc.prefetchQuery(weekPackQuery(y)));
+      if (packArea) yearsFor(w).forEach((y) => void qc.prefetchQuery(weekPackQuery(y, packArea)));
       else qc.prefetchQuery({ queryKey: ["hotspots", w, viewQuery], queryFn: ({ signal }) => fetchWeek(w, signal), staleTime: Infinity });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [apiWeek, viewQuery, worldView]);
+  }, [apiWeek, viewQuery, packArea]);
 
   // Playback only moves on once the next week's detections are loaded, so every
   // frame shows its own week (on a slow connection it plays slower, not frozen).
@@ -120,14 +121,14 @@ export function ExploreClient({
         const next = i + 1 >= timeline.length ? 0 : i + 1;
         const w = timeline[next]?.week;
         if (!w) return i;
-        const ready = worldView
-          ? yearsFor(w).every((y) => qc.getQueryData(["week-pack", y]))
+        const ready = packArea
+          ? yearsFor(w).every((y) => qc.getQueryData(["week-pack", packArea, y]))
           : qc.getQueryData(["hotspots", w, viewQuery]);
         return ready ? next : i;
       });
     }, 700 / speed);
     return () => clearInterval(id);
-  }, [playing, speed, timeline, qc, viewQuery, worldView]);
+  }, [playing, speed, timeline, qc, viewQuery, packArea]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -159,7 +160,7 @@ export function ExploreClient({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [packsKey, week],
   );
-  const usesPacks = !!worldPoints && (worldView || !data);
+  const usesPacks = !!worldPoints && (packArea !== null || !data);
   const points: HotspotPoint[] = useMemo(() => {
     if (usesPacks) return worldPoints;
     if (!data) return [];

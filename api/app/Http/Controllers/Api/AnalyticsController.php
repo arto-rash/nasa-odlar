@@ -74,7 +74,17 @@ class AnalyticsController extends Controller
     /** A year of sampled detections; finished years never change, so browsers keep them. */
     public function weekPack(int $year): Response
     {
-        $result = $this->ml->cachedGet("/week-pack/{$year}");
+        return $this->pack("/week-pack/{$year}", $year);
+    }
+
+    public function homeWeekPack(int $year): Response
+    {
+        return $this->pack("/week-pack/home/{$year}", $year);
+    }
+
+    private function pack(string $path, int $year): Response
+    {
+        $result = $this->ml->cachedGet($path);
 
         return response($result['body'], 200, [
             'Content-Type' => $result['type'],

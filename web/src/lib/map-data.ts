@@ -50,11 +50,22 @@ export function parsePack(buf: ArrayBuffer): WeekPack {
   };
 }
 
-export function weekPackQuery(year: number) {
+/** The world file is a sample; the home file has every detection of the area Explore opens on. */
+export type PackArea = "world" | "home";
+const HOME: readonly number[] = [33, 35, 58, 46]; // west, south, east, north; same box as odlar.week_packs
+
+/** Which file can draw a view: "w,s,e,n", or null for the whole world. */
+export function packAreaFor(bbox: string | null): PackArea | null {
+  if (bbox === null) return "world";
+  const [w, s, e, n] = bbox.split(",").map(Number);
+  return w >= HOME[0] && s >= HOME[1] && e <= HOME[2] && n <= HOME[3] ? "home" : null;
+}
+
+export function weekPackQuery(year: number, area: PackArea = "world") {
   return {
-    queryKey: ["week-pack", year],
+    queryKey: ["week-pack", area, year],
     queryFn: async ({ signal }: { signal?: AbortSignal }) => {
-      const res = await fetch(`/api/v1/week-pack/${year}?v=${PACK_VERSION}`, { signal });
+      const res = await fetch(`/api/v1/week-pack/${area === "home" ? "home/" : ""}${year}?v=${PACK_VERSION}`, { signal });
       if (!res.ok) throw new Error(`week pack ${year}: ${res.status}`);
       return parsePack(await res.arrayBuffer());
     },

@@ -9,6 +9,9 @@ downloads once and then reads any week from at no cost.
     python -m odlar.week_packs               # every year
     python -m odlar.week_packs --year 2026   # one year (the daily refresh)
 
+Explore opens on the South Caucasus, so the wider area around it (``HOME``) also
+gets a file per year with every detection: that view loses nothing either.
+
 Layout, little-endian:
     uint32 rate, uint32 weeks, uint32 points
     weeks x (uint32 day number of the Monday, uint32 points in that week)
@@ -31,6 +34,7 @@ from odlar.store import get_store
 
 RATE = 250
 PACK_DIR = ARTIFACTS_DIR / "week_packs"
+HOME = (33, 35, 58, 46)  # west, south, east, north; web/src/lib/map-data.ts has the same box
 
 
 def encode(rows: pd.DataFrame, rate: int = RATE) -> bytes:
@@ -47,17 +51,23 @@ def encode(rows: pd.DataFrame, rate: int = RATE) -> bytes:
                      (power | viirs).tobytes()])
 
 
-def write_year(year: int, out_dir: Path = PACK_DIR, rate: int = RATE) -> int:
-    rows = get_store().points.query(f"hash(lon, lat, acq_date, acq_time) % {rate} = 0", None,
-                                    "lon, lat, sensor, frp, acq_date", [year])
+def _write(rows: pd.DataFrame, path: Path, rate: int) -> int:
     if rows.empty:
         return 0
     data = encode(rows, rate)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    tmp = out_dir / f".{year}.tmp"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix(".tmp")
     tmp.write_bytes(data)
-    os.replace(tmp, out_dir / f"{year}.bin")  # the API never reads half a file
+    os.replace(tmp, path)  # the API never reads half a file
     return len(data)
+
+
+def write_year(year: int, out_dir: Path = PACK_DIR, rate: int = RATE) -> tuple[int, int]:
+    cols, points = "lon, lat, sensor, frp, acq_date", get_store().points
+    world = points.query(f"hash(lon, lat, acq_date, acq_time) % {rate} = 0", None, cols, [year])
+    w, s, e, n = HOME
+    home = points.query(f"lon BETWEEN {w} AND {e} AND lat BETWEEN {s} AND {n}", None, cols, [year])
+    return _write(world, out_dir / f"{year}.bin", rate), _write(home, out_dir / "home" / f"{year}.bin", 1)
 
 
 def main() -> None:

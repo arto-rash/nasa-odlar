@@ -31,6 +31,7 @@ Route::prefix('v1')->group(function () {
         Route::get('hotspots', 'hotspots')->name('hotspots');
         Route::get('timeline', 'timeline')->name('timeline');
         Route::get('week-pack/{year}', 'weekPack')->whereNumber('year')->name('week-pack');
+        Route::get('week-pack/home/{year}', 'homeWeekPack')->whereNumber('year')->name('week-pack.home');
         Route::get('grid', 'grid')->name('grid');
         Route::post('aoi/summary', 'aoiSummary')->name('aoi.summary');
         Route::get('harmonization/skill', 'skill')->name('harmonization.skill');
