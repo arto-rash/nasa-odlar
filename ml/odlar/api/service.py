@@ -89,17 +89,17 @@ def list_regions(s: Store) -> list[dict]:
 
 def regions_geojson(s: Store) -> str:
     """Every region at full map detail (the shapes are read from disk)."""
-    return region_shapes(s, None, 8.0)
+    return region_shapes(s, None, 8.0, provinces_only=False)
 
 
 def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = None, zoom: float = 8.0,
-                  country: str | None = None) -> str:
+                  country: str | None = None, provinces_only: bool = True) -> str:
     """The regions in view as GeoJSON text: country outlines only when zoomed out
     (zoom < 4), provinces simplified to ~500 m up to zoom 7, full map detail after.
     Risk and density properties are current; geometry comes pre-serialized."""
     detail = "z0" if zoom < 4 else "z1" if zoom < 7 else "z2"
     where, params = ["detail = ?"], [detail]
-    if zoom >= 4 and not country:
+    if zoom >= 4 and not country and provinces_only:
         # a zoomed-in map draws provinces only: leave out the (heavy) country outlines
         where.append("NOT is_country")
     if bbox:
