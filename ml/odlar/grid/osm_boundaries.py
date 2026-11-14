@@ -25,6 +25,7 @@ from pathlib import Path
 
 import geopandas as gpd
 import httpx
+import numpy as np
 import pandas as pd
 from shapely.geometry import LineString, MultiLineString, MultiPolygon, Polygon
 from shapely.ops import linemerge, polygonize, unary_union
@@ -159,21 +160,33 @@ def geoboundaries_full(iso3: str, adm: str, client: httpx.Client) -> gpd.GeoData
     return _clean_names(gpd.read_file(io.BytesIO(resp.content)).to_crs(4326))
 
 
-def pick_level(iso2: str, target: int, client: httpx.Client) -> int | None:
-    """The OSM admin level whose unit count is closest to geoBoundaries' ADM1 count."""
-    q = (f'[out:json][timeout:300];area["ISO3166-1"="{iso2}"][admin_level=2]->.a;'
-         f'rel(area.a)[boundary=administrative][admin_level~"^(3|4|5|6)$"];out tags;')
+KM2_PER_UNIT = 3_000   # aim: province-sized units (Azerbaijan's districts are ~1,100 km²)
+MAX_UNITS = 150        # per country, so a batch's feature panel stays within a laptop's memory
+
+
+def level_counts(iso2: str, client: httpx.Client) -> dict[int, int]:
+    """Number of OSM admin relations per level (3-8) inside a country, one
+    ``out count`` query per level (cheap even where level 8 has thousands)."""
+    parts = "".join(f'rel(area.a)[boundary=administrative][admin_level={lvl}];out count;' for lvl in range(3, 9))
+    q = f'[out:json][timeout:300];area["ISO3166-1"="{iso2}"][admin_level=2]->.a;{parts}'
     counts: dict[int, int] = {}
-    for e in overpass(q, client)["elements"]:
-        try:
-            lvl = int(e["tags"].get("admin_level", 0))
-        except ValueError:
-            continue
-        counts[lvl] = counts.get(lvl, 0) + 1
-    ok = {lvl: n for lvl, n in counts.items() if 2 <= n <= 3 * target + 5}
+    for lvl, e in zip(range(3, 9), overpass(q, client)["elements"], strict=False):
+        n = int(e.get("tags", {}).get("relations", 0))
+        if n:
+            counts[lvl] = n
+    return counts
+
+
+def pick_level(counts: dict[int, int], n_adm1: int, land_km2: float) -> int | None:
+    """The OSM level giving province-sized units: closest (on a log scale) to one
+    unit per ~3,000 km² of land, never coarser than the official top level
+    (geoBoundaries ADM1), at most 150 units. The UK gets its counties rather than
+    its four nations, France its départements rather than its 13 regions."""
+    target = float(np.clip(land_km2 / KM2_PER_UNIT, 3, MAX_UNITS))
+    ok = {lvl: n for lvl, n in counts.items() if max(2, 0.6 * n_adm1) <= n <= MAX_UNITS}
     if not ok:
         return None
-    return min(ok, key=lambda lvl: (abs(ok[lvl] - target), abs(lvl - 4)))
+    return min(ok, key=lambda lvl: (abs(np.log(ok[lvl] / target)), abs(lvl - 5)))
 
 
 def fill_gaps(units: gpd.GeoDataFrame, land, gb: gpd.GeoDataFrame, min_km2: float = 50.0) -> gpd.GeoDataFrame:
@@ -196,6 +209,26 @@ def fill_gaps(units: gpd.GeoDataFrame, land, gb: gpd.GeoDataFrame, min_km2: floa
     return units
 
 
+def still_right(iso3: str, path: Path, client: httpx.Client) -> str | None:
+    """For a boundary file made before the province-size rule: a description if
+    it already matches what the rule picks now, else None (rebuild it)."""
+    from odlar.grid.regions import COUNTRIES
+    if not path.exists():
+        return None
+    meta = COUNTRIES[iso3]
+    n_file = len(json.loads(path.read_text())["features"])
+    if iso3 in GEOBOUNDARIES_ONLY or meta.get("n_adm1", 0) <= 1:
+        return f"geoboundaries, {n_file} units"
+    land = geoboundaries(iso3, "ADM0", client, (BOUNDARY_DIR / meta["file"]).parent).geometry.make_valid().union_all()
+    land_km2 = gpd.GeoSeries([land], crs=4326).to_crs(6933).area.iloc[0] / 1e6
+    counts = level_counts(meta["iso2"], client)
+    level = pick_level(counts, int(meta.get("n_adm1", 10)), land_km2)
+    if level is None:
+        return f"geoboundaries, {n_file} units" if n_file else None
+    # the file holds that level's units plus at most a few gap fills
+    return f"osm level {level}, {n_file} units" if abs(n_file - counts[level]) <= 0.15 * counts[level] + 2 else None
+
+
 def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]:
     """Provinces of one country: OSM at the level matching geoBoundaries' ADM1,
     or geoBoundaries' full-resolution ADM1 when OSM is too big, has no such level,
@@ -207,7 +240,7 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
     land_km2 = gpd.GeoSeries([land], crs=4326).to_crs(6933).area.iloc[0] / 1e6
     if iso3 not in GEOBOUNDARIES_ONLY and meta.get("n_adm1", 0) > 1:
         try:
-            level = pick_level(meta["iso2"], int(meta.get("n_adm1", 10)), client)
+            level = pick_level(level_counts(meta["iso2"], client), int(meta.get("n_adm1", 10)), land_km2)
             if level is not None:
                 osm = fetch_units(meta["iso2"], level, client)
                 coast = fetch_coastline(land.bounds, client)
@@ -375,16 +408,29 @@ def main() -> None:
             # after another (instead of all waiting for an alphabetical sweep)
             from odlar.world_build import ordered_batches
             order = [i for b in ordered_batches(a.batches.split(",") if a.batches else None) for i in b["countries"]]
-            todo = [i for i in order if not (BOUNDARY_DIR / f"{COUNTRIES[i]['file']}_OSM.geojson").exists()]
-            todo = todo[shard::n_shards]
+            # A ".level" note beside each file records the rule that made it; files from
+            # before the province-size rule are re-checked and kept when they match.
+            note = lambda i: BOUNDARY_DIR / f"{COUNTRIES[i]['file']}_OSM.level"  # noqa: E731
+            todo = [i for i in order if not note(i).exists()][shard::n_shards]
             for iso3 in todo:
+                path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"
+                try:
+                    keep = still_right(iso3, path, client)
+                except Exception as exc:  # noqa: BLE001 — cannot check: rebuild it
+                    print(f"{iso3}: check failed ({exc!r:.100}); rebuilding", flush=True)
+                    keep = None
+                if keep:
+                    note(iso3).write_text(keep)
+                    done += 1
+                    print(f"{iso3}: kept ({keep}) [{done}/{len(todo)}]", flush=True)
+                    continue
                 try:
                     gdf, source = build_world(iso3, client)
                 except Exception as exc:  # noqa: BLE001 — log and move on to the next country
                     print(f"{iso3}: FAILED {exc!r:.200}", flush=True)
                     continue
-                path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"
                 path.write_text(json.dumps(json.loads(gdf.to_json(drop_id=True)), separators=(",", ":")))
+                note(iso3).write_text(source)
                 done += 1
                 print(f"{iso3}: {len(gdf)} units from {source} ({path.stat().st_size / 1e6:.1f} MB) "
                       f"[{done}/{len(todo)}]", flush=True)
