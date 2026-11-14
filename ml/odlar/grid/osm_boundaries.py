@@ -362,6 +362,7 @@ def main() -> None:
     ap.add_argument("countries", nargs="*", help="ISO3 codes; with --world, every world-catalogue country")
     ap.add_argument("--world", action="store_true", help="all countries of data/world.json not done yet")
     ap.add_argument("--shard", default="0/1", help="i/n: this process takes every n-th country from i")
+    ap.add_argument("--batches", default=None, help="with --world: only these comma-separated batches")
     a = ap.parse_args()
     shard, n_shards = (int(x) for x in a.shard.split("/"))
     global _MIRROR_OFFSET
@@ -373,7 +374,7 @@ def main() -> None:
             # in the order the world build runs its batches, so batches complete one
             # after another (instead of all waiting for an alphabetical sweep)
             from odlar.world_build import ordered_batches
-            order = [i for b in ordered_batches(None) for i in b["countries"]]
+            order = [i for b in ordered_batches(a.batches.split(",") if a.batches else None) for i in b["countries"]]
             todo = [i for i in order if not (BOUNDARY_DIR / f"{COUNTRIES[i]['file']}_OSM.geojson").exists()]
             todo = todo[shard::n_shards]
             for iso3 in todo:

@@ -1,7 +1,8 @@
 """Build every world batch in turn and ship each one to the server as it finishes.
 
     caffeinate -dimsu python -m odlar.world_build            # needs FIRMS_MAP_KEY
-    python -m odlar.world_build --only western_europe --no-ship
+    python -m odlar.world_build --only western_europe --no-ship   # a teammate: build, do not upload
+    python -m odlar.world_build --only western_europe --ship-only # upload batches built elsewhere
 
 Light batches go first so whole regions go live early; the heavy single-country
 batches (year-by-year ingestion) come last. A batch waits until all of its
@@ -99,14 +100,22 @@ def ship(name: str) -> bool:
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--only", default=None, help="comma-separated batch names")
+    ap.add_argument("--exclude", default=None, help="comma-separated batch names to leave to others")
+    ap.add_argument("--ship-only", action="store_true", help="upload already-built batches, build nothing")
     ap.add_argument("--no-ship", action="store_true", help="build only, do not upload")
     ap.add_argument("--rebuild", action="store_true", help="build batches that already have a store")
     a = ap.parse_args()
-    if not os.environ.get("FIRMS_MAP_KEY"):
+    if not a.ship_only and not os.environ.get("FIRMS_MAP_KEY"):
         raise SystemExit("FIRMS_MAP_KEY not set")
     from odlar.grid.regions import COUNTRIES
     status = load_status()
-    pending = [b for b in ordered_batches(a.only.split(",") if a.only else None)
+    skip = set(a.exclude.split(",")) if a.exclude else set()
+    pending = [b for b in ordered_batches(a.only.split(",") if a.only else None) if b["name"] not in skip]
+    if a.ship_only:  # batches handed over from another machine: just upload them
+        pending = [b for b in pending if (BATCHES[b["name"]].store_dir / "meta.json").exists()]
+        for b in pending:
+            status.setdefault(b["name"], {})["state"] = "built"
+    pending = [b for b in pending
                if b["name"] in BATCHES and (a.rebuild or not (BATCHES[b["name"]].store_dir / "meta.json").exists()
                                             or status.get(b["name"], {}).get("state") in
                                             ("built", "uploading", "ship_failed"))]
@@ -126,7 +135,7 @@ def main() -> None:
     shipper = threading.Thread(target=uploader, daemon=False)
     shipper.start()
     while pending:
-        ready = [b for b in pending if boundaries_ready(b, COUNTRIES)]
+        ready = [b for b in pending if a.ship_only or boundaries_ready(b, COUNTRIES)]
         if not ready:
             print(f"{now()} waiting for boundaries of {len(pending)} batches", flush=True)
             time.sleep(300)
@@ -134,7 +143,7 @@ def main() -> None:
         b = ready[0]
         pending.remove(b)
         name = b["name"]
-        if a.rebuild or not (BATCHES[name].store_dir / "meta.json").exists():
+        if not a.ship_only and (a.rebuild or not (BATCHES[name].store_dir / "meta.json").exists()):
             status[name] = {"state": "building", "started": now()}
             save_status(status)
             print(f"{now()} building {name} ({len(b['countries'])} countries)", flush=True)

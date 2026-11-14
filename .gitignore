@@ -19,3 +19,11 @@ api/.env
 api/storage/*.key
 deploy/.env
 ml/data/boundaries/world/
+# World batches are built locally and shipped to the server; they are far too big
+# for git (the pilot and Turkey/Iran stay tracked).
+ml/artifacts/*
+!ml/artifacts/caucasus/
+!ml/artifacts/turkey_iran/
+ml/data/world_build.log
+ml/data/world_logs/
+ml/data/world_status.json
