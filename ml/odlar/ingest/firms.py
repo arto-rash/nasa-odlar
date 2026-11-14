@@ -151,12 +151,12 @@ class FirmsClient:
             self._last = time.monotonic()
             try:
                 resp = self.client.get(url.replace("{key}", self.map_key))
-                if "invalid map_key" in resp.text[:200].lower() and len(self.keys) > 1:
-                    # a revoked or expired key: carry on with the others
-                    print(f"  FIRMS key {self._key + 1}/{len(self.keys)} is invalid; dropping it", flush=True)
-                    del self.keys[self._key]
-                    self._spent = {i - (i > self._key) for i in self._spent if i != self._key}
-                    self._key %= len(self.keys)
+                if "invalid map_key" in resp.text[:200].lower() and len(self._spent | {self._key}) < len(self.keys):
+                    # FIRMS now and then rejects a good key for a while: set it aside
+                    # like a spent one (tried again after the next wait) and go on
+                    print(f"  FIRMS key {self._key + 1}/{len(self.keys)} rejected; using the next", flush=True)
+                    self._spent.add(self._key)
+                    self._key = next(i for i in range(len(self.keys)) if i not in self._spent)
                     continue
                 if "exceeding allowed transaction limit" in resp.text[:200].lower():
                     # 5,000 transactions per 10 minutes per key (large areas cost more):

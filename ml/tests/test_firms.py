@@ -103,9 +103,9 @@ def test_client_raises_on_invalid_key(tmp_path, monkeypatch):
 
 
 @respx.mock
-def test_client_drops_an_invalid_key_and_keeps_going(tmp_path):
+def test_client_sets_a_rejected_key_aside_and_keeps_going(tmp_path):
     respx.get(url__regex=r".*/api/area/csv/BAD/.*").mock(return_value=httpx.Response(400, text="Invalid MAP_KEY."))
     good = respx.get(url__regex=r".*/api/area/csv/GOOD/.*").mock(return_value=httpx.Response(200, text=VIIRS_CSV))
     client = firms.FirmsClient("BAD,GOOD", cache_dir=tmp_path, min_interval=0)
     assert len(client.area_csv("VIIRS_SNPP_SP", BBox(46, 39, 48, 41), date(2016, 7, 15), 5)) == 3
-    assert client.keys == ["GOOD"] and good.call_count == 1
+    assert client.map_key == "GOOD" and good.call_count == 1
