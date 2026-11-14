@@ -100,3 +100,12 @@ def test_client_raises_on_invalid_key(tmp_path, monkeypatch):
     client = firms.FirmsClient("BAD", cache_dir=tmp_path, min_interval=0)
     with pytest.raises(httpx.HTTPError):
         client.area_csv("MODIS_SP", BBox(1, 1, 2, 2), date(2005, 1, 1), 1)
+
+
+@respx.mock
+def test_client_drops_an_invalid_key_and_keeps_going(tmp_path):
+    respx.get(url__regex=r".*/api/area/csv/BAD/.*").mock(return_value=httpx.Response(400, text="Invalid MAP_KEY."))
+    good = respx.get(url__regex=r".*/api/area/csv/GOOD/.*").mock(return_value=httpx.Response(200, text=VIIRS_CSV))
+    client = firms.FirmsClient("BAD,GOOD", cache_dir=tmp_path, min_interval=0)
+    assert len(client.area_csv("VIIRS_SNPP_SP", BBox(46, 39, 48, 41), date(2016, 7, 15), 5)) == 3
+    assert client.keys == ["GOOD"] and good.call_count == 1
