@@ -57,10 +57,21 @@ def country_names() -> dict[str, tuple[str, str]]:
     return _COUNTRY_NAMES
 
 
-def _region_dict(r) -> dict:
+def _where(s: Store | None, r) -> dict:
+    """Where a region is, for the small line under its name: its country, and for
+    the local units of a split country also its state ("Michigan · United States")."""
     cn = country_names().get(r.country, (r.country.upper(), r.country.upper()))
+    out = {"country_name_en": cn[0], "country_name_az": cn[1]}
+    if s is not None and r.level != "country" and not pd.isna(r.parent_id):
+        parent = s.by_id.get(int(r.parent_id))
+        if parent is not None and parent.kind == "state":
+            out.update(state_name_en=parent.name_en, state_name_az=parent.name_az)
+    return out
+
+
+def _region_dict(r, s: Store | None = None) -> dict:
     return {"id": int(r.region_id), "slug": r.slug, "name_en": r.name_en, "name_az": r.name_az,
-            "country": r.country, "country_name_en": cn[0], "country_name_az": cn[1],
+            "country": r.country, **_where(s, r),
             "level": r.level, "kind": r.kind,
             "parent_id": None if pd.isna(r.parent_id) else int(r.parent_id),
             "area_km2": _f(r.area_km2, 1), "lat": _f(r.lat, 4), "lon": _f(r.lon, 4)}
@@ -168,7 +179,7 @@ def list_regions(s: Store, country: str | None = None, parent: str | None = None
         regs = regs.head(limit)
     out = []
     for r in regs.itertuples():
-        d = _region_dict(r)
+        d = _region_dict(r, s)
         row = summ.loc[int(r.region_id)]
         d["risk"] = _risk_dict(row)
         if not lite:
@@ -217,7 +228,7 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
         reg = s.by_id[int(rid)]
         rk = _risk_for(s, int(rid)) or {}
         props = {"id": int(rid), "slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az,
-                 "country": reg.country, "level": reg.level, "probability": rk.get("probability"),
+                 "country": reg.country, **_where(s, reg), "level": reg.level, "probability": rk.get("probability"),
                  "risk_level": rk.get("level"),
                  "density": _f(clim.get(int(rid), 0.0) / max(float(reg.area_km2 or 1), 1) * 100, 3)}
         parts.append('{"type":"Feature","geometry":' + geom + ',"properties":' + json.dumps(props) + "}")
@@ -242,15 +253,15 @@ def trend(years: np.ndarray, values: np.ndarray) -> dict:
 def region_detail(s: Store, slug: str) -> dict:
     r = region_or_404(s, slug)
     rid = int(r.region_id)
-    d = _region_dict(r)
+    d = _region_dict(r, s)
     ann = s.annual[s.annual["region_id"] == rid]
     end_year = int(pd.Timestamp(s.meta["data_end"]).year)
     full = ann[(ann["year"] >= 2001) & (ann["year"] < end_year)]
     cal = s.calendar(rid) or {}
     d["risk"] = _risk_for(s, rid)
-    d["children"] = [_region_dict(c) for c in s.regions[s.regions["parent_id"] == rid].itertuples()]
+    d["children"] = [_region_dict(c, s) for c in s.regions[s.regions["parent_id"] == rid].itertuples()]
     if not pd.isna(r.parent_id):
-        d["parent"] = _region_dict(s.by_id[int(r.parent_id)])
+        d["parent"] = _region_dict(s.by_id[int(r.parent_id)], s)
     d["stats"] = {
         "annual_mean": _f(full["harmonized"].mean(), 1),
         "annual_mean_raw_modis": _f(full.loc[full["year"] < 2012, "modis"].mean(), 1),
@@ -305,7 +316,7 @@ def calendar(s: Store, slug: str) -> dict:
     cal = s.calendar(int(r.region_id))
     if cal is None:
         raise NotFound("no calendar")
-    return {"region": _region_dict(r), **cal}
+    return {"region": _region_dict(r, s), **cal}
 
 
 def risk_detail(s: Store, slug: str) -> dict:
@@ -316,7 +327,7 @@ def risk_detail(s: Store, slug: str) -> dict:
     fw = s.fire_weather[s.fire_weather["region_id"].isin(leaf_ids)]
     ol = s.outlook_now[s.outlook_now["region_id"].isin(leaf_ids)]
     hist = s.rows("risk_history", leaf_ids)
-    out: dict = {"region": _region_dict(r), "as_of": s.meta["data_end"], "forecast_source": s.meta.get("forecast_source")}
+    out: dict = {"region": _region_dict(r, s), "as_of": s.meta["data_end"], "forecast_source": s.meta.get("forecast_source")}
     if rn.empty:
         raise NotFound("no risk for region")
     if len(leaf_ids) == 1:
@@ -359,7 +370,7 @@ def risk_map(s: Store, country: str | None = None, limit: int | None = None) -> 
     for r in rn.itertuples():
         reg = s.by_id[int(r.region_id)]
         out.append({"id": int(r.region_id), "slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az,
-                    "country": reg.country, "probability": _f(r.probability, 4), "level": r.level,
+                    "country": reg.country, **_where(s, reg), "probability": _f(r.probability, 4), "level": r.level,
                     "expected7": _f(r.expected7, 2), "driver": r.drivers[0]["code"] if r.drivers else None})
     return sorted(out, key=lambda x: -(x["probability"] or 0))
 
@@ -586,5 +597,5 @@ def locate(s: Store, lat: float, lon: float) -> dict:
         "AND ? BETWEEN minx AND maxx AND ? BETWEEN miny AND maxy", [s.shape_paths, lon, lat]).fetchall()
     for rid, geom in rows:
         if from_geojson(geom).contains(pt):
-            return {"region": _region_dict(s.by_id[int(rid)])}
+            return {"region": _region_dict(s.by_id[int(rid)], s)}
     raise NotFound("no region at this location")
