@@ -90,6 +90,24 @@ def fetch_units(iso2: str, level: int | str, client: httpx.Client, bbox=None) ->
                             crs=4326)
 
 
+def unmangle(name):
+    """Undo UTF-8 text that was decoded as Latin-1 ('RegiÃ£o' -> 'Região'), which
+    some geoBoundaries releases carry; anything else is returned unchanged."""
+    if not isinstance(name, str):
+        return name
+    try:
+        fixed = name.encode("latin-1").decode("utf-8")
+    except (UnicodeEncodeError, UnicodeDecodeError):
+        return name
+    return fixed
+
+
+def _clean_names(gdf: gpd.GeoDataFrame) -> gpd.GeoDataFrame:
+    if "shapeName" in gdf:
+        gdf["shapeName"] = gdf["shapeName"].map(unmangle)
+    return gdf
+
+
 def geoboundaries(iso3: str, adm: str, client: httpx.Client, boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
     """geoBoundaries open release (simplified), downloaded once into ``boundary_dir``."""
     path = boundary_dir / f"{iso3}_{adm}.geojson"
@@ -98,7 +116,7 @@ def geoboundaries(iso3: str, adm: str, client: httpx.Client, boundary_dir: Path 
         resp = client.get(meta["simplifiedGeometryGeoJSON"], follow_redirects=True)
         resp.raise_for_status()
         path.write_bytes(resp.content)
-    return gpd.read_file(path).to_crs(4326)
+    return _clean_names(gpd.read_file(path).to_crs(4326))
 
 
 def build_osm_only(iso3: str, client: httpx.Client) -> gpd.GeoDataFrame:
@@ -136,7 +154,7 @@ def geoboundaries_full(iso3: str, adm: str, client: httpx.Client) -> gpd.GeoData
     meta = client.get(f"https://www.geoboundaries.org/api/current/gbOpen/{iso3}/{adm}/").json()
     resp = client.get(meta["gjDownloadURL"], follow_redirects=True, timeout=600)
     resp.raise_for_status()
-    return gpd.read_file(io.BytesIO(resp.content)).to_crs(4326)
+    return _clean_names(gpd.read_file(io.BytesIO(resp.content)).to_crs(4326))
 
 
 def pick_level(iso2: str, target: int, client: httpx.Client) -> int | None:
@@ -154,6 +172,26 @@ def pick_level(iso2: str, target: int, client: httpx.Client) -> int | None:
     if not ok:
         return None
     return min(ok, key=lambda lvl: (abs(ok[lvl] - target), abs(lvl - 4)))
+
+
+def fill_gaps(units: gpd.GeoDataFrame, land, gb: gpd.GeoDataFrame, min_km2: float = 50.0) -> gpd.GeoDataFrame:
+    """Add land the OSM level leaves out (e.g. Portugal's Azores and Madeira sit
+    one level up from its districts) as the geoBoundaries ADM1 units found there."""
+    gap = land.difference(units.geometry.union_all())
+    if gap.is_empty:
+        return units
+    extra = []
+    for _, u in gb.iterrows():
+        piece = u.geometry.intersection(gap) if u.geometry is not None else None
+        if piece is None or piece.is_empty:
+            continue
+        eq = gpd.GeoSeries([piece, u.geometry], crs=4326).to_crs(6933).area
+        if eq.iloc[0] / 1e6 >= min_km2 and eq.iloc[0] >= 0.5 * eq.iloc[1]:
+            extra.append({"shapeName": u["shapeName"], "name_az": None, "osm_id": None, "geometry": piece})
+    if extra:
+        print(f"  added from geoBoundaries: {[e['shapeName'] for e in extra]}")
+        units = pd.concat([units, gpd.GeoDataFrame(extra, crs=4326)], ignore_index=True)
+    return units
 
 
 def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]:
@@ -175,9 +213,9 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
                 cover = gpd.GeoSeries([osm.geometry.union_all().intersection(land)], crs=4326) \
                     .to_crs(6933).area.iloc[0] / 1e6
                 if len(osm) and cover >= 0.9 * land_km2:
-                    return gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
-                                             "osm_id": osm["osm_id"], "geometry": osm.geometry},
-                                            crs=4326), f"osm level {level}"
+                    out = gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
+                                            "osm_id": osm["osm_id"], "geometry": osm.geometry}, crs=4326)
+                    return fill_gaps(out, land, geoboundaries(iso3, "ADM1", client)), f"osm level {level}"
                 print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land; using geoBoundaries")
         except Exception as exc:  # noqa: BLE001 — any OSM trouble falls back to geoBoundaries
             print(f"  {iso3}: OSM failed ({exc!r:.120}); using geoBoundaries")

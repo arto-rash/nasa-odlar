@@ -87,8 +87,23 @@ def regions(s: Store = Depends(store)):
 
 
 @app.get("/regions/geojson", dependencies=deps)
-def regions_geojson(s: Store = Depends(store)):
-    return service.regions_geojson(s)
+def regions_geojson(bbox: str | None = Query(None, description="west,south,east,north"),
+                    zoom: float | None = Query(None, ge=0, le=24), country: str | None = Query(None, max_length=3),
+                    s: Store = Depends(store)):
+    """Without parameters: every region at map detail (the full set, used by the
+    gateway's region sync). With bbox/zoom/country: only the shapes in view."""
+    if bbox is None and zoom is None and country is None:
+        return service.regions_geojson(s)
+    box = None
+    if bbox:
+        try:
+            box = tuple(float(v) for v in bbox.split(","))
+        except ValueError as exc:
+            raise ValueError("bbox must be west,south,east,north") from exc
+        if len(box) != 4:
+            raise ValueError("bbox must be west,south,east,north")
+    return Response(service.region_shapes(s, box, 8.0 if zoom is None else zoom, country),
+                    media_type="application/geo+json")
 
 
 @app.get("/regions/locate", dependencies=deps)

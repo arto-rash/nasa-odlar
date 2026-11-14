@@ -79,6 +79,32 @@ def serving_geometry(regions: gpd.GeoDataFrame, tolerance: float | None = None) 
     return geo
 
 
+# Map detail levels for the viewport endpoint: (key, simplification in degrees or
+# None for the batch's serving tolerance, whether provinces are included).
+SHAPE_LEVELS = (("z0", 0.02, False), ("z1", 0.005, True), ("z2", None, True))
+
+
+def write_region_shapes(store_dir: Path, regions: gpd.GeoDataFrame) -> None:
+    """Every region's outline at three levels of detail, one row per region and
+    level, with its bounding box, so the API can return just the shapes in view
+    (``regions_geo.parquet``; geometry as GeoJSON text)."""
+    rows = []
+    for key, tol, provinces in SHAPE_LEVELS:
+        geo = serving_geometry(regions, tol)
+        if not provinces:
+            geo = geo[geo["level"] == "country"]
+        geo = geo[~geo.geometry.is_empty]
+        b = geo.geometry.bounds
+        rows.append(pd.DataFrame({
+            "region_id": geo["region_id"].astype(int).to_numpy(), "detail": key,
+            "is_country": (geo["level"] == "country").to_numpy(),
+            "minx": b["minx"].to_numpy(), "miny": b["miny"].to_numpy(),
+            "maxx": b["maxx"].to_numpy(), "maxy": b["maxy"].to_numpy(),
+            "geometry": shapely.to_geojson(shapely.set_precision(geo.geometry.to_numpy(), 1e-4 if tol else 1e-5)),
+        }))
+    pd.concat(rows, ignore_index=True).to_parquet(store_dir / "regions_geo.parquet", index=False)
+
+
 def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFrame | None, weekly: pd.DataFrame,
               annual: pd.DataFrame, calendars: dict, skill: dict, model_report: dict, risk_now: pd.DataFrame,
               outlook_now: pd.DataFrame, fire_weather: pd.DataFrame, risk_history: pd.DataFrame,
@@ -86,6 +112,7 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
     """Write a batch store. Detections go to per-year files (odlar.points); with
     ``hotspot_years`` only those years are written (the caller carries the rest over)."""
     store_dir.mkdir(parents=True, exist_ok=True)
+    write_region_shapes(store_dir, regions)
     tol = serve_tolerance(regions)
     serving_geometry(regions, tol).to_file(store_dir / "regions.geojson", driver="GeoJSON",
                                            COORDINATE_PRECISION=5 if tol < 0.001 else 4)
@@ -159,6 +186,7 @@ class Store:
         self.calendar_files = {name: d / "calendars.json" for name, d in zip(names, dirs, strict=True)}
         self._calendars: OrderedDict[str, dict] = OrderedDict()
         self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
+        self.shape_paths = [str(d / "regions_geo.parquet") for d in dirs if (d / "regions_geo.parquet").exists()]
         batch_of = {}
         for name, d in zip(names, dirs, strict=True):
             for t in _TABLES:

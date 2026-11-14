@@ -108,6 +108,41 @@ def regions_geojson(s: Store) -> dict:
     return {"type": "FeatureCollection", "features": feats}
 
 
+def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = None, zoom: float = 8.0,
+                  country: str | None = None) -> str:
+    """The regions in view as GeoJSON text: country outlines only when zoomed out
+    (zoom < 4), provinces simplified to ~500 m up to zoom 7, full map detail after.
+    Risk and density properties are current; geometry comes pre-serialized."""
+    detail = "z0" if zoom < 4 else "z1" if zoom < 7 else "z2"
+    where, params = ["detail = ?"], [detail]
+    if bbox:
+        where.append("maxx >= ? AND minx <= ? AND maxy >= ? AND miny <= ?")
+        params += [bbox[0], bbox[2], bbox[1], bbox[3]]
+    if country:
+        ids = s.regions.loc[s.regions["country"] == country.lower(), "region_id"].astype(int).tolist()
+        where.append("list_contains(?, region_id)")
+        params.append(ids)
+    if not s.shape_paths:
+        raise NotFound("no region shapes built")
+    rows = s.points._con().execute(
+        f"SELECT region_id, geometry FROM read_parquet(?) WHERE {' AND '.join(where)}",
+        [s.shape_paths, *params]).fetchall()
+    recent_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    ann = s.annual[(s.annual["year"] >= 2003) & (s.annual["year"] < recent_year)]
+    ids = [int(r[0]) for r in rows]
+    clim = ann[ann["region_id"].isin(ids)].groupby("region_id")["harmonized"].mean()
+    parts = []
+    for rid, geom in rows:
+        reg = s.by_id[int(rid)]
+        rk = _risk_for(s, int(rid)) or {}
+        props = {"id": int(rid), "slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az,
+                 "country": reg.country, "level": reg.level, "probability": rk.get("probability"),
+                 "risk_level": rk.get("level"),
+                 "density": _f(clim.get(int(rid), 0.0) / max(float(reg.area_km2 or 1), 1) * 100, 3)}
+        parts.append('{"type":"Feature","geometry":' + geom + ',"properties":' + json.dumps(props) + "}")
+    return '{"type":"FeatureCollection","features":[' + ",".join(parts) + "]}"
+
+
 def trend(years: np.ndarray, values: np.ndarray) -> dict:
     """Theil–Sen slope with a Mann–Kendall (Kendall tau) significance test."""
     m = np.isfinite(values)
