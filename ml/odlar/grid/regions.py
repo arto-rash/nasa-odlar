@@ -116,6 +116,19 @@ def polygonal(geom):
     return unary_union(parts) if parts else Polygon()
 
 
+# country -> neighbours whose sources' claim prevails where both cover the same
+# ground: East Jerusalem and the West Bank edges (Palestine), north Kosovo (Kosovo).
+YIELDS = {"ISR": ("PSE",), "JOR": ("PSE",), "SRB": ("XKX",)}
+
+
+@lru_cache(maxsize=8)
+def _country_shape(iso: str, boundary_dir: Path = BOUNDARY_DIR):
+    meta = COUNTRIES[iso]
+    osm = boundary_dir / f"{meta['file']}_OSM.geojson"
+    gdf = gpd.read_file(osm if osm.exists() else boundary_dir / f"{meta['file']}.geojson").to_crs(4326)
+    return unary_union([polygonal(g) for g in gdf.geometry.make_valid()])
+
+
 def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
     """All regions (sub-national + country) of one batch, with stable integer ids
     (``batch.id_offset`` + rank within the batch)."""
@@ -135,6 +148,12 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
         # stays with the country listed first, so every point has one region.
         if taken is not None:
             gdf["geometry"] = [polygonal(g) for g in gdf.geometry.difference(taken)]
+            gdf = gdf[~gdf.geometry.is_empty]
+        # Ground both a country's and a neighbour's source claim is left to the
+        # neighbour listed here (the user's decision), whatever batch either is in.
+        yielded = [_country_shape(n, boundary_dir) for n in YIELDS.get(iso, ())]
+        if yielded:
+            gdf["geometry"] = [polygonal(g) for g in gdf.geometry.difference(unary_union(yielded))]
             gdf = gdf[~gdf.geometry.is_empty]
         country_union = gdf.geometry.union_all()
         taken = country_union if taken is None else taken.union(country_union)
@@ -187,6 +206,9 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
     regions = regions.drop(columns="parent_key")
     eq = regions.to_crs(6933)  # equal-area for km²
     regions["area_km2"] = (eq.geometry.area / 1e6).round(1)
+    # a unit left with (almost) nothing after YIELDS goes; ids are assigned first,
+    # so every other region keeps its id
+    regions = regions[(regions["level"] == "country") | (regions["area_km2"] >= 1)].reset_index(drop=True)
     cent = regions.geometry.representative_point()
     regions["lat"] = cent.y.round(4)
     regions["lon"] = cent.x.round(4)

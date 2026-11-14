@@ -8338,6 +8338,32 @@
    "parent_country": "KAZ",
    "weight": 40380.55172413793,
    "x": 51.018004804862926
+  },
+  "PSE": {
+   "code": "ps",
+   "iso2": "PS",
+   "name_en": "Palestine",
+   "name_az": "Fələstin",
+   "file": "world/PSE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Palestine",
+   "subregion": "Western Asia",
+   "n_adm1": 16,
+   "weight": 0
+  },
+  "XKX": {
+   "code": "xk",
+   "iso2": "XK",
+   "name_en": "Kosovo",
+   "name_az": "Kosovo",
+   "file": "world/XKX_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Kosovo",
+   "subregion": "Southern Europe",
+   "n_adm1": 7,
+   "weight": 0
   }
  },
  "batches": [
@@ -10492,6 +10518,24 @@
    "stream": false,
    "weight": 585518.0,
    "split_of": "KAZ"
+  },
+  {
+   "name": "palestine",
+   "countries": [
+    "PSE"
+   ],
+   "id_offset": 470000,
+   "stream": false,
+   "weight": 0
+  },
+  {
+   "name": "kosovo",
+   "countries": [
+    "XKX"
+   ],
+   "id_offset": 480000,
+   "stream": false,
+   "weight": 0
   }
  ]
 }
