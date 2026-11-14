@@ -109,3 +109,15 @@ def test_client_sets_a_rejected_key_aside_and_keeps_going(tmp_path):
     client = firms.FirmsClient("BAD,GOOD", cache_dir=tmp_path, min_interval=0)
     assert len(client.area_csv("VIIRS_SNPP_SP", BBox(46, 39, 48, 41), date(2016, 7, 15), 5)) == 3
     assert client.map_key == "GOOD" and good.call_count == 1
+
+
+@respx.mock
+def test_client_waits_when_every_key_is_at_its_limit(tmp_path, monkeypatch):
+    waits = []
+    monkeypatch.setattr(firms.time, "sleep", lambda s: waits.append(s))
+    route = respx.get(url__regex=r".*/api/area/csv/.*").mock(side_effect=[
+        httpx.Response(400, text="Invalid MAP_KEY."), httpx.Response(400, text="Invalid MAP_KEY."),
+        httpx.Response(200, text=VIIRS_CSV)])
+    client = firms.FirmsClient("K1,K2", cache_dir=tmp_path, min_interval=0)
+    assert len(client.area_csv("VIIRS_SNPP_SP", BBox(46, 39, 48, 41), date(2016, 7, 15), 5)) == 3
+    assert 120 in waits and route.call_count == 3

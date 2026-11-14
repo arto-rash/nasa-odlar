@@ -144,31 +144,30 @@ class FirmsClient:
 
     def _get(self, url: str, retries: int = 12) -> str:
         """GET a FIRMS URL; ``{key}`` in it is replaced by the key in use."""
-        for attempt in range(retries + 2 * len(self.keys)):
+        attempt = limit_waits = 0
+        while True:
             wait = self.min_interval - (time.monotonic() - self._last)
             if wait > 0:
                 time.sleep(wait)
             self._last = time.monotonic()
             try:
                 resp = self.client.get(url.replace("{key}", self.map_key))
-                if "invalid map_key" in resp.text[:200].lower() and len(self._spent | {self._key}) < len(self.keys):
-                    # FIRMS now and then rejects a good key for a while: set it aside
-                    # like a spent one (tried again after the next wait) and go on
-                    print(f"  FIRMS key {self._key + 1}/{len(self.keys)} rejected; using the next", flush=True)
-                    self._spent.add(self._key)
-                    self._key = next(i for i in range(len(self.keys)) if i not in self._spent)
-                    continue
-                if "exceeding allowed transaction limit" in resp.text[:200].lower():
-                    # 5,000 transactions per 10 minutes per key (large areas cost more):
-                    # use the next key; when every key is spent, wait for the window
+                head = resp.text[:200].lower()
+                # FIRMS answers "Invalid MAP_KEY" for a key at its limit as well: 5,000
+                # transactions per 10 minutes per key (large areas cost more). Use the
+                # next key; when every key is spent, wait for the window. A key that
+                # really is invalid fails on its own (a single key has nothing to wait for).
+                if "exceeding allowed transaction limit" in head or ("invalid map_key" in head and len(self.keys) > 1):
                     self._spent.add(self._key)
                     if len(self._spent) < len(self.keys):
-                        self._key = (self._key + 1) % len(self.keys)
+                        self._key = next(i for i in range(len(self.keys)) if i not in self._spent)
                         continue
-                    print(f"  FIRMS transaction limit reached on all {len(self.keys)} key(s); waiting 2 min",
-                          flush=True)
+                    print(f"  FIRMS limit reached on all {len(self.keys)} key(s); waiting 2 min", flush=True)
                     time.sleep(120)
                     self._spent.clear()
+                    limit_waits += 1
+                    if limit_waits > 30:  # an hour: something else is wrong
+                        raise httpx.HTTPError("FIRMS keys stayed unavailable")
                     continue
                 if resp.status_code == 429 or resp.status_code >= 500:
                     raise httpx.HTTPStatusError("retryable", request=resp.request, response=resp)
@@ -178,10 +177,10 @@ class FirmsClient:
                     raise httpx.HTTPError(text[:200])
                 return text
             except httpx.HTTPError:
-                if attempt == retries - 1:
+                attempt += 1
+                if attempt >= retries:
                     raise
                 time.sleep(min(60, 2 ** attempt * 2))
-        raise RuntimeError("unreachable")
 
     def area_csv(self, source: str, bbox: BBox, start: date, days: int) -> pd.DataFrame:
         # the pilot box predates per-box caching; any other box gets its own folder
