@@ -8,7 +8,9 @@ a long archive pull can be stopped and resumed without spending transactions.
 from __future__ import annotations
 
 import io
+import os
 import time
+import zipfile
 from collections.abc import Iterable
 from datetime import date, timedelta
 from pathlib import Path
@@ -246,6 +248,9 @@ def country_file(kind: str, year: int, country: str, client: httpx.Client,
     missing = path.with_suffix(".missing")
     if missing.exists():
         return pd.DataFrame()
+    raw = from_global_zip(kind, year, country)
+    if raw is not None:
+        return normalize(raw, COUNTRY_FILES[kind]) if len(raw) else pd.DataFrame()
     if not path.exists():
         for attempt in range(5):
             try:
@@ -265,6 +270,47 @@ def country_file(kind: str, year: int, country: str, client: httpx.Client,
         path.write_bytes(resp.content)
     raw = pd.read_csv(path)
     return normalize(raw, COUNTRY_FILES[kind]) if len(raw) else pd.DataFrame()
+
+
+GLOBAL_DIR = CACHE_DIR / "firms_global"
+GLOBAL_URL = FIRMS_BASE + "/data/country/zips/{kind}_{year}_all_countries.zip"
+
+
+def from_global_zip(kind: str, year: int, country: str, global_dir: Path = GLOBAL_DIR) -> pd.DataFrame | None:
+    """The country's file from FIRMS' yearly all-countries zip, if that zip has been
+    downloaded (``download_global``); None when there is no zip for that year.
+    A country absent from the zip had no detections: an empty frame."""
+    zpath = global_dir / f"{kind}_{year}_all_countries.zip"
+    if not zpath.exists():
+        return None
+    member = f"{kind}/{year}/{kind}_{year}_{country.replace(' ', '_')}.csv"
+    with zipfile.ZipFile(zpath) as z:
+        if member not in z.namelist():
+            return pd.DataFrame()
+        with z.open(member) as f:
+            return pd.read_csv(f)
+
+
+def download_global(start_year: int, end_year: int, global_dir: Path = GLOBAL_DIR) -> None:
+    """Fetch the yearly all-countries zips (the whole world: ~12 GB in total)."""
+    global_dir.mkdir(parents=True, exist_ok=True)
+    with httpx.Client(timeout=None, follow_redirects=True) as http:
+        for kind, source in COUNTRY_FILES.items():
+            for year in range(max(start_year, SOURCES[source][2].year), end_year + 1):
+                path = global_dir / f"{kind}_{year}_all_countries.zip"
+                if path.exists():
+                    continue
+                tmp = path.with_suffix(".part")
+                with http.stream("GET", GLOBAL_URL.format(kind=kind, year=year)) as resp:
+                    if resp.status_code == 404:
+                        print(f"  {path.name}: none", flush=True)
+                        continue
+                    resp.raise_for_status()
+                    with tmp.open("wb") as out:
+                        for chunk in resp.iter_bytes(1 << 20):
+                            out.write(chunk)
+                os.replace(tmp, path)
+                print(f"  {path.name}: {path.stat().st_size / 1e6:.0f} MB", flush=True)
 
 
 def fetch_country_archive(map_key: str, country: str, bbox: BBox, start: date, end: date) -> pd.DataFrame:
