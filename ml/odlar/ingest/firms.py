@@ -430,22 +430,24 @@ def batch_bboxes(batch, regions) -> list[BBox]:
     return [b for r in regions[regions["level"] == "country"].itertuples() for b in land_boxes(r.geometry)]
 
 
-def country_bboxes(batch, regions) -> list[tuple[str, list[BBox]]]:
-    """(country code, its land boxes) for each country of a batch."""
-    return [(r.country, land_boxes(r.geometry)) for r in regions[regions["level"] == "country"].itertuples()]
+def country_bboxes(batch, regions) -> list[tuple[dict, list[BBox]]]:
+    """(catalogue entry, its land boxes) for each country of a batch. Entries are
+    found by the country region's slug, so the states of a split country (one
+    code, several entries) each keep their own FIRMS file (Puerto Rico, Guam…)."""
+    from odlar.grid.regions import COUNTRIES
+    by_slug = {m.get("slug", m["code"]): m for m in COUNTRIES.values()}
+    return [(by_slug[r.slug], land_boxes(r.geometry)) for r in regions[regions["level"] == "country"].itertuples()]
 
 
 def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.DataFrame:
     """The full detection record for a batch's countries."""
     if batch.firms == "area":
         return fetch_archive(map_key, start, end)
-    from odlar.grid.regions import COUNTRIES
-    by_code = {m["code"]: m for m in COUNTRIES.values()}
     frames = []
-    for code, boxes in country_bboxes(batch, regions):
-        name = by_code[code].get("firms_name")
+    for meta, boxes in country_bboxes(batch, regions):
+        name = meta.get("firms_name")
         if not name:  # FIRMS has no file for some microstates: no detections on record
-            print(f"  FIRMS: no country files for {code}; skipped", flush=True)
+            print(f"  FIRMS: no country files for {meta['code']}; skipped", flush=True)
             continue
         print(f"  FIRMS {name}: country files + area API {[b.as_firms() for b in boxes]}", flush=True)
         frames.append(fetch_country_archive(map_key, name, boxes, start, end))

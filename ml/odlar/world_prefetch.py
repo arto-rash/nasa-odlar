@@ -26,9 +26,8 @@ from odlar.world_build import STATUS_FILE, boundaries_ready, ordered_batches
 
 def prefetch(name: str, key: str, end: date) -> None:
     regions = load_regions(name)
-    by_code = {m["code"]: m for m in COUNTRIES.values()}
-    for code, boxes in firms.country_bboxes(BATCHES[name], regions):
-        if not by_code[code].get("firms_name"):
+    for meta, boxes in firms.country_bboxes(BATCHES[name], regions):
+        if not meta.get("firms_name"):
             continue
         for box in boxes:
             firms.fetch_archive(key, date(end.year, 1, 1), end, box)

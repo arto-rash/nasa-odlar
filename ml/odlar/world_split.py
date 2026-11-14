@@ -29,6 +29,10 @@ from odlar.grid.osm_boundaries import unmangle
 SPLIT_LEVELS = {"AUS": "ADM2", "USA": "ADM2", "BRA": "ADM2", "RUS": "ADM2", "CHN": "ADM2", "IND": "ADM2",
                 "CAN": "ADM3", "ARG": "ADM2", "IDN": "ADM2", "KAZ": "ADM2"}
 MAX_UNITS = 200
+# overseas territories FIRMS publishes as countries of their own
+OWN_FIRMS_FILE = {"Puerto Rico": "Puerto_Rico", "Guam": "Guam", "American Samoa": "American_Samoa",
+                  "United States Virgin Islands": "United_States_Virgin_Islands",
+                  "Commonwealth of the Northern Mariana Islands": "Northern_Mariana_Islands"}
 SPLIT_DIR = BOUNDARY_DIR / "world" / "split"
 FIRST_OFFSET = 1_000_000
 OFFSET_STEP = 10_000
@@ -111,7 +115,8 @@ def split_country(iso3: str, country: dict, client: httpx.Client) -> list[dict]:
             entries.append({
                 "key": key, "code": country["code"], "iso2": country["iso2"], "name_en": name, "name_az": name,
                 "file": file, "source": "split", "kind": "state",
-                "slug": f"{country['code']}-{slug(name)}", "firms_name": country["firms_name"],
+                "slug": f"{country['code']}-{slug(name)}",
+                "firms_name": OWN_FIRMS_FILE.get(state, country["firms_name"]),
                 "subregion": country["subregion"], "n_adm1": len(part), "parent_country": iso3,
                 "weight": country["weight"] * len(part) / len(units), "x": float(part["x"].mean()),
             })

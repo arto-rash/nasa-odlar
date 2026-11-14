@@ -45,7 +45,7 @@ def test_region_detail_and_404(client):
 
 def test_locate(client):
     assert client.get("/regions/locate", params={"lat": 39.9, "lon": 48.8}).json()["region"]["slug"] == "az-sabirabad"
-    assert client.get("/regions/locate", params={"lat": 10, "lon": 10}).status_code == 404
+    assert client.get("/regions/locate", params={"lat": 0, "lon": -30}).status_code == 404  # mid-Atlantic
     assert client.get("/regions/locate", params={"lat": 100, "lon": 10}).status_code == 422
 
 

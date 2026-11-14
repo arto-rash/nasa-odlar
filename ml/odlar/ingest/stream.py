@@ -24,7 +24,7 @@ import numpy as np
 import pandas as pd
 
 from odlar.grid.gridding import daily_counts, grid_cells
-from odlar.grid.regions import COUNTRIES, assign_regions
+from odlar.grid.regions import assign_regions
 from odlar.ingest import firms
 from odlar.points import write_points
 
@@ -65,14 +65,13 @@ def ingest(map_key: str, batch, regions, start: date, end: date, staging: Path,
     shutil.rmtree(staging, ignore_errors=True)
     raw_dir = staging / "raw"
     raw_dir.mkdir(parents=True)
-    by_code = {m["code"]: m for m in COUNTRIES.values()}
     cell_months: set[tuple[int, int, int]] = set()
     n_raw = 0
     with httpx.Client(timeout=300) as http:
         for year in range(start.year, end.year + 1):
-            parts = [country_year(map_key, by_code[code]["firms_name"], cboxes, year, start, end, http)
-                     for code, cboxes in firms.country_bboxes(batch, regions)
-                     if by_code[code].get("firms_name")]
+            parts = [country_year(map_key, meta["firms_name"], cboxes, year, start, end, http)
+                     for meta, cboxes in firms.country_bboxes(batch, regions)
+                     if meta.get("firms_name")]
             parts = [p for p in parts if len(p)]
             if not parts:
                 continue
