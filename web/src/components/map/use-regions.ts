@@ -35,16 +35,18 @@ function viewOf(map: Map): View {
 }
 
 /**
- * What a fire map should ask for at the current view: individual detections in
- * the visible area from zoom 5, detections summed per grid cell when zoomed out
- * (``cell``, degrees), and the density grid's cell size (``step``).
+ * What a fire map should ask for at the current view: detections in the visible
+ * area (the whole world when zoomed far out; the API sends a random sample of
+ * the real points when there are more than a map can draw), and the density
+ * grid's cell size (``step``). ``cell`` (per-cell sums) is not used by the maps:
+ * centred cell dots read as an artificial grid.
  */
 export type PointView = { cell: number | null; bbox: string | null; step: number };
 
 function pointViewOf(map: Map): PointView {
   const z = map.getZoom();
-  if (z < 3) return { cell: 1, bbox: null, step: 1 };
-  if (z < 5) return { cell: 0.25, bbox: snappedBounds(map, 5), step: 0.25 };
+  if (z < 3) return { cell: null, bbox: null, step: 1 };
+  if (z < 5) return { cell: null, bbox: snappedBounds(map, 5), step: 0.25 };
   return { cell: null, bbox: snappedBounds(map, 1), step: 0.1 };
 }
 

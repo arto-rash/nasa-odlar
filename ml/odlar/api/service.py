@@ -305,8 +305,11 @@ def hotspots(s: Store, start: date, end: date, sensor: str | None = None, region
                 "points": [[round(float(x.lon), 3), round(float(x.lat), 3), x.sensor[0], x.satellite, int(x.frp),
                             x.acq_date.strftime("%Y-%m-%d")] for x in sel.itertuples()]}
     total = s.points.count(where, params, years)
-    sel = s.points.query(where, params, "lon, lat, sensor, satellite, frp, acq_date", years, limit)
-    return {"total": total, "truncated": total > limit,
+    cols = "lon, lat, sensor, satellite, frp, acq_date"
+    # more than the map can draw: a random sample of the real detections, not the first N
+    sel = s.points.sample(limit, where, params, cols, years) if total > limit else \
+        s.points.query(where, params, cols, years)
+    return {"total": total, "truncated": total > limit, "sampled": total > limit,
             "columns": ["lon", "lat", "sensor", "satellite", "frp", "date"],
             "points": [[round(float(x.lon), 4), round(float(x.lat), 4), x.sensor[0], x.satellite,
                         round(float(x.frp), 1), x.acq_date.strftime("%Y-%m-%d")] for x in sel.itertuples()]}

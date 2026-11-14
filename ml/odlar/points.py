@@ -134,6 +134,17 @@ class Points:
             sql += f" LIMIT {int(limit)}"
         return self._con().execute(sql, [paths, *(params or [])]).df()
 
+    def sample(self, n: int, where: str = "TRUE", params: list | None = None, columns: str = "*",
+               years: range | list[int] | None = None, seed: int = 7) -> pd.DataFrame:
+        """A uniform random sample of ``n`` matching rows (repeatable), for maps that
+        cannot draw every point: dense areas stay dense, nothing moves."""
+        paths = self._paths(years)
+        if not paths:
+            return pd.DataFrame(columns=COLUMNS)
+        sql = (f"SELECT * FROM (SELECT {columns} FROM read_parquet(?) WHERE {where}) "
+               f"USING SAMPLE reservoir({int(n)} ROWS) REPEATABLE ({int(seed)})")
+        return self._con().execute(sql, [paths, *(params or [])]).df()
+
     def count(self, where: str = "TRUE", params: list | None = None,
               years: range | list[int] | None = None) -> int:
         paths = self._paths(years)

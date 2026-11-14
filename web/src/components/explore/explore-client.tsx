@@ -119,9 +119,9 @@ export function ExploreClient({
       age: Math.max(0, Math.ceil((w0 - new Date(date + "T00:00:00Z").getTime()) / (7 * 86400000))),
     }));
   }, [data, week]);
-  // zoomed out, each point is a grid cell carrying its detection count
-  const currentCount = points.filter((p) => p.age === 0 && sensors[p.sensor])
-    .reduce((n, p) => n + (data?.cell_deg ? p.frp : 1), 0);
+  // a sampled answer (more points than the map draws) is scaled back to the true count
+  const shown = points.filter((p) => p.age === 0 && sensors[p.sensor]).length;
+  const currentCount = data?.sampled && points.length ? Math.round((shown * data.total) / points.length) : shown;
 
   const aoi = useMutation({
     mutationFn: (coords: [number, number][]) =>

@@ -319,6 +319,8 @@ export interface HotspotResponse {
   /** Set when detections are summed per grid cell: each point is a cell centre,
    *  its fifth value the detection count (not FRP) and its date the week's Monday. */
   cell_deg?: number;
+  /** More detections matched than ``limit``: ``points`` is a random sample of them. */
+  sampled?: boolean;
   points: [number, number, "M" | "V", string, number, string][];
 }
 
