@@ -26,7 +26,7 @@ services:
     environment:
       ODLAR_INTERNAL_TOKEN: ${ODLAR_INTERNAL_TOKEN}
     volumes: ["/opt/odlar/artifacts:/app/artifacts:ro"]
-    mem_limit: 1100m
+    mem_limit: 1400m  # the region sync after each new batch peaks above 1.1 GB
     # a guest on Jabish's server: under memory pressure ODLAR goes first
     oom_score_adj: 500
 
