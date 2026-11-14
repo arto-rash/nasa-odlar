@@ -27,9 +27,11 @@ class SyncRegions extends Command
 
     public function handle(MlClient $ml): int
     {
+        ini_set('memory_limit', '1G'); // the biggest countries' shapes, tens of MB of JSON each
+
         try {
             // The GeoJSON lacks parent/area/centroid; /regions has them.
-            $meta = collect($ml->json('/regions'))->keyBy('id');
+            $meta = collect($ml->json('/regions', ['lite' => 'true']))->keyBy('id');
         } catch (MlUnavailableException|MlRequestException $e) {
             $this->error('ML service unavailable: '.$e->getMessage());
 

@@ -57,7 +57,8 @@ services:
       default:
       proxy:
         aliases: [odlar-api]
-    mem_limit: 384m
+    mem_limit: 768m  # the region sync of the biggest countries; idles near 70 MB
+    oom_score_adj: 500
 
 networks:
   proxy:
