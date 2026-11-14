@@ -19,7 +19,7 @@ import { Link } from "@/i18n/navigation";
 import { aheadCells, cellState, weekStart, type AheadCells } from "@/lib/calendar-cells";
 import { cn } from "@/lib/cn";
 import { fmtNum, fmtPct, regionName, weekLabel, weekRange, type AppLocale } from "@/lib/format";
-import type { AnnualSeries, CalendarPayload, ForecastPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
+import type { AnnualSeries, CalendarPayload, ForecastPayload, LevelBreak, Region, RegionDetail, RiskDetail } from "@/lib/types";
 import { DriverList } from "./drivers";
 import { reasonText } from "./reasons";
 
@@ -295,7 +295,7 @@ export function NormalYearPanel({ cal }: { cal: CalendarPayload }) {
   );
 }
 
-export function HistoryPanel({ annual }: { annual: AnnualSeries }) {
+export function HistoryPanel({ annual, breaks }: { annual: AnnualSeries; breaks?: { raw: LevelBreak; harmonized: LevelBreak } }) {
   const t = useTranslations("region");
   const tc = useTranslations("common");
   const locale = useLocale() as AppLocale;
@@ -340,6 +340,7 @@ export function HistoryPanel({ annual }: { annual: AnnualSeries }) {
         band={{ lo: (d) => d.lo, hi: (d) => d.hi, color: "var(--harmonized)", label: tc("uncertainty") }}
         markers={[{ x: 2012, label: "VIIRS" }]}
       />
+      {breaks && <BreakNote b={breaks} />}
     </Panel>
   );
 }
@@ -446,5 +447,24 @@ export function ExportBar({ slug }: { slug: string }) {
         </a>
       ))}
     </div>
+  );
+}
+
+const fmtP = (p: number, locale: AppLocale) => (p < 0.001 ? "< 0.001" : fmtNum(p, locale, p < 0.01 ? 3 : 2));
+
+/** Pettitt's test on both records: the raw one usually jumps the year VIIRS starts. */
+function BreakNote({ b }: { b: { raw: LevelBreak; harmonized: LevelBreak } }) {
+  const t = useTranslations("region");
+  const locale = useLocale() as AppLocale;
+  const raw = b.raw.significant && b.raw.year
+    ? t("breakRaw", { year: b.raw.year, shift: fmtNum(b.raw.shift ?? 0, locale, 1), p: fmtP(b.raw.p, locale) })
+    : t("breakRawNone", { p: fmtP(b.raw.p, locale) });
+  const ours = b.harmonized.significant && b.harmonized.year
+    ? t("breakOurs", { year: b.harmonized.year, p: fmtP(b.harmonized.p, locale) })
+    : t("breakOursNone", { p: fmtP(b.harmonized.p, locale) });
+  return (
+    <p className="mt-4 border-t border-line pt-3 text-[12.5px] leading-relaxed text-dim">
+      <span className="font-medium text-text">{t("breakTitle")}</span> {raw} {ours}
+    </p>
   );
 }

@@ -315,7 +315,12 @@
     "seasonIn": "{weeks, plural, =0 {Yanğın mövsümü: son həftə} other {Yanğın mövsümü: təxminən # həftə qalıb}}",
     "seasonSoon": "{weeks, plural, =0 {Yanğın mövsümü bu həftə başlayır} other {Yanğın mövsümü təxminən # həftəyə başlayır}}",
     "seasonLater": "İndi sakitdir. Mövsüm adətən {when} başlayır",
-    "seasonRatio": "bu həftə üçün adi səviyyənin {ratio} misli"
+    "seasonRatio": "bu həftə üçün adi səviyyənin {ratio} misli",
+    "breakTitle": "Sıçrayış testi (Pettitt):",
+    "breakRaw": "xam qeyd {year} ilində əvvəlki səviyyəsinin {shift} mislinə sıçrayır (p {p}).",
+    "breakRawNone": "xam qeyddə kəskin sıçrayış yoxdur (p {p}).",
+    "breakOurs": "ODLAR qeydi {year} ilində səviyyəsini dəyişir (p {p}): real dəyişiklik və ya tendensiya.",
+    "breakOursNone": "ODLAR qeydində belə sıçrayış yoxdur (p {p})."
   },
   "reasons": {
     "high_total": "illik aktivlik normadan {value}× çox",

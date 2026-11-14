@@ -114,6 +114,8 @@ export interface RegionDetail extends Region {
     detections_total: number;
     trend: Trend;
     trend_naive: Trend;
+    /** Pettitt test for one abrupt change in level, on each record */
+    break?: { raw: LevelBreak; harmonized: LevelBreak };
   };
   season: SeasonProfile | null;
   current: CurrentStatus | null;
@@ -331,6 +333,15 @@ export interface RiskMapItem {
   driver: DriverCode | null;
 }
 
+export interface LevelBreak {
+  /** first year of the new level */
+  year: number | null;
+  p: number;
+  /** mean after / mean before */
+  shift: number | null;
+  significant: boolean;
+}
+
 export interface Overview {
   meta: Meta;
   pilot: { year: number; harmonized: number; lo: number; hi: number; modis: number; viirs: number; naive: number }[];
@@ -348,6 +359,7 @@ export interface Overview {
   risk_top: RiskMapItem[];
   risk_counts: Partial<Record<RiskLevel, number>>;
   n_regions: number;
+  breaks?: { countries: number; raw_breaks: number; raw_at_new_satellite: number; corrected_breaks: number; corrected_at_new_satellite: number };
   countries?: string[];
   country_names?: Record<string, { en: string; az: string }>;
 }

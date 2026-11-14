@@ -315,7 +315,12 @@
     "seasonIn": "{weeks, plural, =0 {Fire season: last week} one {Fire season: about # week left} other {Fire season: about # weeks left}}",
     "seasonSoon": "{weeks, plural, =0 {Fire season starts this week} one {Fire season starts in about # week} other {Fire season starts in about # weeks}}",
     "seasonLater": "Quiet now. The season usually starts {when}",
-    "seasonRatio": "{ratio}× the usual for this week"
+    "seasonRatio": "{ratio}× the usual for this week",
+    "breakTitle": "Jump test (Pettitt):",
+    "breakRaw": "the raw record jumps in {year} to {shift}× its earlier level (p {p}).",
+    "breakRawNone": "the raw record has no abrupt jump (p {p}).",
+    "breakOurs": "ODLAR's record changes level in {year} (p {p}): a real change, or a trend.",
+    "breakOursNone": "ODLAR's record has none (p {p})."
   },
   "reasons": {
     "high_total": "{value}× the normal annual activity",

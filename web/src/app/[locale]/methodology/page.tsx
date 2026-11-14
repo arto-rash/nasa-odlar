@@ -63,6 +63,9 @@ export default async function MethodologyPage({ params }: { params: Promise<{ lo
     truth: overview.synthetic_truth ? P(overview.synthetic_truth.bias) : "—", auc: N(h.roc_auc), aucRaw: N(r.roc_auc),
     base: N(h.base_roc_auc), bss: N(h.brier_skill), bssRaw: N(r.brier_skill), pr: N(h.pr_auc), prRaw: N(r.pr_auc), prBase: N(h.base_pr_auc),
     nboot: overview.meta.n_boot,
+    nBreak: overview.breaks?.countries ?? "—", rawBreaks: overview.breaks?.raw_breaks ?? "—",
+    rawAtSat: overview.breaks?.raw_at_new_satellite ?? "—", corrBreaks: overview.breaks?.corrected_breaks ?? "—",
+    corrAtSat: overview.breaks?.corrected_at_new_satellite ?? "—",
   };
   const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k as keyof typeof vars] ?? `{${k}}`));
 
@@ -171,6 +174,7 @@ const EN: Section[] = [
   ] },
   { id: "validation", title: "Validation", body: [
     "<b>Leave-one-year-out.</b> Each overlap year in turn is removed from calibration, its MODIS weeks are harmonized, and the result is compared with what S-NPP actually recorded. Over {years} held-out years, the harmonized totals are off by <b>{bias}</b> overall, where raw MODIS undercounts by <b>{rawBias}</b>. Annual 90% intervals contain the truth {cov} of the time (weekly: {wcov}).",
+    "<b>Jump test.</b> Pettitt's change-point test on each country's yearly totals, 2001–2025 ({nBreak} countries with enough fires): the raw record jumps abruptly in <b>{rawBreaks}</b> of them, <b>{rawAtSat}</b> exactly when a new VIIRS satellite started (2012–13, 2018–19). On ODLAR's record {corrAtSat} still change level in those years, a residual we state openly; {corrBreaks} change level at some point, mostly at other times and for real reasons, such as Indonesia's peat-fire controls after 2015. Each region page shows its own test.",
   ] },
   { id: "calendar", title: "Fire calendar", body: [
     "- <b>Climatology</b>: for every calendar week, the mean, median and 10/25/75/90th percentiles over all complete years.\n- <b>Season</b> on a circular year that starts at the quietest four weeks, so seasons crossing New Year still work. Onset is the week 10% of the annual activity has occurred, end is 90%.\n- <b>Critical windows</b>: contiguous weeks above the 75th percentile of the smoothed climatology, ranked by their share of annual activity. <b>Peaks</b> come from prominence-based peak finding, which also tells us when a region has two seasons (spring field burning and summer stubble burning).\n- <b>Unusual years</b>: robust z-scores (median/MAD) of annual total, peak intensity, onset and end. A year is flagged only if it is both statistically unusual (|z| ≥ 2) and practically so (at least 1.5× or ≤ 1/1.5× the median, or a shift of 2 or more weeks).",
@@ -210,6 +214,7 @@ const AZ: Section[] = [
   ] },
   { id: "validation", title: "Yoxlama", body: [
     "<b>Hər ili kənarda saxla.</b> Ortaq illərin hər biri növbə ilə kalibrasiyadan çıxarılır, onun MODIS həftələri harmonizə edilir və nəticə S-NPP-nin faktiki qeydi ilə müqayisə olunur. {years} yoxlama ili üzrə harmonizə edilmiş cəmlərin ümumi xətası <b>{bias}</b> təşkil edir, xam MODIS isə <b>{rawBias}</b> az sayır. İllik 90% intervallar həqiqəti halların {cov}-ində əhatə edir (həftəlik: {wcov}).",
+    "<b>Sıçrayış testi.</b> Hər ölkənin 2001–2025 illik cəmlərinə Pettitt dəyişmə nöqtəsi testi ({nBreak} kifayət qədər yanğını olan ölkə): xam qeyd onların <b>{rawBreaks}</b>-də kəskin sıçrayır, <b>{rawAtSat}</b>-də məhz yeni VIIRS peyki işə düşəndə (2012–13, 2018–19). ODLAR qeydində {corrAtSat} ölkə həmin illərdə hələ də səviyyəsini dəyişir, bunu açıq deyirik; {corrBreaks} ölkə hansısa vaxt səviyyəsini dəyişir, əsasən başqa illərdə və real səbəblərdən, məsələn İndoneziyada 2015-dən sonrakı torf yanğını nəzarəti. Hər bölgə səhifəsi öz testini göstərir.",
   ] },
   { id: "calendar", title: "Yanğın təqvimi", body: [
     "- <b>Klimatologiya</b>: hər təqvim həftəsi üçün bütün tam illər üzrə orta, median və 10/25/75/90-cı persentillər.\n- <b>Mövsüm</b>: ən sakit dörd həftədən başlayan dairəvi il üzərində hesablanır, ona görə Yeni ili keçən mövsümlər də düzgün işlənir. Başlanğıc illik aktivliyin 10%-inin, son isə 90%-inin baş verdiyi həftədir.\n- <b>Kritik pəncərələr</b>: hamarlanmış klimatologiyanın 75-ci persentilindən yuxarı olan ardıcıl həftələr, illik aktivlikdəki paylarına görə sıralanır. <b>Zirvələr</b> qabarıqlığa əsaslanan axtarışla tapılır; bu, bölgədə iki mövsümün (yaz tarla yandırması və yay küləş yandırması) olub-olmadığını da göstərir.\n- <b>Qeyri-adi illər</b>: illik cəm, pik intensivliyi, başlanğıc və son üçün robust z-dəyərləri (median/MAD). İl yalnız həm statistik (|z| ≥ 2), həm də praktik baxımdan qeyri-adi olduqda qeyd edilir: medianın ən azı 1,5 qatı və ya ≤ 1/1,5 qatı, yaxud 2 və daha çox həftəlik sürüşmə.",

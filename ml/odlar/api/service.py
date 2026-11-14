@@ -289,6 +289,54 @@ def trend(years: np.ndarray, values: np.ndarray) -> dict:
             "slope_lo": round(float(_lo), 3), "slope_hi": round(float(_hi), 3)}
 
 
+def pettitt(years: np.ndarray, values: np.ndarray) -> dict:
+    """Pettitt's test for one abrupt change in level (rank-based, so a few big
+    fire years cannot fake it). ``year``: the first year of the new level;
+    ``p``: approximate two-sided p-value; ``shift``: mean after / mean before."""
+    m = np.isfinite(values)
+    years, x = np.asarray(years)[m], np.asarray(values, dtype=float)[m]
+    n = len(x)
+    if n < 8 or np.allclose(x, x[0]):
+        return {"year": None, "p": 1.0, "shift": None, "significant": False}
+    sgn = np.sign(x[:, None] - x[None, :])  # sgn(x_i - x_j)
+    u = np.array([sgn[: t + 1, t + 1:].sum() for t in range(n - 1)])
+    t = int(np.argmax(np.abs(u)))
+    k = float(np.abs(u[t]))
+    p = float(min(1.0, 2 * np.exp(-6 * k**2 / (n**3 + n**2))))
+    before, after = x[: t + 1].mean(), x[t + 1:].mean()
+    return {"year": int(years[t + 1]), "p": round(p, 4),
+            "shift": round(float(after / before), 2) if before > 0 else None, "significant": p < 0.05}
+
+
+def breaks_summary(s: Store) -> dict:
+    """Worldwide: in how many countries the raw and the corrected record show an
+    abrupt change in level, and how many of the raw ones fall when a new VIIRS
+    satellite started (2012 S-NPP, 2018 NOAA-20). Cached per store."""
+    cached = getattr(s, "_breaks", None)
+    if cached is not None:
+        return cached
+    end_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    ctry = s.regions.loc[s.regions["level"] == "country", ["region_id", "country"]]
+    a = s.annual.merge(ctry, on="region_id")
+    a = a[(a["year"] >= 2001) & (a["year"] < end_year)]
+    per = a.groupby(["country", "year"])[["harmonized", "naive"]].sum().reset_index()
+    raw_sig = harm_sig = at_sensor = harm_at_sensor = n = 0
+    sensor_years = (2012, 2013, 2018, 2019)
+    for _, g in per.groupby("country"):
+        if g["naive"].sum() < 500:
+            continue
+        n += 1
+        yr = g["year"].to_numpy()
+        br, bh = pettitt(yr, g["naive"].to_numpy(dtype=float)), pettitt(yr, g["harmonized"].to_numpy(dtype=float))
+        raw_sig += br["significant"]
+        harm_sig += bh["significant"]
+        at_sensor += bool(br["significant"] and br["year"] in sensor_years)
+        harm_at_sensor += bool(bh["significant"] and bh["year"] in sensor_years)
+    s._breaks = {"countries": n, "raw_breaks": raw_sig, "raw_at_new_satellite": at_sensor,
+                 "corrected_breaks": harm_sig, "corrected_at_new_satellite": harm_at_sensor}
+    return s._breaks
+
+
 def region_detail(s: Store, slug: str) -> dict:
     r = region_or_404(s, slug)
     rid = int(r.region_id)
@@ -311,6 +359,9 @@ def region_detail(s: Store, slug: str) -> dict:
         "detections_total": int(ann[["modis", "viirs"]].sum().sum()),
         "trend": trend(full["year"].to_numpy(dtype=float), full["harmonized"].to_numpy(dtype=float)),
         "trend_naive": trend(full["year"].to_numpy(dtype=float), full["naive"].to_numpy(dtype=float)),
+        # one abrupt change in level? (raw: usually the year a new VIIRS satellite started)
+        "break": {"raw": pettitt(full["year"].to_numpy(), full["naive"].to_numpy(dtype=float)),
+                  "harmonized": pettitt(full["year"].to_numpy(), full["harmonized"].to_numpy(dtype=float))},
     }
     d["season"] = cal.get("season")
     d["current"] = cal.get("current")
@@ -787,6 +838,7 @@ def overview(s: Store) -> dict:
         "risk_top": risk[:8],
         "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),
         "n_regions": int(len(s.regions)),
+        "breaks": breaks_summary(s),
         "countries": sorted(s.regions.loc[s.regions["level"] == "country", "country"].unique().tolist()),
         "country_names": {c: {"en": country_names().get(c, (c.upper(),) * 2)[0],
                               "az": country_names().get(c, (c.upper(),) * 2)[1]}

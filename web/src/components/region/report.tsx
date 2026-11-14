@@ -108,7 +108,7 @@ export function RegionReport({
       </section>
 
       <section className="mt-8 break-inside-avoid">
-        <HistoryPanel annual={annual} />
+        <HistoryPanel annual={annual} breaks={region.stats.break} />
       </section>
 
       {forecast && (

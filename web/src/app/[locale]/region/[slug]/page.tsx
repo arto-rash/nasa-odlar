@@ -71,7 +71,7 @@ export default async function RegionPage({ params }: Props) {
           <NormalYearPanel cal={cal} />
         </div>
         <div className="lg:col-span-2">
-          <HistoryPanel annual={annual} />
+          <HistoryPanel annual={annual} breaks={region.stats.break} />
         </div>
         <div className="lg:col-span-2">
           <AnomaliesPanel cal={cal} />

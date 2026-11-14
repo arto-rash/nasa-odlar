@@ -140,3 +140,11 @@ def test_internal_token(monkeypatch, client):
     monkeypatch.setattr(m, "INTERNAL_TOKEN", "secret")
     assert client.get("/overview").status_code == 401
     assert client.get("/overview", headers={"X-Internal-Token": "secret"}).status_code == 200
+
+
+def test_break_test(client):
+    b = client.get("/regions/az").json()["stats"]["break"]
+    assert b["raw"]["year"] in (2012, 2013) and b["raw"]["significant"]
+    assert b["harmonized"]["p"] > b["raw"]["p"]
+    o = client.get("/overview").json()["breaks"]
+    assert o["raw_breaks"] >= o["corrected_breaks"] and o["raw_at_new_satellite"] >= o["corrected_at_new_satellite"]
