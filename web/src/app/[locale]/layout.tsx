@@ -5,6 +5,7 @@ import { hasLocale, NextIntlClientProvider } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ViewTransition } from "react";
 import { routing } from "@/i18n/routing";
+import { SITE_URL } from "@/lib/site";
 import { Providers } from "@/components/layout/providers";
 import { SiteNav } from "@/components/layout/site-nav";
 import { CommandPalette } from "@/components/layout/command-palette";
@@ -23,7 +24,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
   const { locale } = await params;
   const t = await getTranslations({ locale, namespace: "meta" });
   return {
-    metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+    metadataBase: new URL(SITE_URL),
     title: { default: t("title"), template: `%s · ODLAR` },
     description: t("description"),
     openGraph: { title: t("title"), description: t("description"), type: "website", locale },

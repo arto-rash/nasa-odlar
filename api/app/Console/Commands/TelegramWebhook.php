@@ -7,7 +7,7 @@ use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
-#[Signature('odlar:telegram-webhook {base : Public base URL of this API, e.g. https://odlar.artoghrul.com}')]
+#[Signature('odlar:telegram-webhook {base : Public base URL of this API, e.g. https://odlar-api.46-224-126-66.sslip.io}')]
 #[Description('Point the Telegram bot at this API (run once after setting TELEGRAM_* in the environment)')]
 class TelegramWebhook extends Command
 {
