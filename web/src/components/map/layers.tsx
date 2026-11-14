@@ -13,10 +13,6 @@ const EMPTY: FC = { type: "FeatureCollection", features: [] };
  *  vanishes, so light mode stays in saturated, darker embers. */
 export const LAYER_COLORS = {
   dark: {
-    sparkGlow: [0, "#7a1526", 0.4, "#e2462a", 0.8, "#ff9a3d", 1, "#ffe0a8"],
-    sparkCore: [0, "#ff7a2a", 0.6, "#ffc46b", 1, "#fff4dc"],
-    sparkGlowOpacity: [0.25, 0.75],
-    sparkBlur: 1,
     density: [0, "rgba(0,0,0,0)", 0.12, "#3d1218", 0.3, "#7a1526", 0.5, "#c22b2a", 0.7, "#f0592a", 0.85, "#ff9a3d", 1, "#fff3d6"],
     sensor: SENSOR_HEX,
     // ember halo behind each detection, by age (glows on the dark basemap)
@@ -32,10 +28,6 @@ export const LAYER_COLORS = {
     aoiPoint: "#0b0907",
   },
   light: {
-    sparkGlow: [0, "#f3b48a", 0.4, "#f08a4a", 0.8, "#e2562a", 1, "#c93a25"],
-    sparkCore: [0, "#e2562a", 0.6, "#c93a25", 1, "#8f1d22"],
-    sparkGlowOpacity: [0.08, 0.35],
-    sparkBlur: 1,
     density: [0, "rgba(0,0,0,0)", 0.12, "#f6c9a0", 0.35, "#f08a4a", 0.6, "#d2452a", 0.85, "#a8262a", 1, "#6e1420"],
     sensor: SENSOR_HEX_LIGHT,
     // on the light basemap a faint halo in the dot's own colour: an orange halo
@@ -282,74 +274,6 @@ export function RegionsLayer({
       map.off("click", "regions-fill", click);
     };
   }, [map, onHover, onClick, visible]);
-  return null;
-}
-
-/** Deterministic PRNG so the spark field is identical on every render. */
-function mulberry32(seed: number) {
-  return () => {
-    seed |= 0;
-    seed = (seed + 0x6d2b79f5) | 0;
-    let t = Math.imul(seed ^ (seed >>> 15), 1 | seed);
-    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
-
-export function sparkField(cells: [number, number, number][], deg = 0.1, maxPerCell = 7): FC {
-  const rand = mulberry32(2026);
-  // log scale against the busy end (95th percentile), not the single busiest cell:
-  // against that one, every ordinary fire region came out almost invisible
-  const sorted = cells.map((c) => c[2]).sort((a, b) => a - b);
-  const top = Math.log1p(sorted[Math.floor(sorted.length * 0.95)] ?? 1);
-  const features: FC["features"] = [];
-  for (const [lon, lat, n] of cells) {
-    const s = Math.min(1, Math.log1p(n) / Math.max(top, 1));
-    const k = Math.max(1, Math.round(s * s * maxPerCell));
-    for (let i = 0; i < k; i++) {
-      features.push({
-        type: "Feature",
-        // scattered over the whole cell, so the field does not show the grid
-        geometry: { type: "Point", coordinates: [lon + (rand() - 0.5) * deg, lat + (rand() - 0.5) * deg] },
-        properties: { w: s * (0.45 + rand() * 0.55) },
-      });
-    }
-  }
-  return { type: "FeatureCollection", features };
-}
-
-/** Glowing ember sparks — 25 years of detections as a night-lights field. */
-export function SparkLayer({ cells, id = "sparks", deg = 0.1, perCell = 7 }: {
-  cells: [number, number, number][];
-  id?: string;
-  /** cell size of `cells`, in degrees (sparks are scattered over the cell) */
-  deg?: number;
-  perCell?: number;
-}) {
-  const lc = useLayerColors();
-  const fc = useMemo(() => sparkField(cells, deg, perCell), [cells, deg, perCell]);
-  useGeoJson(id, fc);
-  useLayer({
-    id: `${id}-glow`,
-    type: "circle",
-    source: id,
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 1.5, 5, ["+", 2, ["*", 6, ["get", "w"]]], 8, ["+", 6, ["*", 14, ["get", "w"]]]],
-      "circle-color": ["interpolate", ["linear"], ["get", "w"], ...lc.sparkGlow] as ExpressionSpecification,
-      "circle-blur": lc.sparkBlur,
-      "circle-opacity": ["interpolate", ["linear"], ["get", "w"], 0, lc.sparkGlowOpacity[0], 1, lc.sparkGlowOpacity[1]],
-    },
-  });
-  useLayer({
-    id: `${id}-core`,
-    type: "circle",
-    source: id,
-    paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 2, 0.4, 5, ["+", 0.5, ["*", 1.4, ["get", "w"]]], 8, ["+", 1, ["*", 3, ["get", "w"]]]],
-      "circle-color": ["interpolate", ["linear"], ["get", "w"], ...lc.sparkCore] as ExpressionSpecification,
-      "circle-opacity": ["interpolate", ["linear"], ["get", "w"], 0, 0.35, 1, 1],
-    },
-  });
   return null;
 }
 

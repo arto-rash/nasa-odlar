@@ -5,18 +5,20 @@ import type { Map as MlMap } from "maplibre-gl";
 import { useReducedMotion } from "motion/react";
 import { useCountryShape } from "@/components/map/use-regions";
 import { BaseMap } from "@/components/map/base-map";
-import { SignatureLayer, SparkLayer } from "@/components/map/layers";
-import { http } from "@/lib/client";
+import { HotspotLayer, SignatureLayer, type HotspotPoint } from "@/components/map/layers";
 
 /** The landing globe. Split out so MapLibre and the fire grid load after the hero text,
  *  instead of riding in the page's HTML. */
 export default function HeroMap() {
   const reduce = useReducedMotion();
+  // a real month of detections, a static file (odlar.hero_snapshot): instant, and no API load
   const { data } = useQuery({
-    queryKey: ["grid", 1],
-    // 1° cells: the globe shows the whole world, where 0.1° would be far too many
-    queryFn: () => http<{ cells: [number, number, number][] }>("/grid?step=1"),
-    staleTime: 30 * 60_000,
+    queryKey: ["hero-fires"],
+    queryFn: async () => {
+      const rows: [number, number, 0 | 1, number][] = await (await fetch("/hero-fires.json")).json();
+      return rows.map(([lon, lat, s, frp]): HotspotPoint => ({ lon, lat, sensor: s ? "V" : "M", frp, age: 0 }));
+    },
+    staleTime: Infinity,
   });
   const regions = useCountryShape("az");
 
@@ -54,7 +56,7 @@ export default function HeroMap() {
       onReady={onReady}
     >
       <SignatureLayer geojson={regions} />
-      {data && <SparkLayer cells={data.cells} deg={1} perCell={9} />}
+      {data && <HotspotLayer points={data} />}
     </BaseMap>
   );
 }
