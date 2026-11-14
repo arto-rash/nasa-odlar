@@ -68,6 +68,9 @@ def test_apply_daily_and_weekly():
     assert (new.lo <= new.harmonized).all() and (new.harmonized < new.hi).all()
     # the country is the sum of its districts
     assert np.isclose(new.loc[1, "harmonized"], new.loc[2, "harmonized"] + new.loc[3, "harmonized"])
+    # its range is not the sum of its regions' ranges: one missed-fire allowance, not one each
+    assert new.loc[1, "hi"] - new.loc[1, "harmonized"] < (new.loc[2, "hi"] - new.loc[2, "harmonized"]) + (
+        new.loc[3, "hi"] - new.loc[3, "harmonized"])
 
 
 def test_status_out_and_back(tmp_path):

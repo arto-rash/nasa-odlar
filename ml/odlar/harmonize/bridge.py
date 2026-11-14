@@ -157,20 +157,22 @@ def overdispersion(w: pd.DataFrame, ratios: pd.DataFrame) -> float:
 
 # --- applying it ----------------------------------------------------------------------
 
-BRIDGE_COLS = ["snpp_eq", "b_pois", "b_rsd", "bridged"]
+BRIDGE_COLS = ["snpp_eq", "b_pois", "b_allow", "b_rsd", "bridged"]
 
 
 def apply_daily(daily: pd.DataFrame, ratios: pd.DataFrame, start: pd.Timestamp,
                 stop: pd.Timestamp | None = None) -> pd.DataFrame:
     """Adds ``snpp_eq`` (the S-NPP-scale count: S-NPP itself, or the bridge on the
-    days it is missing) and the pieces of the bridge's uncertainty."""
+    days it is missing) and the pieces of the bridge's uncertainty: count scatter
+    (``b_pois``), an allowance for a fire NOAA-20 missed (``b_allow``) and the
+    ratio's own error (``b_rsd``, a standard deviation shared by the week)."""
     d = daily.drop(columns=[c for c in BRIDGE_COLS if c in daily.columns])
     dates = pd.to_datetime(d["date"])
     on = (dates >= start) & ((dates < stop) if stop is not None else True)
     on = np.asarray(on, dtype=bool)
     d["snpp_eq"] = d["viirs_n"].astype(float)
-    d["b_pois"] = 0.0
-    d["b_rsd"] = 0.0
+    for c in ("b_pois", "b_allow", "b_rsd"):
+        d[c] = 0.0
     d["bridged"] = on.astype(np.int8)
     if on.any():
         r = d.loc[on, ["region_id"]].assign(season=season_of_day(d.loc[on, "date"]).to_numpy())
@@ -180,9 +182,10 @@ def apply_daily(daily: pd.DataFrame, ratios: pd.DataFrame, start: pd.Timestamp,
         phi = r["phi"].fillna(1.0).to_numpy()
         j = d.loc[on, PREDICTOR].to_numpy(dtype=float)
         d.loc[on, "snpp_eq"] = ratio * j
-        # +1/7 a day (one fire a week): a week NOAA-20 saw nothing in can still hold
+        d.loc[on, "b_pois"] = phi * ratio * j
+        # 1/7 a day (one fire a week): a week NOAA-20 saw nothing in can still hold
         # a fire S-NPP would have seen
-        d.loc[on, "b_pois"] = phi * ratio * (j + 1 / 7)
+        d.loc[on, "b_allow"] = phi * ratio / 7
         d.loc[on, "b_rsd"] = rsd * j
     return d
 
@@ -204,14 +207,15 @@ def apply_weekly(hw: pd.DataFrame, sums: pd.DataFrame, regions: pd.DataFrame | N
         s = s[s["region_id"].isin(leaf_ids(regions))]  # parents are rebuilt from these
     if s.empty:
         return hw
-    out = hw.copy()
-    sd = np.sqrt(s["b_pois"] + s["b_rsd"] ** 2)
-    rep = pd.DataFrame({"region_id": s["region_id"].to_numpy(), "week": s["week"].to_numpy(),
-                        "harmonized": s["snpp_eq"].to_numpy(),
-                        "lo": np.maximum(0.0, s["snpp_eq"] - Z80 * sd).to_numpy(),
-                        "hi": (s["snpp_eq"] + Z80 * sd).to_numpy()})
+    parts = s[["region_id", "week", "snpp_eq", "b_pois", "b_allow", "b_rsd"]]
     if regions is not None:
-        rep = pd.concat([rep, _parent_rows(rep, regions)], ignore_index=True)
+        parts = pd.concat([parts, _parent_parts(parts, regions)], ignore_index=True)
+    sd = np.sqrt(parts["b_pois"] + parts["b_allow"] + parts["b_rsd"] ** 2)
+    rep = pd.DataFrame({"region_id": parts["region_id"].to_numpy(), "week": parts["week"].to_numpy(),
+                        "harmonized": parts["snpp_eq"].to_numpy(),
+                        "lo": np.maximum(0.0, parts["snpp_eq"] - Z80 * sd).to_numpy(),
+                        "hi": (parts["snpp_eq"] + Z80 * sd).to_numpy()})
+    out = hw.copy()
     key = pd.MultiIndex.from_frame(out[["region_id", "week"]])
     rk = pd.MultiIndex.from_frame(rep[["region_id", "week"]])
     pos = key.get_indexer(rk)
@@ -223,21 +227,25 @@ def apply_weekly(hw: pd.DataFrame, sums: pd.DataFrame, regions: pd.DataFrame | N
     return out
 
 
-def _parent_rows(rep: pd.DataFrame, regions: pd.DataFrame) -> pd.DataFrame:
-    """Sums of leaf rows up every parent (lo/hi summed: a conservative range)."""
+_AGG = {"snpp_eq": "sum", "b_pois": "sum", "b_rsd": "sum", "b_allow": "max"}
+
+
+def _parent_parts(parts: pd.DataFrame, regions: pd.DataFrame) -> pd.DataFrame:
+    """Leaf parts summed up every parent: counts and scatter add up; the ratio
+    error is added linearly (its regions share a country ratio); and a parent
+    keeps one missed-fire allowance, not one per region."""
     parent = regions.set_index("region_id")["parent_id"]
-    rows, cur = [], rep
+    rows, cur = [], parts
     for _ in range(4):  # country > province > district at most
         cur = cur.assign(region_id=cur["region_id"].map(parent)).dropna(subset=["region_id"])
         if cur.empty:
             break
-        cur = cur.astype({"region_id": int}).groupby(["region_id", "week"], as_index=False)[["harmonized", "lo", "hi"]].sum()
+        cur = cur.astype({"region_id": int}).groupby(["region_id", "week"], as_index=False).agg(_AGG)
         rows.append(cur)
     if not rows:
-        return rep.iloc[:0]
-    allp = pd.concat(rows, ignore_index=True)
+        return parts.iloc[:0]
     # a parent reached by leaves at different depths: add the parts up
-    return allp.groupby(["region_id", "week"], as_index=False)[["harmonized", "lo", "hi"]].sum()
+    return pd.concat(rows, ignore_index=True).groupby(["region_id", "week"], as_index=False).agg(_AGG)
 
 
 def week_of(day: pd.Timestamp) -> pd.Timestamp:
