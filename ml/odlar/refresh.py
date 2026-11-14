@@ -22,6 +22,7 @@ import os
 import shutil
 import subprocess
 import sys
+import tempfile
 import time
 from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
@@ -103,7 +104,10 @@ def update_weather(weather: pd.DataFrame, leaves, end: date, offline: bool) -> t
 
 def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path | None = None,
         model_dir: Path | None = None, state_dir: Path | None = None, map_key: str | None = None,
-        offline: bool = False, fetch=firms.fetch_recent) -> dict:
+        offline: bool = False, fetch=None, nrt_dir: Path | None = None) -> dict:
+    """``fetch(key, start, end, bboxes)`` defaults to the global 7-day NRT files
+    (``nrt_dir`` if already downloaded) topped up from the area API."""
+    fetch = fetch or (lambda k, s, e, b: firms.fetch_refresh(k, s, e, b, nrt_dir))
     t0 = time.time()
     b = BATCHES[batch]
     store_dir, model_dir, state_dir = store_dir or b.store_dir, model_dir or b.model_dir, state_dir or b.state_dir
@@ -120,7 +124,9 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
     since = max(prev_end - timedelta(days=lookback - 1), build_end + timedelta(days=1))
     if end < since:
         raise UpToDate(f"store already covers {prev_end}; nothing to do for {end}")
-    regions = load_regions(batch)
+    # the build's own polygons, so the server needs no boundary files
+    regions = store.load_state_regions(state_dir)
+    regions = load_regions(batch) if regions is None else regions
     leaves = leaf_regions(regions)
     boxes = firms.batch_bboxes(b, regions)
 
@@ -215,7 +221,7 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
                  "by_satellite": satellite_counts(meta["build_by_satellite"], tail.iloc[:0], tail)})
     tmp = store_dir.with_name(store_dir.name + ".new")
     shutil.rmtree(tmp, ignore_errors=True)
-    store.write_all(tmp, regions=regions, hotspots=None, grid=None, weekly=hw, annual=annual, calendars=calendars,
+    store.write_all(tmp, regions=regions, hotspots=None, grid=None, shapes=False, weekly=hw, annual=annual, calendars=calendars,
                     skill=json.loads((store_dir / "skill.json").read_text()),
                     model_report=json.loads((store_dir / "model_report.json").read_text()),
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=rh,
@@ -223,7 +229,8 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
     # The build's year files and grid are linked over unchanged; only tails are new.
     points.write_points(tmp, tail, tail_years, tail=True)
     points.carry_over(store_dir, tmp, skip={f"{y}.tail.parquet" for y in tail_years})
-    points.link(store_dir / "grid.parquet", tmp / "grid.parquet")
+    for name in ("grid.parquet", "regions.geojson", "regions_geo.parquet"):
+        points.link(store_dir / name, tmp / name)
     if len(tail):
         grid_cells(tail).to_parquet(tmp / "grid_tail.parquet", index=False)
     swap(tmp, store_dir)
@@ -275,18 +282,24 @@ def main() -> None:
     ap.add_argument("--offline", action="store_true", help="no weather calls (climatological forecast)")
     ap.add_argument("--batch", action="append", choices=sorted(BATCHES),
                     help="batch to refresh (repeatable); default: every batch that has a store")
+    ap.add_argument("--nrt-dir", type=Path, default=None, help="folder with FIRMS' global 7-day files")
     a = ap.parse_args()
     if not os.environ.get("FIRMS_MAP_KEY"):
         raise SystemExit("FIRMS_MAP_KEY not set")
     names = a.batch or [n for n, b in BATCHES.items() if (b.store_dir / "meta.json").exists()]
     if len(names) > 1:
-        # one process per batch, so memory is handed back between batches
+        # one process per batch, so memory is handed back between batches; the
+        # global NRT files are downloaded once and shared
         failed = []
-        for name in names:
-            args = [sys.executable, "-m", "odlar.refresh", "--batch", name, "--lookback", str(a.lookback)]
-            args += (["--end", a.end.isoformat()] if a.end else []) + (["--offline"] if a.offline else [])
-            if subprocess.run(args, check=False).returncode:
-                failed.append(name)
+        with tempfile.TemporaryDirectory() as tmp:
+            nrt = a.nrt_dir or Path(tmp)
+            firms.download_global_nrt(nrt)
+            for name in names:
+                args = [sys.executable, "-m", "odlar.refresh", "--batch", name, "--lookback", str(a.lookback),
+                        "--nrt-dir", str(nrt)]
+                args += (["--end", a.end.isoformat()] if a.end else []) + (["--offline"] if a.offline else [])
+                if subprocess.run(args, check=False).returncode:
+                    failed.append(name)
         if failed:
             raise SystemExit(f"refresh failed for {failed}")
         return
@@ -294,7 +307,7 @@ def main() -> None:
     for name in names:
         print(f"== {name}", flush=True)
         try:
-            out = run(name, end=a.end, lookback=a.lookback, offline=a.offline)
+            out = run(name, end=a.end, lookback=a.lookback, offline=a.offline, nrt_dir=a.nrt_dir)
         except UpToDate as exc:
             print(f"   {exc}", flush=True)
             continue

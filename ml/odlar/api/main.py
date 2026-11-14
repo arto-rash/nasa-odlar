@@ -93,7 +93,7 @@ def regions_geojson(bbox: str | None = Query(None, description="west,south,east,
     """Without parameters: every region at map detail (the full set, used by the
     gateway's region sync). With bbox/zoom/country: only the shapes in view."""
     if bbox is None and zoom is None and country is None:
-        return service.regions_geojson(s)
+        return Response(service.regions_geojson(s), media_type="application/geo+json")
     box = None
     if bbox:
         try:

@@ -18,3 +18,4 @@ api/vendor/
 api/.env
 api/storage/*.key
 deploy/.env
+ml/data/boundaries/world/

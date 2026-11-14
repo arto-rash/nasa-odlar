@@ -9,7 +9,7 @@ HOST="${ODLAR_HOST:-portfelim-hz}"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 RSYNC=(rsync -az --delete --exclude .git --exclude node_modules --exclude vendor --exclude .venv
        --exclude 'data/cache' --exclude '__pycache__' --exclude '.env' --exclude 'storage/logs/*'
-       --exclude '.pytest_cache' --exclude '.hypothesis' --exclude 'artifacts')
+       --exclude '.pytest_cache' --exclude '.hypothesis' --exclude 'artifacts' --exclude 'data/boundaries/world')
 
 echo "==> artifacts"
 ssh "$HOST" "mkdir -p /opt/odlar/artifacts /opt/odlar/ml /opt/odlar/api /opt/odlar/deploy"

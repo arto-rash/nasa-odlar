@@ -87,25 +87,9 @@ def list_regions(s: Store) -> list[dict]:
     return out
 
 
-def regions_geojson(s: Store) -> dict:
-    gj = json.loads(json.dumps(s.regions_geojson))
-    risk = {int(k): v for k, v in ((r["id"], r["risk"]) for r in list_regions(s))}
-    ann = s.annual
-    recent_year = int(pd.Timestamp(s.meta["data_end"]).year)
-    clim = ann[(ann["year"] >= 2003) & (ann["year"] < recent_year)].groupby("region_id")["harmonized"].mean()
-    feats = []
-    for f in gj["features"]:
-        p = f["properties"]
-        rid = int(p["region_id"])
-        rk = risk.get(rid) or {}
-        area = float(p.get("area_km2") or 1)
-        feats.append({"type": "Feature", "geometry": f["geometry"], "properties": {
-            "id": rid, "slug": p["slug"], "name_en": p["name_en"], "name_az": p["name_az"],
-            "country": p["country"], "level": p["level"],
-            "probability": rk.get("probability"), "risk_level": rk.get("level"),
-            "density": _f(clim.get(rid, 0.0) / area * 100, 3),  # mean annual detections per 100 km²
-        }})
-    return {"type": "FeatureCollection", "features": feats}
+def regions_geojson(s: Store) -> str:
+    """Every region at full map detail (the shapes are read from disk)."""
+    return region_shapes(s, None, 8.0)
 
 
 def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = None, zoom: float = 8.0,
@@ -125,7 +109,8 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
     if not s.shape_paths:
         raise NotFound("no region shapes built")
     rows = s.points._con().execute(
-        f"SELECT region_id, geometry FROM read_parquet(?) WHERE {' AND '.join(where)}",
+        f"SELECT region_id, geometry FROM read_parquet(?) WHERE {' AND '.join(where)} "
+        "ORDER BY is_country DESC, region_id",  # countries first (provinces reference them)
         [s.shape_paths, *params]).fetchall()
     recent_year = int(pd.Timestamp(s.meta["data_end"]).year)
     ann = s.annual[(s.annual["year"] >= 2003) & (s.annual["year"] < recent_year)]
@@ -459,10 +444,13 @@ def locate(s: Store, lat: float, lon: float) -> dict:
     """Leaf region containing a point (for "use my location")."""
     if not (-90 <= lat <= 90 and -180 <= lon <= 180):
         raise ValueError("lat/lon out of range")
+    from shapely import from_geojson
     from shapely.geometry import Point
     pt = Point(lon, lat)
-    for f in s.regions_geojson["features"]:
-        p = f["properties"]
-        if p["level"] != "country" and shape(f["geometry"]).contains(pt):
-            return {"region": _region_dict(s.by_id[int(p["region_id"])])}
+    rows = s.points._con().execute(
+        "SELECT region_id, geometry FROM read_parquet(?) WHERE detail = 'z2' AND NOT is_country "
+        "AND ? BETWEEN minx AND maxx AND ? BETWEEN miny AND maxy", [s.shape_paths, lon, lat]).fetchall()
+    for rid, geom in rows:
+        if from_geojson(geom).contains(pt):
+            return {"region": _region_dict(s.by_id[int(rid)])}
     raise NotFound("no region at this location")

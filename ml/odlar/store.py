@@ -108,14 +108,16 @@ def write_region_shapes(store_dir: Path, regions: gpd.GeoDataFrame) -> None:
 def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFrame | None, weekly: pd.DataFrame,
               annual: pd.DataFrame, calendars: dict, skill: dict, model_report: dict, risk_now: pd.DataFrame,
               outlook_now: pd.DataFrame, fire_weather: pd.DataFrame, risk_history: pd.DataFrame,
-              grid: pd.DataFrame | None, meta: dict, weather: pd.DataFrame, hotspot_years: list[int] | None = None) -> None:
+              grid: pd.DataFrame | None, meta: dict, weather: pd.DataFrame, hotspot_years: list[int] | None = None,
+              shapes: bool = True) -> None:
     """Write a batch store. Detections go to per-year files (odlar.points); with
     ``hotspot_years`` only those years are written (the caller carries the rest over)."""
     store_dir.mkdir(parents=True, exist_ok=True)
-    write_region_shapes(store_dir, regions)
-    tol = serve_tolerance(regions)
-    serving_geometry(regions, tol).to_file(store_dir / "regions.geojson", driver="GeoJSON",
-                                           COORDINATE_PRECISION=5 if tol < 0.001 else 4)
+    if shapes:  # False: the caller links the previous build's shapes over (they do not change)
+        write_region_shapes(store_dir, regions)
+        tol = serve_tolerance(regions)
+        serving_geometry(regions, tol).to_file(store_dir / "regions.geojson", driver="GeoJSON",
+                                               COORDINATE_PRECISION=5 if tol < 0.001 else 4)
     pd.DataFrame(regions.drop(columns="geometry")).to_parquet(store_dir / "regions.parquet")
     if hotspots is not None:  # None: the caller has already put the point files in place
         write_points(store_dir, hotspots, hotspot_years)
@@ -139,7 +141,8 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
 
 
 def write_state(state_dir: Path, *, weather: pd.DataFrame, elevation: pd.Series,
-                static_cells: pd.DataFrame, daily_recent: pd.DataFrame | None = None) -> None:
+                static_cells: pd.DataFrame, daily_recent: pd.DataFrame | None = None,
+                regions: gpd.GeoDataFrame | None = None) -> None:
     """Full-record inputs for ``odlar.refresh``: raw daily weather, region
     elevation, the persistent heat-source cells found on the full archive and the
     recent region-day detection counts (so the refresh never reads point files)."""
@@ -151,6 +154,13 @@ def write_state(state_dir: Path, *, weather: pd.DataFrame, elevation: pd.Series,
     static_cells.to_parquet(state_dir / "static_cells.parquet")
     if daily_recent is not None:
         daily_recent.to_parquet(state_dir / "daily_recent.parquet", index=False)
+    if regions is not None:  # full-resolution polygons: the refresh needs no boundary files
+        regions.to_parquet(state_dir / "regions.parquet")
+
+
+def load_state_regions(state_dir: Path) -> gpd.GeoDataFrame | None:
+    path = state_dir / "regions.parquet"
+    return gpd.read_parquet(path) if path.exists() else None
 
 
 # Small tables (one or a few rows per region) are loaded into memory. Detections,
@@ -182,7 +192,7 @@ class Store:
         self.dirs = dirs
         self.stamp = tuple((d / "meta.json").stat().st_mtime_ns for d in dirs)
         parts: dict[str, list[pd.DataFrame]] = {t: [] for t in _TABLES}
-        self.skills, self.model_reports, metas, feats, risk = {}, {}, {}, [], []
+        self.skills, self.model_reports, metas, risk = {}, {}, {}, []
         self.calendar_files = {name: d / "calendars.json" for name, d in zip(names, dirs, strict=True)}
         self._calendars: OrderedDict[str, dict] = OrderedDict()
         self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
@@ -192,7 +202,6 @@ class Store:
             for t in _TABLES:
                 parts[t].append(pd.read_parquet(d / f"{t}.parquet"))
             metas[name] = json.loads((d / "meta.json").read_text())
-            feats += json.loads((d / "regions.geojson").read_text())["features"]
             self.skills[name] = json.loads((d / "skill.json").read_text())
             self.model_reports[name] = json.loads((d / "model_report.json").read_text())
             rn = pd.read_parquet(d / "risk_now.parquet")
@@ -211,7 +220,6 @@ class Store:
         # the refresh keeps the grid of its tail detections apart (grid_tail.parquet)
         self.grid_paths = [str(p) for d in dirs for p in (d / "grid.parquet", d / "grid_tail.parquet") if p.exists()]
         self.risk_now = pd.concat(risk, ignore_index=True)
-        self.regions_geojson = {"type": "FeatureCollection", "features": feats}
         self.by_slug = {r.slug: r for r in self.regions.itertuples()}
         self.by_id = {int(r.region_id): r for r in self.regions.itertuples()}
         self.parent = self.regions.set_index("region_id")["parent_id"]

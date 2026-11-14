@@ -47,6 +47,9 @@ def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | 
             time.sleep(2 + attempt * 4)
         resp.raise_for_status()
         frames.append(parse(resp.json(), part["region_id"].tolist()))
+        if i + chunk < len(regions):
+            # every location counts as a call: stay under ~600 per minute
+            time.sleep(chunk / 600 * 60)
     return pd.concat(frames, ignore_index=True)
 
 

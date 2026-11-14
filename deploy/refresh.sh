@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # Move the served record forward to yesterday: new FIRMS NRT detections and
 # weather, risk re-scored with the trained models (odlar.refresh). Runs on the
-# server from cron twice a day; the ML API picks up the swapped store by itself.
-#   30 6,18 * * * /opt/odlar/deploy/refresh.sh >> /opt/odlar/refresh.log 2>&1
+# server from cron once a day (Open-Meteo allows ~10k location-calls a day); the ML API picks up the swapped store by itself.
+#   30 6 * * * /opt/odlar/deploy/refresh.sh >> /opt/odlar/refresh.log 2>&1
 set -euo pipefail
 cd /opt/odlar/deploy
 dc() { docker compose -f docker-compose.prod.yml "$@"; }

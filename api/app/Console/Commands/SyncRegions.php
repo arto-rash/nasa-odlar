@@ -28,7 +28,6 @@ class SyncRegions extends Command
     public function handle(MlClient $ml): int
     {
         try {
-            $geojson = $ml->json('/regions/geojson');
             // The GeoJSON lacks parent/area/centroid; /regions has them.
             $meta = collect($ml->json('/regions'))->keyBy('id');
         } catch (MlUnavailableException|MlRequestException $e) {
@@ -37,20 +36,33 @@ class SyncRegions extends Command
             return self::FAILURE;
         }
 
-        $features = $geojson['features'] ?? [];
-        DB::transaction(function () use ($features, $meta) {
-            foreach ($features as $feature) {
-                $p = $feature['properties'];
-                $m = $meta->get($p['id'], []);
-                DB::statement(self::UPSERT, [
-                    $p['id'], $p['slug'], $p['name_en'], $p['name_az'], $p['country'] ?? null, $p['level'],
-                    $m['parent_id'] ?? null, $m['area_km2'] ?? null, $m['lat'] ?? null, $m['lon'] ?? null,
-                    json_encode($feature['geometry']),
-                ]);
-            }
-        });
+        // One country at a time (provinces at ~500 m detail): the whole world in
+        // a single response would not fit in PHP's memory.
+        $total = 0;
+        foreach ($meta->pluck('country')->filter()->unique()->values() as $country) {
+            try {
+                $geojson = $ml->json('/regions/geojson', ['country' => $country, 'zoom' => 5]);
+            } catch (MlUnavailableException|MlRequestException $e) {
+                $this->error("ML service unavailable for {$country}: ".$e->getMessage());
 
-        $this->info('Synced '.count($features).' regions.');
+                return self::FAILURE;
+            }
+            $features = $geojson['features'] ?? [];
+            DB::transaction(function () use ($features, $meta) {
+                foreach ($features as $feature) {
+                    $p = $feature['properties'];
+                    $m = $meta->get($p['id'], []);
+                    DB::statement(self::UPSERT, [
+                        $p['id'], $p['slug'], $p['name_en'], $p['name_az'], $p['country'] ?? null, $p['level'],
+                        $m['parent_id'] ?? null, $m['area_km2'] ?? null, $m['lat'] ?? null, $m['lon'] ?? null,
+                        json_encode($feature['geometry']),
+                    ]);
+                }
+            });
+            $total += count($features);
+        }
+
+        $this->info("Synced {$total} regions.");
 
         return self::SUCCESS;
     }

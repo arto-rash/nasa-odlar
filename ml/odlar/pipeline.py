@@ -226,7 +226,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=risk_hist,
                     grid=grid, meta=meta_store, weather=weather_recent(w_ext, end))
     store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells,
-                      daily_recent=daily[pd.to_datetime(daily["date"]) >= recent_start(end)])
+                      daily_recent=daily[pd.to_datetime(daily["date"]) >= recent_start(end)], regions=regions)
     log(f"store written to {store_dir}", t0)
     return {"skill": skill, "report_h": report_h["overall"], "report_r": report_r["overall"]}
 

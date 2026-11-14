@@ -358,3 +358,70 @@ def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.Data
         frames.append(fetch_country_archive(map_key, name, box, start, end))
     df = pd.concat(frames, ignore_index=True)
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
+
+
+# FIRMS' public whole-world files of the last 7 days (no key, one per satellite),
+# refreshed every few hours: the daily refresh of every batch reads these.
+GLOBAL_NRT = {
+    "MODIS_NRT": "modis-c6.1/csv/MODIS_C6_1_Global_7d.csv",
+    "VIIRS_SNPP_NRT": "suomi-npp-viirs-c2/csv/SUOMI_VIIRS_C2_Global_7d.csv",
+    "VIIRS_NOAA20_NRT": "noaa-20-viirs-c2/csv/J1_VIIRS_C2_Global_7d.csv",
+    "VIIRS_NOAA21_NRT": "noaa-21-viirs-c2/csv/J2_VIIRS_C2_Global_7d.csv",
+}
+
+
+def download_global_nrt(out_dir: Path) -> None:
+    """Fetch the four global 7-day files into ``out_dir`` (skips files already there)."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    with httpx.Client(timeout=300, follow_redirects=True) as http:
+        for source, path in GLOBAL_NRT.items():
+            dst = out_dir / f"{source}.csv"
+            if dst.exists():
+                continue
+            resp = http.get(f"{FIRMS_BASE}/data/active_fire/{path}")
+            resp.raise_for_status()
+            dst.with_suffix(".part").write_bytes(resp.content)
+            os.replace(dst.with_suffix(".part"), dst)
+
+
+def global_recent(nrt_dir: Path, start: date, end: date, bboxes: list[BBox]) -> tuple[pd.DataFrame, date | None]:
+    """Detections in ``bboxes`` between ``start`` and ``end`` from the global 7-day
+    files, and the first day those files cover (None if they hold nothing)."""
+    frames, first = [], None
+    for source in GLOBAL_NRT:
+        path = nrt_dir / f"{source}.csv"
+        if not path.exists():
+            continue
+        raw = pd.read_csv(path)
+        if raw.empty:
+            continue
+        d = pd.to_datetime(raw["acq_date"]).dt.date
+        first = min(first, d.min()) if first else d.min()
+        inside = np.zeros(len(raw), dtype=bool)
+        for b in bboxes:
+            inside |= raw["longitude"].between(b.west, b.east).to_numpy() & raw["latitude"].between(b.south, b.north).to_numpy()
+        raw = raw[inside & (d >= start).to_numpy() & (d <= end).to_numpy()]
+        if len(raw):
+            frames.append(normalize(raw, source))
+    df = pd.concat(frames, ignore_index=True) if frames else pd.DataFrame(columns=COLUMNS)
+    return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]), first
+
+
+def fetch_refresh(map_key: str, start: date, end: date, bboxes: list[BBox], nrt_dir: Path | None = None) -> pd.DataFrame:
+    """New detections for the daily refresh: the global 7-day files (downloaded
+    into a temporary folder unless ``nrt_dir`` already has them), plus the keyed
+    area API for any days before those files begin."""
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        folder = nrt_dir or Path(tmp)
+        download_global_nrt(folder)
+        recent, first = global_recent(folder, start, end, bboxes)
+    frames = [recent]
+    if first is None or start < first:
+        older_end = (first - timedelta(days=1)) if first else end
+        frames.append(fetch_recent(map_key, start, min(older_end, end), bboxes))
+    frames = [f for f in frames if len(f)]
+    if not frames:
+        return pd.DataFrame(columns=COLUMNS)
+    df = pd.concat(frames, ignore_index=True)
+    return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)

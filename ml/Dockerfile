@@ -12,6 +12,8 @@ RUN pip install -r requirements.txt
 COPY pyproject.toml .
 COPY odlar ./odlar
 COPY data/boundaries ./data/boundaries
+# batch catalogue; world boundaries are not shipped (the refresh reads each batch's state)
+COPY data/world.json ./data/world.json
 COPY artifacts ./artifacts
 RUN pip install --no-deps -e . && useradd -r -u 10001 odlar && chown -R odlar /app
 USER odlar

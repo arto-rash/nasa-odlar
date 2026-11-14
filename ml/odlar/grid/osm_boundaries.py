@@ -34,6 +34,7 @@ from odlar.config import BOUNDARY_DIR, CACHE_DIR
 OVERPASS = ("https://overpass-api.de/api/interpreter", "https://overpass.private.coffee/api/interpreter",
             "https://maps.mail.ru/osm/tools/overpass/api/interpreter")
 USER_AGENT = "ODLAR/1.0 (NASA Space Apps 2026 fire-risk project)"
+_MIRROR_OFFSET = 0  # parallel shards start on different Overpass mirrors
 
 
 def overpass(query: str, client: httpx.Client, retries: int = 5) -> dict:
@@ -42,7 +43,7 @@ def overpass(query: str, client: httpx.Client, retries: int = 5) -> dict:
         return json.loads(path.read_text())
     for attempt in range(retries * len(OVERPASS)):
         try:
-            resp = client.post(OVERPASS[attempt % len(OVERPASS)], data={"data": query})
+            resp = client.post(OVERPASS[(attempt + _MIRROR_OFFSET) % len(OVERPASS)], data={"data": query})
         except httpx.TransportError:
             time.sleep(10)
             continue
@@ -112,6 +113,7 @@ def geoboundaries(iso3: str, adm: str, client: httpx.Client, boundary_dir: Path 
     """geoBoundaries open release (simplified), downloaded once into ``boundary_dir``."""
     path = boundary_dir / f"{iso3}_{adm}.geojson"
     if not path.exists():
+        path.parent.mkdir(parents=True, exist_ok=True)
         meta = client.get(f"https://www.geoboundaries.org/api/current/gbOpen/{iso3}/{adm}/").json()
         resp = client.get(meta["simplifiedGeometryGeoJSON"], follow_redirects=True)
         resp.raise_for_status()
@@ -200,7 +202,8 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
     fails, or covers under 90% of the country's land. Returns (units, source)."""
     from odlar.grid.regions import COUNTRIES
     meta = COUNTRIES[iso3]
-    land = geoboundaries(iso3, "ADM0", client).geometry.make_valid().union_all()
+    gb_dir = (BOUNDARY_DIR / meta["file"]).parent
+    land = geoboundaries(iso3, "ADM0", client, gb_dir).geometry.make_valid().union_all()
     land_km2 = gpd.GeoSeries([land], crs=4326).to_crs(6933).area.iloc[0] / 1e6
     if iso3 not in GEOBOUNDARIES_ONLY and meta.get("n_adm1", 0) > 1:
         try:
@@ -215,14 +218,14 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
                 if len(osm) and cover >= 0.9 * land_km2:
                     out = gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
                                             "osm_id": osm["osm_id"], "geometry": osm.geometry}, crs=4326)
-                    return fill_gaps(out, land, geoboundaries(iso3, "ADM1", client)), f"osm level {level}"
+                    return fill_gaps(out, land, geoboundaries(iso3, "ADM1", client, gb_dir)), f"osm level {level}"
                 print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land; using geoBoundaries")
         except Exception as exc:  # noqa: BLE001 — any OSM trouble falls back to geoBoundaries
             print(f"  {iso3}: OSM failed ({exc!r:.120}); using geoBoundaries")
     try:
         gb = geoboundaries_full(iso3, "ADM1", client)
     except Exception:  # noqa: BLE001 — a few small countries have no ADM1 release
-        gb = geoboundaries(iso3, "ADM0", client).assign(shapeName=meta["name_en"])
+        gb = geoboundaries(iso3, "ADM0", client, gb_dir).assign(shapeName=meta["name_en"])
     gb["geometry"] = gb.geometry.make_valid()
     gb = gb.dissolve(by="shapeName", as_index=False)
     return gpd.GeoDataFrame({"shapeName": gb["shapeName"], "name_az": None, "osm_id": None,
@@ -358,13 +361,17 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("countries", nargs="*", help="ISO3 codes; with --world, every world-catalogue country")
     ap.add_argument("--world", action="store_true", help="all countries of data/world.json not done yet")
+    ap.add_argument("--shard", default="0/1", help="i/n: this process takes every n-th country from i")
     a = ap.parse_args()
+    shard, n_shards = (int(x) for x in a.shard.split("/"))
+    global _MIRROR_OFFSET
+    _MIRROR_OFFSET = shard
     with httpx.Client(timeout=400, headers={"User-Agent": USER_AGENT}) as client:
         from odlar.grid.regions import COUNTRIES
         if a.world:
             done = 0
             todo = [i for i, c in COUNTRIES.items() if c.get("subregion")
-                    and not (BOUNDARY_DIR / f"{c['file']}_OSM.geojson").exists()]
+                    and not (BOUNDARY_DIR / f"{c['file']}_OSM.geojson").exists()][shard::n_shards]
             for iso3 in todo:
                 try:
                     gdf, source = build_world(iso3, client)
