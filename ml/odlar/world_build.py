@@ -61,7 +61,10 @@ def ordered_batches(only: list[str] | None) -> list[dict]:
 
 
 def boundaries_ready(batch: dict, countries: dict) -> bool:
-    return all((BOUNDARY_DIR / f"{countries[i]['file']}_OSM.geojson").exists() for i in batch["countries"])
+    """Every country has its border file, checked against the province-size rule
+    (the ``.level`` note odlar.grid.osm_boundaries writes)."""
+    return all((BOUNDARY_DIR / f"{countries[i]['file']}_OSM.geojson").exists()
+               and (BOUNDARY_DIR / f"{countries[i]['file']}_OSM.level").exists() for i in batch["countries"])
 
 
 def build(name: str) -> bool:
