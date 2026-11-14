@@ -52,6 +52,9 @@ class SyncRegions extends Command
                 foreach ($features as $feature) {
                     $p = $feature['properties'];
                     $m = $meta->get($p['id'], []);
+                    // a rebuild can move a slug to another id (a province regained, finer
+                    // borders): the old row gives it up, or the unique index would refuse it
+                    DB::update("UPDATE regions SET slug = 'old-' || id WHERE slug = ? AND id <> ?", [$p['slug'], $p['id']]);
                     DB::statement(self::UPSERT, [
                         $p['id'], $p['slug'], $p['name_en'], $p['name_az'], $p['country'] ?? null, $p['level'],
                         $m['parent_id'] ?? null, $m['area_km2'] ?? null, $m['lat'] ?? null, $m['lon'] ?? null,
@@ -61,6 +64,11 @@ class SyncRegions extends Command
             });
             $total += count($features);
         }
+
+        // rows left without a slug no longer exist, unless someone subscribed to them
+        DB::delete("DELETE FROM regions r WHERE r.slug LIKE 'old-%'
+            AND NOT EXISTS (SELECT 1 FROM subscriptions s WHERE s.region_id = r.id)
+            AND NOT EXISTS (SELECT 1 FROM alerts a WHERE a.region_id = r.id)");
 
         $this->info("Synced {$total} regions.");
 

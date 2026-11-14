@@ -116,6 +116,51 @@ def polygonal(geom):
     return unary_union(parts) if parts else Polygon()
 
 
+@lru_cache(maxsize=1)
+def _outlines(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
+    """Every catalogued country's outline (geoBoundaries ADM0, equal-area CRS), for
+    telling a country's own units from a neighbour's that an OSM query also returned."""
+    rows = []
+    for iso, meta in COUNTRIES.items():
+        if meta.get("source") == "split":
+            continue
+        f = boundary_dir / "world" / f"{iso}_ADM0.geojson"
+        if f.exists():
+            g = gpd.read_file(f).to_crs(4326)
+            x0, _, x1, _ = g.total_bounds
+            if x1 - x0 > 180:  # crosses the date line: projected, it would wrap the whole map
+                continue
+            rows.append({"iso": iso, "geometry": unary_union(list(g.to_crs(6933).geometry.make_valid()))})
+    return gpd.GeoDataFrame(rows, crs=6933)
+
+
+# slivers of a neighbour's unit in a country's OSM data, too small for the outline test
+STRAY_UNITS = {("NLD", "Lower Saxony")}
+
+
+def _foreign(iso: str, gdf: gpd.GeoDataFrame, boundary_dir: Path = BOUNDARY_DIR) -> pd.Series:
+    """Units that lie mostly inside another country's outline (an OSM area query
+    also returns a neighbour's province that touches the country: Kenya came with
+    South Sudan's Eastern Equatoria). Overseas islands outside every outline stay."""
+    out = _outlines(boundary_dir)
+    if iso not in set(out["iso"]):
+        return pd.Series(False, index=gdf.index)
+    own = out.loc[out["iso"] == iso, "geometry"].iloc[0].buffer(2000)  # 2 km: outlines are simplified
+    others = out[out["iso"] != iso]
+    eq = gdf.to_crs(6933)
+    flags = []
+    for geom in eq.geometry.make_valid():
+        area = geom.area
+        if area <= 0 or geom.intersection(own).area / area >= 0.5:
+            flags.append(False)  # mostly its own country's ground
+            continue
+        near = others[others.intersects(geom)]
+        abroad = sum(geom.intersection(g).area for g in near.geometry.buffer(0)) if len(near) else 0.0
+        ours = geom.intersection(own).area / area
+        flags.append(abroad / area >= 0.25 and abroad / area > ours)  # OSM shapes can include sea
+    return pd.Series(flags, index=gdf.index)
+
+
 # country -> neighbours whose sources' claim prevails where both cover the same
 # ground: East Jerusalem and the West Bank edges (Palestine), north Kosovo (Kosovo).
 YIELDS = {"ISR": ("PSE",), "JOR": ("PSE",), "SRB": ("XKX",)}
@@ -144,6 +189,8 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
         # geoBoundaries ships a few split polygons with the same name (e.g. Lankaran
         # District twice); dissolve them so every name maps to one region.
         gdf = gdf.dissolve(by="shapeName", as_index=False)
+        foreign = _foreign(iso, gdf, boundary_dir) if meta.get("source") != "split" else pd.Series(False, index=gdf.index)
+        foreign |= gdf["shapeName"].map(lambda n: (iso, n) in STRAY_UNITS)
         # Ground claimed by two countries' sources (e.g. the Artsvashen exclave)
         # stays with the country listed first, so every point has one region.
         if taken is not None:
@@ -152,10 +199,14 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
         # Ground both a country's and a neighbour's source claim is left to the
         # neighbour listed here (the user's decision), whatever batch either is in.
         yielded = [_country_shape(n, boundary_dir) for n in YIELDS.get(iso, ())]
+        emptied = pd.Series(False, index=gdf.index)
         if yielded:
+            before = gdf.to_crs(6933).area
             gdf["geometry"] = [polygonal(g) for g in gdf.geometry.difference(unary_union(yielded))]
+            emptied = (gdf.to_crs(6933).area < 1e6) & (before >= 1e6)
             gdf = gdf[~gdf.geometry.is_empty]
-        country_union = gdf.geometry.union_all()
+        gdf = gdf.assign(_foreign=foreign.reindex(gdf.index, fill_value=False) | emptied.reindex(gdf.index, fill_value=False))
+        country_union = gdf.loc[~gdf["_foreign"], "geometry"].union_all()
         taken = country_union if taken is None else taken.union(country_union)
         # A big country is split into states or chunks of them ("split" entries from
         # odlar.world_split): the state is the parent region, its slug prefixes the
@@ -185,6 +236,7 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
                 "level": "district" if iso == "AZE" or kind == "district" else "province",
                 "kind": kind,
                 "geometry": r.geometry,
+                "_drop": bool(r.get("_foreign", False)),
             })
         country_geom = country_union
         rows.append({
@@ -206,9 +258,9 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
     regions = regions.drop(columns="parent_key")
     eq = regions.to_crs(6933)  # equal-area for km²
     regions["area_km2"] = (eq.geometry.area / 1e6).round(1)
-    # a unit left with (almost) nothing after YIELDS goes; ids are assigned first,
-    # so every other region keeps its id
-    regions = regions[(regions["level"] == "country") | (regions["area_km2"] >= 1)].reset_index(drop=True)
+    # a neighbour's unit an OSM query returned, or one YIELDS left empty, goes; ids
+    # are assigned first, so every other region keeps its id
+    regions = regions[~regions["_drop"].fillna(False).astype(bool)].drop(columns="_drop").reset_index(drop=True)
     cent = regions.geometry.representative_point()
     regions["lat"] = cent.y.round(4)
     regions["lon"] = cent.x.round(4)
