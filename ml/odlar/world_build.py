@@ -74,9 +74,15 @@ def build(name: str) -> bool:
 def ship(name: str) -> bool:
     """Upload one batch and bring it live on the server."""
     src = ARTIFACTS_DIR / name
+    root, stage = "/opt/odlar/artifacts", f"/opt/odlar/artifacts/.incoming/{name}"
     steps = [
-        ["ssh", HOST, f"mkdir -p /opt/odlar/artifacts/{name}"],
-        ["rsync", "-az", "--delete", f"{src}/", f"{HOST}:/opt/odlar/artifacts/{name}/"],
+        # Upload into a staging folder (unchanged files hard-linked from the live
+        # copy), then swap it in with renames: the API must never load a batch
+        # whose files are still arriving.
+        ["ssh", HOST, f"mkdir -p {root}/.incoming && rm -rf {stage}"],
+        ["rsync", "-az", "--delete", f"--link-dest={root}/{name}/", f"{src}/", f"{HOST}:{stage}/"],
+        ["ssh", HOST, f"cd {root} && rm -rf {name}.old && {{ [ ! -e {name} ] || mv {name} {name}.old; }} "
+                      f"&& mv {stage} {name} && rm -rf {name}.old"],
         ["ssh", HOST, f"{COMPOSE} --profile jobs run --rm -T refresh python -m odlar.refresh --batch {name}; "
                       f"{COMPOSE} exec -T api php artisan odlar:sync-regions && "
                       f"{COMPOSE} exec -T api php artisan cache:clear"],
