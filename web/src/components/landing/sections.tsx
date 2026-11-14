@@ -92,7 +92,7 @@ export function ClockTeaser({ cal }: { cal: CalendarPayload }) {
               </div>
             </Reveal>
           )}
-          <Reveal delay={0.2} className="mt-9 flex items-center gap-5">
+          <Reveal delay={0.2} className="mt-9 flex flex-wrap items-center gap-x-5 gap-y-4">
             <Link href={`/region/${cal.region.slug}`}>
               <Button variant="primary" className="group">
                 {t("cta")} <ArrowRight className="size-4 transition group-hover:translate-x-1" />

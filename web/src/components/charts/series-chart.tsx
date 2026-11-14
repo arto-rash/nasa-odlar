@@ -185,9 +185,12 @@ export function SeriesChart<T>({
                   animate={s.dashed ? { opacity: s.opacity ?? 1 } : { pathLength: 1, opacity: s.opacity ?? 1 }}
                   transition={{ duration: s.dashed ? 0.6 : 1.6, ease: [0.65, 0, 0.35, 1] }}
                 />
-                {s.endLabel && <EndLabel data={data} s={s} x={(d) => xs(x(d) as never)} y={ys} />}
               </g>
             ),
+          )}
+          {/* after every line, so no line runs over a label */}
+          {paths.map(({ s }) =>
+            s.hidden || !s.endLabel ? null : <EndLabel key={s.key} data={data} s={s} x={(d) => xs(x(d) as never)} y={ys} />,
           )}
           {hd && (
             <g pointerEvents="none">
@@ -219,18 +222,15 @@ export function SeriesChart<T>({
 function EndLabel<T>({ data, s, x, y }: { data: T[]; s: Series<T>; x: (d: T) => number; y: (v: number) => number }) {
   const last = [...data].reverse().find((d) => s.value(d) != null);
   if (!last) return null;
+  const right = x(last) - 2;
+  const base = y(s.value(last)!) - 9;
+  const w = (s.endLabel?.length ?? 0) * 7.6 + 10;
   return (
-    <text
-      x={x(last) - 2}
-      y={y(s.value(last)!) - 9}
-      textAnchor="end"
-      className="text-[13px] font-semibold tabular-nums"
-      fill={s.color}
-      stroke="var(--panel-solid)"
-      strokeWidth={4}
-      paintOrder="stroke"
-    >
-      {s.endLabel}
-    </text>
+    <g pointerEvents="none">
+      <rect x={right - w + 5} y={base - 14} width={w} height={19} rx={4} fill="var(--panel-solid)" fillOpacity={0.88} />
+      <text x={right} y={base} textAnchor="end" className="text-[13px] font-semibold tabular-nums" fill={s.color}>
+        {s.endLabel}
+      </text>
+    </g>
   );
 }

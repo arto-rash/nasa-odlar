@@ -34,6 +34,11 @@ export function FireClock({
   const [wrapRef, { width }] = useSize<HTMLDivElement>();
   const size = Math.min(width, 720);
   const L = useMemo(() => clockLayout(size, years.length), [size, years.length]);
+  const centre = {
+    label: Math.min(12, L.inner * 0.17),
+    value: Math.min(Math.max(18, L.inner * 0.42), L.inner * 0.46),
+    gap: Math.min(16, L.inner * 0.32),
+  };
   const reduce = useReducedMotion();
   const uid = useId().replace(/:/g, "");
   const [hover, setHover] = useState<{ yearIndex: number; week: number } | null>(null);
@@ -220,17 +225,17 @@ export function FireClock({
             </text>
           ))}
 
-          {/* center readout */}
+          {/* center readout: sized to stay inside the hole on small clocks */}
           <g pointerEvents="none" textAnchor="middle">
-            <text x={L.cx} y={L.cy - 14} className="fill-faint text-[12px] font-semibold">
+            <text x={L.cx} y={L.cy - centre.gap} className="fill-faint font-semibold" style={{ fontSize: centre.label }}>
               {hover ? `${years[hover.yearIndex]} · ${weekLabel(hover.week, locale)}` : centerYear ?? t("annualMean")}
             </text>
-            <text x={L.cx} y={L.cy + 14} className="font-display fill-text tabular" style={{ fontSize: Math.max(18, L.inner * 0.42) }}>
+            <text x={L.cx} y={L.cy + centre.value * 0.35} className="font-display fill-text tabular" style={{ fontSize: centre.value }}>
               {centerVal != null
                 ? fmtNum(centerVal, locale, centerVal < 10 ? 1 : 0)
                 : fmtNum(season?.annual_mean ?? 0, locale)}
             </text>
-            <text x={L.cx} y={L.cy + 32} className="fill-dim text-[12px]">
+            <text x={L.cx} y={L.cy + centre.gap + centre.label * 0.7} className="fill-dim" style={{ fontSize: centre.label }}>
               {hover ? t("detectionsWeek") : t("detectionsYear")}
             </text>
           </g>

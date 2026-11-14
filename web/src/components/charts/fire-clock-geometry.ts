@@ -12,7 +12,8 @@ export interface ClockLayout {
   nYears: number;
 }
 
-export function clockLayout(size: number, nYears: number, innerFrac = 0.3, pad = 46): ClockLayout {
+/** ``innerFrac`` grows on small clocks: the centre has to hold three lines of text. */
+export function clockLayout(size: number, nYears: number, innerFrac = size < 520 ? 0.42 : 0.3, pad = 46): ClockLayout {
   const outer = Math.max(10, size / 2 - pad);
   const inner = outer * innerFrac;
   return { cx: size / 2, cy: size / 2, inner, outer, ring: (outer - inner) / Math.max(nYears, 1), nYears };

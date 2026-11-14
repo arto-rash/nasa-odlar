@@ -20,10 +20,10 @@ export const Button = forwardRef<
     <button
       ref={ref}
       className={cn(
-        "inline-flex select-none items-center justify-center gap-2 rounded-md font-semibold transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" && "h-8 px-3 text-[13px]",
-        size === "md" && "h-10 px-4 text-[14px]",
-        size === "lg" && "h-12 px-5 text-[15px]",
+        "inline-flex select-none items-center justify-center gap-2 rounded-md text-center font-semibold leading-tight transition-colors duration-150 disabled:pointer-events-none disabled:opacity-50",
+        size === "sm" && "min-h-8 px-3 py-1 text-[13px]",
+        size === "md" && "min-h-10 px-4 py-2 text-[14px]",
+        size === "lg" && "min-h-12 px-5 py-2 text-[15px]",
         styles[variant],
         className,
       )}
