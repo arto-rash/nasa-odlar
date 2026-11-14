@@ -27,3 +27,4 @@ ml/artifacts/*
 ml/data/world_build.log
 ml/data/world_logs/
 ml/data/world_status.json
+ml/data/my_batches.txt
