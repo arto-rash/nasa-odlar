@@ -175,7 +175,7 @@
   "footer": {
     "tagline": "Odlar Yurdu üçün vahid yanğın tarixçəsi.",
     "sources": "Məlumat mənbələri",
-    "credits": "NASA FIRMS, NASA POWER, Open-Meteo, geoBoundaries, OpenFreeMap / OpenStreetMap",
+    "credits": "NASA FIRMS, NASA POWER, Open-Meteo, OpenStreetMap, geoBoundaries, OpenFreeMap",
     "challenge": "NASA Space Apps Challenge 2026 üçün hazırlanıb.",
     "disclaimer": "ODLAR rəsmi xəbərdarlıq xidməti deyil. Təcili hallarda 112-yə zəng edin."
   },
@@ -422,7 +422,7 @@
     "api": "API",
     "apiLead": "Bütün son nöqtələr JSON qaytarır. Açar tələb olunmur, sorğular IP üzrə məhdudlaşdırılır.",
     "license": "Lisenziya və istinad",
-    "licenseText": "Mənbə məlumatı: NASA FIRMS (ictimai), NASA POWER, geoBoundaries (ODbL). Harmonizə edilmiş məhsul CC BY 4.0 lisenziyası ilə paylaşılır.",
+    "licenseText": "Mənbə məlumatı: NASA FIRMS (ictimai), NASA POWER, OpenStreetMap (ODbL), geoBoundaries. Harmonizə edilmiş məhsul CC BY 4.0 lisenziyası ilə paylaşılır.",
     "columns": "Sütunlar"
   },
   "simple": {

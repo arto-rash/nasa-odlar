@@ -10,6 +10,7 @@ from pathlib import Path
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 
 from odlar.config import STORE_DIR
 
@@ -51,14 +52,28 @@ def _clean(obj):
     return obj
 
 
+SERVE_TOLERANCE = 0.0006  # degrees, ~60 m: about a pixel at zoom 11
+
+
+def serving_geometry(regions: gpd.GeoDataFrame, tolerance: float = SERVE_TOLERANCE) -> gpd.GeoDataFrame:
+    """Lighter polygons for the map. Leaves are simplified as one coverage, so
+    neighbours keep an identical shared edge (no slivers or overlaps), and each
+    country is the union of its simplified leaves."""
+    geo = regions.copy()
+    leaf = (geo["level"] != "country").to_numpy()
+    geo.loc[leaf, "geometry"] = shapely.coverage_simplify(geo.geometry[leaf].to_numpy(), tolerance)
+    for i in np.flatnonzero(~leaf):
+        kids = geo["parent_id"] == geo.at[geo.index[i], "region_id"]
+        geo.at[geo.index[i], "geometry"] = shapely.union_all(geo.geometry[kids].to_numpy())
+    return geo
+
+
 def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFrame, weekly: pd.DataFrame,
               annual: pd.DataFrame, calendars: dict, skill: dict, model_report: dict, risk_now: pd.DataFrame,
               outlook_now: pd.DataFrame, fire_weather: pd.DataFrame, risk_history: pd.DataFrame,
               grid: pd.DataFrame, meta: dict, weather: pd.DataFrame) -> None:
     store_dir.mkdir(parents=True, exist_ok=True)
-    geo = regions.copy()
-    geo["geometry"] = geo.geometry.simplify(0.004, preserve_topology=True)
-    geo.to_file(store_dir / "regions.geojson", driver="GeoJSON")
+    serving_geometry(regions).to_file(store_dir / "regions.geojson", driver="GeoJSON", COORDINATE_PRECISION=5)
     pd.DataFrame(regions.drop(columns="geometry")).to_parquet(store_dir / "regions.parquet")
     h = hotspots[["sensor", "satellite", "acq_date", "acq_time", "lat", "lon", "frp", "confidence", "region_id"]].copy()
     h["acq_date"] = pd.to_datetime(h["acq_date"])

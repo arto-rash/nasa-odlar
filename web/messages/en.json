@@ -175,7 +175,7 @@
   "footer": {
     "tagline": "One fire history for the Land of Fire.",
     "sources": "Data sources",
-    "credits": "NASA FIRMS, NASA POWER, Open-Meteo, geoBoundaries, OpenFreeMap / OpenStreetMap",
+    "credits": "NASA FIRMS, NASA POWER, Open-Meteo, OpenStreetMap, geoBoundaries, OpenFreeMap",
     "challenge": "Built for the NASA Space Apps Challenge 2026.",
     "disclaimer": "ODLAR is not an official warning service. In an emergency call 112."
   },
@@ -422,7 +422,7 @@
     "api": "API",
     "apiLead": "Every endpoint returns JSON. No key is needed; requests are rate-limited per IP.",
     "license": "License & citation",
-    "licenseText": "Source data: NASA FIRMS (public domain), NASA POWER, geoBoundaries (ODbL). The harmonized product is shared under CC BY 4.0.",
+    "licenseText": "Source data: NASA FIRMS (public domain), NASA POWER, OpenStreetMap (ODbL), geoBoundaries. The harmonized product is shared under CC BY 4.0.",
     "columns": "Columns"
   },
   "simple": {

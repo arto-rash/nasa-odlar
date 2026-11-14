@@ -18,9 +18,12 @@ from shapely.geometry import Polygon, box
 from odlar.config import BOUNDARY_DIR
 
 COUNTRIES = {
-    "AZE": {"code": "az", "name_en": "Azerbaijan", "name_az": "Azərbaycan", "file": "AZE_ADM2"},
-    "GEO": {"code": "ge", "name_en": "Georgia", "name_az": "Gürcüstan", "file": "GEO_ADM1"},
-    "ARM": {"code": "am", "name_en": "Armenia", "name_az": "Ermənistan", "file": "ARM_ADM1"},
+    "AZE": {"code": "az", "iso2": "AZ", "name_en": "Azerbaijan", "name_az": "Azərbaycan", "file": "AZE_ADM2",
+            "osm_level": 6},
+    "GEO": {"code": "ge", "iso2": "GE", "name_en": "Georgia", "name_az": "Gürcüstan", "file": "GEO_ADM1",
+            "osm_level": 4},
+    "ARM": {"code": "am", "iso2": "AM", "name_en": "Armenia", "name_az": "Ermənistan", "file": "ARM_ADM1",
+            "osm_level": 4},
 }
 
 AZ_NAMES = {
@@ -81,12 +84,22 @@ def _localized(base: str, kind: str) -> tuple[str, str]:
 def load_regions(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
     """Return all regions (sub-national + country) with stable integer ids."""
     rows = []
+    taken = None
     for iso, meta in COUNTRIES.items():
-        gdf = gpd.read_file(boundary_dir / f"{meta['file']}.geojson").to_crs(4326)
+        # OSM geometry (see odlar.grid.osm_boundaries) where it has been fetched
+        osm = boundary_dir / f"{meta['file']}_OSM.geojson"
+        gdf = gpd.read_file(osm if osm.exists() else boundary_dir / f"{meta['file']}.geojson").to_crs(4326)
         gdf["geometry"] = gdf.geometry.make_valid()
         # geoBoundaries ships a few split polygons with the same name (e.g. Lankaran
         # District twice); dissolve them so every name maps to one region.
         gdf = gdf.dissolve(by="shapeName", as_index=False)
+        # Ground claimed by two countries' sources (e.g. the Artsvashen exclave)
+        # stays with the country listed first, so every point has one region.
+        if taken is not None:
+            gdf["geometry"] = gdf.geometry.difference(taken)
+            gdf = gdf[~gdf.geometry.is_empty]
+        country_union = gdf.geometry.union_all()
+        taken = country_union if taken is None else taken.union(country_union)
         for _, r in gdf.iterrows():
             base, kind = _split_name(r["shapeName"])
             name_en, name_az = _localized(base, kind)
@@ -99,7 +112,7 @@ def load_regions(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
                 "kind": kind,
                 "geometry": r.geometry,
             })
-        country_geom = gdf.geometry.union_all()
+        country_geom = country_union
         rows.append({
             "slug": meta["code"], "name_en": meta["name_en"], "name_az": meta["name_az"],
             "country": meta["code"], "level": "country", "kind": "country", "geometry": country_geom,
