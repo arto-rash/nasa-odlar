@@ -35,7 +35,13 @@ export function NearMeControl({ onFound, position = "top-right" }: { onFound: (r
     return () => {
       ctl.off("geolocate", onPos);
       ctl.off("error", onErr);
-      map.removeControl(ctl);
+      // Leaving the page can destroy the map first, which already removes its
+      // controls; removing this one again threw inside MapLibre and took the
+      // whole page down ("This page couldn't load").
+      if (!map.hasControl(ctl)) return;
+      try {
+        map.removeControl(ctl);
+      } catch {}
     };
   }, [map, position, t]);
   return null;
