@@ -13,6 +13,8 @@ CACHE_DIR = DATA_DIR / "cache"
 BOUNDARY_DIR = DATA_DIR / "boundaries"
 STORE_DIR = Path(os.environ.get("ODLAR_STORE_DIR", ROOT / "artifacts" / "store"))
 MODEL_DIR = Path(os.environ.get("ODLAR_MODEL_DIR", ROOT / "artifacts" / "models"))
+# Inputs the daily refresh needs that the served store does not keep.
+STATE_DIR = Path(os.environ.get("ODLAR_STATE_DIR", ROOT / "artifacts" / "state"))
 
 
 @dataclass(frozen=True)

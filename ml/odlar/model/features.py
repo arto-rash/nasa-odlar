@@ -86,14 +86,21 @@ def weekly_clim(series: pd.DataFrame, years: list[int]) -> pd.DataFrame:
 
 def build_panel(series: pd.DataFrame, weather: pd.DataFrame, regions: pd.DataFrame,
                 clim_years: list[int] | None = None, ndvi: pd.DataFrame | None = None,
-                elevation: pd.Series | None = None) -> pd.DataFrame:
-    """Daily feature panel + labels for every leaf region."""
+                elevation: pd.Series | None = None, clim: pd.DataFrame | None = None,
+                norms: pd.DataFrame | None = None) -> pd.DataFrame:
+    """Daily feature panel + labels for every leaf region.
+
+    ``clim`` (from :func:`weekly_clim`) and ``norms`` (from :func:`weather_norms`)
+    let a short recent ``series`` reuse baselines computed on the full record, so
+    the daily refresh builds the same features as the full pipeline.
+    """
     s = series.sort_values(["region_id", "date"]).reset_index(drop=True)
     if clim_years is None:
         days_per_year = s.drop_duplicates("date")["date"].dt.year.value_counts()
         clim_years = sorted(int(y) for y, n in days_per_year.items() if n >= 360)
     years = clim_years
-    clim = weekly_clim(s, years)
+    if clim is None:
+        clim = weekly_clim(s, years)
     rid = s["region_id"]
     v = s["value"]
     p = s[["region_id", "date"]].copy()
@@ -142,11 +149,13 @@ def build_panel(series: pd.DataFrame, weather: pd.DataFrame, regions: pd.DataFra
     for col, n, name in (("tmax", 7, "tmax_7d"), ("rh", 7, "rh_7d"), ("wind", 7, "wind_7d"), ("vpd", 7, "vpd_7d")):
         p[name] = _grp_roll(p[col], g, n, "mean")
     p["precip_7d"] = _grp_roll(p["precip"], g, 7)
-    precip_90 = _grp_roll(p["precip"], g, 90)
-    doy_p = p["date"].dt.day_of_year
-    p["precip_90d_anom"] = precip_90 - precip_90.groupby([g, doy_p]).transform("mean")
-    tmax_30 = _grp_roll(p["tmax"], g, 30, "mean")
-    p["tmax_30d_anom"] = tmax_30 - tmax_30.groupby([g, doy_p]).transform("mean")
+    rolled = _weather_rolls(p)
+    if norms is None:
+        norms = weather_norms(p)
+    nm = norms.set_index(["region_id", "doy"]).reindex(
+        pd.MultiIndex.from_arrays([g, p["date"].dt.day_of_year]))
+    p["precip_90d_anom"] = rolled["precip_90"].to_numpy() - nm["precip_90"].to_numpy()
+    p["tmax_30d_anom"] = rolled["tmax_30"].to_numpy() - nm["tmax_30"].to_numpy()
     p["fc_tmax"] = _fwd(p["tmax"], g, HORIZON, "mean")
     p["fc_rh_min"] = _fwd(p["rh"], g, HORIZON, "min")
     p["fc_wind_max"] = _fwd(p["wind"], g, HORIZON, "max")
@@ -176,3 +185,37 @@ def build_panel(series: pd.DataFrame, weather: pd.DataFrame, regions: pd.DataFra
     cs_wk = cs.groupby(p["region_id"]).shift(-OUTLOOK_WEEKS * 7)
     p["target_sum13w"] = cs_wk - cs
     return p
+
+
+def _weather_rolls(w: pd.DataFrame) -> pd.DataFrame:
+    """90-day precipitation sum and 30-day mean tmax; ``w`` sorted by region and date."""
+    g = w["region_id"]
+    return pd.DataFrame({"precip_90": _grp_roll(w["precip"], g, 90),
+                         "tmax_30": _grp_roll(w["tmax"], g, 30, "mean")}, index=w.index)
+
+
+def weather_norms(w: pd.DataFrame) -> pd.DataFrame:
+    """Per region × day of year: mean 90-day precipitation and 30-day tmax, the
+    baselines of the ``precip_90d_anom`` and ``tmax_30d_anom`` features."""
+    w = w.sort_values(["region_id", "date"]).reset_index(drop=True)
+    rid = w["region_id"].to_numpy()
+    p_sum, p_n = _block_roll(w["precip"].to_numpy(float), rid, 90)
+    t_sum, t_n = _block_roll(w["tmax"].to_numpy(float), rid, 30)
+    with np.errstate(invalid="ignore", divide="ignore"):
+        r = pd.DataFrame({"region_id": rid, "doy": pd.to_datetime(w["date"]).dt.day_of_year.to_numpy(),
+                          "precip_90": np.where(p_n > 0, p_sum, np.nan),
+                          "tmax_30": np.where(t_n > 0, t_sum / t_n, np.nan)})
+    return r.groupby(["region_id", "doy"], as_index=False)[["precip_90", "tmax_30"]].mean()
+
+
+def _block_roll(x: np.ndarray, keys: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarray]:
+    """Trailing ``window`` sum and count of non-NaN values within runs of equal
+    ``keys`` — a grouped ``rolling(window, min_periods=1)`` without its memory cost."""
+    start = np.r_[0, np.flatnonzero(keys[1:] != keys[:-1]) + 1]
+    pos = np.arange(keys.size) - np.repeat(start, np.diff(np.r_[start, keys.size]))
+    ok = ~np.isnan(x)
+    cs = np.r_[0.0, np.cumsum(np.where(ok, x, 0.0))]
+    cn = np.r_[0, np.cumsum(ok)]
+    i = np.arange(x.size) + 1
+    j = i - np.minimum(pos + 1, window)
+    return cs[i] - cs[j], cn[i] - cn[j]

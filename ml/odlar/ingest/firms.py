@@ -89,15 +89,27 @@ def persistent_source_mask(df: pd.DataFrame, cell_deg: float = 0.01, min_month_s
     """
     if df.empty:
         return pd.Series(False, index=df.index)
+    cells = persistent_cells(df, cell_deg, min_month_share, min_months)
+    return in_cells(df, cells, cell_deg)
+
+
+def persistent_cells(df: pd.DataFrame, cell_deg: float = 0.01, min_month_share: float = 0.2,
+                     min_months: int = 24) -> pd.DataFrame:
+    """The ``(cx, cy)`` cells flagged by :func:`persistent_source_mask`."""
     cx = np.floor(df["lon"] / cell_deg).astype(int)
     cy = np.floor(df["lat"] / cell_deg).astype(int)
     month = pd.to_datetime(df["acq_date"]).dt.to_period("M")
     n_months = max(month.nunique(), 1)
     cells = pd.DataFrame({"cx": cx, "cy": cy, "m": month})
     active = cells.drop_duplicates().groupby(["cx", "cy"]).size()
-    persistent = active[(active >= min_months) & (active / n_months >= min_month_share)].index
-    key = pd.MultiIndex.from_arrays([cx, cy])
-    return pd.Series(key.isin(persistent), index=df.index)
+    persistent = active[(active >= min_months) & (active / n_months >= min_month_share)]
+    return persistent.index.to_frame(index=False)
+
+
+def in_cells(df: pd.DataFrame, cells: pd.DataFrame, cell_deg: float = 0.01) -> pd.Series:
+    key = pd.MultiIndex.from_arrays([np.floor(df["lon"] / cell_deg).astype(int),
+                                     np.floor(df["lat"] / cell_deg).astype(int)])
+    return pd.Series(key.isin(pd.MultiIndex.from_frame(cells[["cx", "cy"]])), index=df.index)
 
 
 def date_windows(start: date, end: date, step: int = MAX_DAYS_PER_CALL) -> Iterable[tuple[date, int]]:
@@ -189,4 +201,25 @@ def fetch_archive(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX)
             if nrt_start <= end:
                 frames.append(client.fetch(nrt, nrt_start, end, bbox, progress=True))
     df = pd.concat([f for f in frames if not f.empty], ignore_index=True)
+    return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"])
+
+
+NRT_SOURCES = ("MODIS_NRT", "VIIRS_SNPP_NRT", "VIIRS_NOAA20_NRT", "VIIRS_NOAA21_NRT")
+
+
+def fetch_recent(map_key: str, start: date, end: date, bbox: BBox = PILOT_BBOX,
+                 cache_dir: Path | None = None) -> pd.DataFrame:
+    """Near-real-time detections (all satellites) for a short recent window.
+
+    NRT files are still filling in for the last days, so nothing is cached unless
+    ``cache_dir`` is given; any failed request raises instead of returning a gap.
+    """
+    import tempfile
+    with tempfile.TemporaryDirectory() as tmp:
+        client = FirmsClient(map_key, cache_dir=cache_dir or Path(tmp))
+        frames = [client.fetch(src, start, end, bbox) for src in NRT_SOURCES]
+    frames = [f for f in frames if not f.empty]
+    if not frames:
+        return pd.DataFrame(columns=COLUMNS)
+    df = pd.concat(frames, ignore_index=True)
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"])

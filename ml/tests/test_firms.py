@@ -57,6 +57,10 @@ def test_persistent_source_mask_flags_flare():
     mask = firms.persistent_source_mask(df)
     assert mask.iloc[: len(flare)].all()
     assert not mask.iloc[len(flare):].any()
+    # the refresh applies the saved cells to new detections only
+    cells = firms.persistent_cells(df)
+    late = pd.DataFrame({"lat": [40.4201, 40.0], "lon": [49.9301, 47.0], "acq_date": [date(2026, 10, 1)] * 2})
+    assert firms.in_cells(late, cells).tolist() == [True, False]
 
 
 def test_date_windows_cover_range_exactly():

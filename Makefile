@@ -1,5 +1,5 @@
 # ODLAR — common tasks
-.PHONY: setup pipeline pipeline-quick serve-ml serve-api web test test-ml test-api test-web e2e deploy deploy-artifacts
+.PHONY: setup pipeline pipeline-quick refresh serve-ml serve-api web test test-ml test-api test-web e2e deploy deploy-artifacts
 
 setup:            ## install everything
 	cd ml && python3 -m venv .venv && .venv/bin/pip install -r requirements.txt -r requirements-dev.txt && .venv/bin/pip install -e .
@@ -14,6 +14,9 @@ pipeline-quick:   ## small bootstrap, for CI (~2 min)
 
 pipeline-firms:   ## real NASA FIRMS archive (needs FIRMS_MAP_KEY)
 	cd ml && .venv/bin/python -m odlar.pipeline --source firms
+
+refresh:          ## move the local store forward to yesterday (needs FIRMS_MAP_KEY; no refit)
+	cd ml && .venv/bin/python -m odlar.refresh
 
 serve-ml:
 	cd ml && .venv/bin/uvicorn odlar.api.main:app --port 8001 --reload --reload-dir odlar

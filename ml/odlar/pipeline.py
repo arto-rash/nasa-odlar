@@ -19,7 +19,7 @@ import pandas as pd
 
 from odlar import store
 from odlar.calendar.engine import build_calendar
-from odlar.config import CACHE_DIR, MODEL_DIR, MODIS_START, OVERLAP_START, STORE_DIR
+from odlar.config import CACHE_DIR, MODEL_DIR, MODIS_START, OVERLAP_START, STATE_DIR, STORE_DIR
 from odlar.grid.gridding import COUNT_COLUMNS, daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
 from odlar.harmonize.engine import aggregate_intervals, harmonize
@@ -62,7 +62,7 @@ def load_weather(regions, start: date, end: date, offline: bool) -> tuple[pd.Dat
 
 def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick: bool = False,
         end: date | None = None, offline: bool = False, store_dir: Path = STORE_DIR,
-        model_dir: Path = MODEL_DIR, seed: int = 42) -> dict:
+        model_dir: Path = MODEL_DIR, state_dir: Path = STATE_DIR, seed: int = 42) -> dict:
     t0 = time.time()
     end = end or date.today() - timedelta(days=1)
     start = MODIS_START
@@ -90,7 +90,8 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     log(f"hotspots: {len(raw_hot):,} raw detections", t0)
 
     hot = firms.quality_filter(raw_hot)
-    static = firms.persistent_source_mask(hot)
+    static_cells = firms.persistent_cells(hot)
+    static = firms.in_cells(hot, static_cells)
     hot = hot[~static.to_numpy()].reset_index(drop=True)
     hot["region_id"] = assign_regions(hot, regions)
     hot = hot.dropna(subset=["region_id"]).astype({"region_id": int})
@@ -203,6 +204,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
                                                "importance": meta["importance"]},
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=risk_hist,
                     grid=grid_cells(hot), meta=meta_store, weather=weather_recent(w_ext, end))
+    store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells)
     log(f"store written to {store_dir}", t0)
     return {"skill": skill, "report_h": report_h["overall"], "report_r": report_r["overall"]}
 

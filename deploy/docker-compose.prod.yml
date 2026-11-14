@@ -28,6 +28,17 @@ services:
     volumes: ["/opt/odlar/artifacts:/app/artifacts:ro"]
     mem_limit: 900m
 
+  # Daily data refresh (deploy/refresh.sh, run from cron). Not started by `up`.
+  refresh:
+    image: odlar-ml:latest
+    profiles: [jobs]
+    user: "0:0"
+    environment:
+      FIRMS_MAP_KEY: ${FIRMS_MAP_KEY}
+    volumes: ["/opt/odlar/artifacts:/app/artifacts"]
+    command: ["python", "-m", "odlar.refresh"]
+    mem_limit: 1200m
+
   api:
     build: ../api
     image: odlar-api:latest

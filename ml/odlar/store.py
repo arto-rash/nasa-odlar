@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import json
-from functools import lru_cache
+import os
+import threading
 from pathlib import Path
 
 import geopandas as gpd
@@ -76,6 +77,18 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
     write_json(store_dir / "meta.json", meta)
 
 
+def write_state(state_dir: Path, *, weather: pd.DataFrame, elevation: pd.Series,
+                static_cells: pd.DataFrame) -> None:
+    """Full-record inputs for ``odlar.refresh``: raw daily weather, region
+    elevation and the persistent heat-source cells found on the full archive."""
+    state_dir.mkdir(parents=True, exist_ok=True)
+    w = weather[["region_id", "date", "tmax", "tmean", "rh", "wind", "precip"]].copy()
+    w["date"] = pd.to_datetime(w["date"])
+    w.to_parquet(state_dir / "weather.parquet")
+    elevation.rename("elevation").rename_axis("region_id").reset_index().to_parquet(state_dir / "elevation.parquet")
+    static_cells.to_parquet(state_dir / "static_cells.parquet")
+
+
 class Store:
     """In-memory view of the store; loaded once per API process."""
 
@@ -84,6 +97,7 @@ class Store:
         if not (d / "meta.json").exists():
             raise FileNotFoundError(f"no ODLAR store at {d}; run `python -m odlar.pipeline` first")
         self.dir = d
+        self.stamp = (d / "meta.json").stat().st_mtime_ns
         self.meta = json.loads((d / "meta.json").read_text())
         self.regions = pd.read_parquet(d / "regions.parquet")
         self.regions_geojson = json.loads((d / "regions.geojson").read_text())
@@ -107,7 +121,19 @@ class Store:
         self.parent = self.regions.set_index("region_id")["parent_id"]
 
 
-@lru_cache(maxsize=1)
+_current: Store | None = None
+_lock = threading.Lock()
+
+
 def get_store() -> Store:
-    import os
-    return Store(Path(os.environ.get("ODLAR_STORE_DIR", STORE_DIR)))
+    """The loaded store. A refresh swaps in a new store directory; the next call
+    sees a different meta.json and loads it, so the API never needs a restart."""
+    global _current
+    d = Path(os.environ.get("ODLAR_STORE_DIR", STORE_DIR))
+    meta = d / "meta.json"
+    if not meta.exists():
+        raise FileNotFoundError(f"no ODLAR store at {d}; run `python -m odlar.pipeline` first")
+    with _lock:  # one load at a time: sync endpoints run in a thread pool
+        if _current is None or _current.stamp != meta.stat().st_mtime_ns:
+            _current = Store(d)
+        return _current

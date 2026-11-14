@@ -6,7 +6,14 @@ from odlar.config import RISK_LEVELS, risk_level
 from odlar.ingest.ndvi import climatological_ndvi
 from odlar.ingest.synthetic import add_dryness
 from odlar.model import predict, train
-from odlar.model.features import FEATURES, OUTLOOK_FEATURES, build_panel, daily_series
+from odlar.model.features import (
+    FEATURES,
+    OUTLOOK_FEATURES,
+    build_panel,
+    daily_series,
+    weather_norms,
+    weekly_clim,
+)
 
 CLIM_YEARS = list(range(2008, 2015))
 
@@ -48,6 +55,22 @@ def test_panel_has_all_features(panel):
     assert not missing
     core = panel[(panel.date > "2008-04-01") & (panel.date < "2017-09-01")]
     assert core[FEATURES].isna().mean().max() < 0.01
+
+
+def test_short_panel_with_full_baselines_matches_full_panel(series, wx, regions, panel):
+    """The daily refresh builds features on a recent window only, with the
+    climatology and weather norms of the full record passed in."""
+    nd = climatological_ndvi(regions[regions.level != "country"], pd.date_range("2008-01-01", "2017-12-31"))
+    lo = pd.Timestamp("2015-01-01")
+    short = build_panel(series[series.date >= lo], wx[wx.date >= lo - pd.Timedelta(days=120)], regions,
+                        CLIM_YEARS, nd, pd.Series({1: 120.0, 2: 300.0}),
+                        clim=weekly_clim(series, CLIM_YEARS), norms=weather_norms(wx[wx.date >= series.date.min()]))
+    cols = FEATURES + [c for c in OUTLOOK_FEATURES if c not in FEATURES] + ["target_event", "threshold7"]
+    key = ["region_id", "date"]
+    window = pd.Timestamp("2016-01-01")  # past the warm-up of 90-day lags and days since fire
+    a = panel[panel.date >= window].set_index(key)[cols].sort_index()
+    b = short[short.date >= window].set_index(key)[cols].sort_index()
+    pd.testing.assert_frame_equal(a, b, check_dtype=False, check_exact=False, rtol=1e-6, atol=1e-6)
 
 
 def test_labels_are_next_seven_days(panel):
