@@ -131,6 +131,8 @@ def _outlines(boundary_dir: Path = BOUNDARY_DIR) -> gpd.GeoDataFrame:
             if x1 - x0 > 180:  # crosses the date line: projected, it would wrap the whole map
                 continue
             rows.append({"iso": iso, "geometry": unary_union(list(g.to_crs(6933).geometry.make_valid()))})
+    if not rows:  # no world outlines (e.g. a fresh checkout: they are not in git)
+        return gpd.GeoDataFrame({"iso": pd.Series(dtype=str)}, geometry=gpd.GeoSeries([], crs=6933))
     return gpd.GeoDataFrame(rows, crs=6933)
 
 

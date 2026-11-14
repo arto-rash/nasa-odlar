@@ -10,13 +10,14 @@ function fakeRegionsMl(string ...$names): void
     $names = $names ?: ['Sabirabad'];
     $square = fn ($x, $y) => ['type' => 'Polygon', 'coordinates' => [[[$x, $y], [$x + 1, $y], [$x + 1, $y + 1], [$x, $y + 1], [$x, $y]]]];
     Http::fake([
-        ml('/regions/geojson') => Http::sequence(array_map(fn ($nameEn) => ['type' => 'FeatureCollection', 'features' => [
+        // one country at a time, with query strings: ?country=AZ&zoom=5
+        ml('/regions/geojson*') => Http::sequence(array_map(fn ($nameEn) => ['type' => 'FeatureCollection', 'features' => [
             ['type' => 'Feature', 'geometry' => $square(44, 38), 'properties' => ['id' => 1, 'slug' => 'az', 'name_en' => 'Azerbaijan', 'name_az' => 'Azərbaycan', 'country' => 'AZ', 'level' => 'country']],
             ['type' => 'Feature', 'geometry' => ['type' => 'MultiPolygon', 'coordinates' => [$square(48, 39)['coordinates']]], 'properties' => ['id' => 31, 'slug' => 'az-sabirabad', 'name_en' => $nameEn, 'name_az' => 'Sabirabad', 'country' => 'AZ', 'level' => 'district']],
         ]], $names)),
-        ml('/regions') => Http::response([
-            ['id' => 1, 'slug' => 'az', 'parent_id' => null, 'area_km2' => 86600.0, 'lat' => 40.3, 'lon' => 47.7],
-            ['id' => 31, 'slug' => 'az-sabirabad', 'parent_id' => 1, 'area_km2' => 1470.2, 'lat' => 39.98, 'lon' => 48.47],
+        ml('/regions?*') => Http::response([
+            ['id' => 1, 'slug' => 'az', 'country' => 'AZ', 'parent_id' => null, 'area_km2' => 86600.0, 'lat' => 40.3, 'lon' => 47.7],
+            ['id' => 31, 'slug' => 'az-sabirabad', 'country' => 'AZ', 'parent_id' => 1, 'area_km2' => 1470.2, 'lat' => 39.98, 'lon' => 48.47],
         ]),
     ]);
 }
