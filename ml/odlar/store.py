@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import os
 import threading
+from collections import OrderedDict
 from pathlib import Path
 
 import geopandas as gpd
@@ -91,12 +92,15 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
     pd.DataFrame(regions.drop(columns="geometry")).to_parquet(store_dir / "regions.parquet")
     if hotspots is not None:  # None: the caller has already put the point files in place
         write_points(store_dir, hotspots, hotspot_years)
-    weekly.to_parquet(store_dir / "weekly.parquet")
+    # sorted by region so per-region queries read only a few row groups
+    weekly.sort_values(["region_id", "week"]).to_parquet(store_dir / "weekly.parquet", index=False,
+                                                         row_group_size=50_000)
     annual.to_parquet(store_dir / "annual.parquet")
     risk_now.assign(drivers=risk_now["drivers"].map(json.dumps)).to_parquet(store_dir / "risk_now.parquet")
     outlook_now.to_parquet(store_dir / "outlook_now.parquet")
     fire_weather.to_parquet(store_dir / "fire_weather.parquet")
-    risk_history.to_parquet(store_dir / "risk_history.parquet")
+    risk_history.sort_values(["region_id", "date"]).to_parquet(store_dir / "risk_history.parquet", index=False,
+                                                               row_group_size=50_000)
     if grid is not None:  # None: the caller links the previous grid over
         grid.sort_values(["year", "cy", "cx"]).to_parquet(store_dir / "grid.parquet", index=False,
                                                           row_group_size=200_000)
@@ -122,8 +126,15 @@ def write_state(state_dir: Path, *, weather: pd.DataFrame, elevation: pd.Series,
         daily_recent.to_parquet(state_dir / "daily_recent.parquet", index=False)
 
 
-# Loaded into memory; detections and the density grid stay on disk (``points``, ``grid_paths``).
-_TABLES = ("regions", "weekly", "annual", "outlook_now", "fire_weather", "risk_history", "weather_recent")
+# Small tables (one or a few rows per region) are loaded into memory. Detections,
+# the density grid, the weekly record and the risk history stay on disk and are
+# queried per region with DuckDB (``points``, ``grid_paths``, ``rows``); calendars
+# are loaded one batch at a time (``calendar``). That keeps the API's memory flat
+# however many batches are served.
+_TABLES = ("regions", "annual", "outlook_now", "fire_weather")
+_ON_DISK = ("weekly", "risk_history")
+_ORDER = {"weekly": "week", "risk_history": "date"}
+_CALENDAR_BATCHES = 6
 
 
 class Store:
@@ -144,14 +155,16 @@ class Store:
         self.dirs = dirs
         self.stamp = tuple((d / "meta.json").stat().st_mtime_ns for d in dirs)
         parts: dict[str, list[pd.DataFrame]] = {t: [] for t in _TABLES}
-        self.calendars, self.skills, self.model_reports, metas, feats, risk = {}, {}, {}, {}, [], []
+        self.skills, self.model_reports, metas, feats, risk = {}, {}, {}, [], []
+        self.calendar_files = {name: d / "calendars.json" for name, d in zip(names, dirs, strict=True)}
+        self._calendars: OrderedDict[str, dict] = OrderedDict()
+        self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
         batch_of = {}
         for name, d in zip(names, dirs, strict=True):
             for t in _TABLES:
                 parts[t].append(pd.read_parquet(d / f"{t}.parquet"))
             metas[name] = json.loads((d / "meta.json").read_text())
             feats += json.loads((d / "regions.geojson").read_text())["features"]
-            self.calendars.update(json.loads((d / "calendars.json").read_text()))
             self.skills[name] = json.loads((d / "skill.json").read_text())
             self.model_reports[name] = json.loads((d / "model_report.json").read_text())
             rn = pd.read_parquet(d / "risk_now.parquet")
@@ -163,10 +176,10 @@ class Store:
         self.batch_of = batch_of
         self.skill, self.model_report = self.skills[primary], self.model_reports[primary]
         self.meta = merged_meta(metas, primary)
-        self.regions, self.weekly, self.annual = cat["regions"], cat["weekly"], cat["annual"]
-        self.outlook_now, self.fire_weather, self.risk_history = cat["outlook_now"], cat["fire_weather"], cat["risk_history"]
-        self.weather = cat["weather_recent"]
+        self.regions, self.annual = cat["regions"], cat["annual"]
+        self.outlook_now, self.fire_weather = cat["outlook_now"], cat["fire_weather"]
         self.points = Points(dirs)
+        self._cal_lock = threading.Lock()
         # the refresh keeps the grid of its tail detections apart (grid_tail.parquet)
         self.grid_paths = [str(p) for d in dirs for p in (d / "grid.parquet", d / "grid_tail.parquet") if p.exists()]
         self.risk_now = pd.concat(risk, ignore_index=True)
@@ -174,6 +187,28 @@ class Store:
         self.by_slug = {r.slug: r for r in self.regions.itertuples()}
         self.by_id = {int(r.region_id): r for r in self.regions.itertuples()}
         self.parent = self.regions.set_index("region_id")["parent_id"]
+
+    def rows(self, table: str, region_ids, where: str = "TRUE", params: list | None = None) -> pd.DataFrame:
+        """Rows of an on-disk table (weekly, risk_history) for the given regions."""
+        ids = [int(i) for i in region_ids]
+        if not ids:
+            return pd.read_parquet(self.table_paths[table][0]).iloc[:0]
+        return self.points._con().execute(
+            f"SELECT * FROM read_parquet(?, union_by_name = true) WHERE list_contains(?, region_id) AND {where} "
+            f"ORDER BY region_id, {_ORDER[table]}", [self.table_paths[table], ids, *(params or [])]).df()
+
+    def calendar(self, region_id: int) -> dict | None:
+        """One region's calendar; its batch's calendar file is cached (a few batches at a time)."""
+        name = self.batch_of.get(int(region_id))
+        if name is None:
+            return None
+        with self._cal_lock:
+            if name not in self._calendars:
+                self._calendars[name] = json.loads(self.calendar_files[name].read_text())
+                while len(self._calendars) > _CALENDAR_BATCHES:
+                    self._calendars.popitem(last=False)
+            self._calendars.move_to_end(name)
+            return self._calendars[name].get(str(int(region_id)))
 
     def skill_for(self, region_id: int) -> dict:
         return self.skills[self.batch_of.get(int(region_id), next(iter(self.skills)))]

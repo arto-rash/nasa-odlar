@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import io
 import json
 import re
 import time
@@ -123,6 +124,71 @@ def build_osm_only(iso3: str, client: httpx.Client) -> gpd.GeoDataFrame:
     print(f"{iso3}: {len(osm)} OSM units, {osm['name_az'].notna().sum()} with an Azerbaijani name")
     return gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
                              "osm_id": osm["osm_id"], "geometry": osm.geometry}, crs=4326)
+
+
+# Too big for Overpass to return whole provinces with full geometry: their
+# geoBoundaries full-resolution files are used instead.
+GEOBOUNDARIES_ONLY = {"RUS", "CAN", "USA", "CHN", "BRA", "AUS", "IND", "ARG", "KAZ", "GRL", "IDN"}
+
+
+def geoboundaries_full(iso3: str, adm: str, client: httpx.Client) -> gpd.GeoDataFrame:
+    """geoBoundaries open release at full resolution (not cached in boundary_dir)."""
+    meta = client.get(f"https://www.geoboundaries.org/api/current/gbOpen/{iso3}/{adm}/").json()
+    resp = client.get(meta["gjDownloadURL"], follow_redirects=True, timeout=600)
+    resp.raise_for_status()
+    return gpd.read_file(io.BytesIO(resp.content)).to_crs(4326)
+
+
+def pick_level(iso2: str, target: int, client: httpx.Client) -> int | None:
+    """The OSM admin level whose unit count is closest to geoBoundaries' ADM1 count."""
+    q = (f'[out:json][timeout:300];area["ISO3166-1"="{iso2}"][admin_level=2]->.a;'
+         f'rel(area.a)[boundary=administrative][admin_level~"^(3|4|5|6)$"];out tags;')
+    counts: dict[int, int] = {}
+    for e in overpass(q, client)["elements"]:
+        try:
+            lvl = int(e["tags"].get("admin_level", 0))
+        except ValueError:
+            continue
+        counts[lvl] = counts.get(lvl, 0) + 1
+    ok = {lvl: n for lvl, n in counts.items() if 2 <= n <= 3 * target + 5}
+    if not ok:
+        return None
+    return min(ok, key=lambda lvl: (abs(ok[lvl] - target), abs(lvl - 4)))
+
+
+def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]:
+    """Provinces of one country: OSM at the level matching geoBoundaries' ADM1,
+    or geoBoundaries' full-resolution ADM1 when OSM is too big, has no such level,
+    fails, or covers under 90% of the country's land. Returns (units, source)."""
+    from odlar.grid.regions import COUNTRIES
+    meta = COUNTRIES[iso3]
+    land = geoboundaries(iso3, "ADM0", client).geometry.make_valid().union_all()
+    land_km2 = gpd.GeoSeries([land], crs=4326).to_crs(6933).area.iloc[0] / 1e6
+    if iso3 not in GEOBOUNDARIES_ONLY and meta.get("n_adm1", 0) > 1:
+        try:
+            level = pick_level(meta["iso2"], int(meta.get("n_adm1", 10)), client)
+            if level is not None:
+                osm = fetch_units(meta["iso2"], level, client)
+                coast = fetch_coastline(land.bounds, client)
+                osm["geometry"] = [land_part(g, coast, land) for g in osm.geometry]
+                osm = osm[~osm.geometry.is_empty]
+                cover = gpd.GeoSeries([osm.geometry.union_all().intersection(land)], crs=4326) \
+                    .to_crs(6933).area.iloc[0] / 1e6
+                if len(osm) and cover >= 0.9 * land_km2:
+                    return gpd.GeoDataFrame({"shapeName": osm["osm_name"], "name_az": osm["name_az"],
+                                             "osm_id": osm["osm_id"], "geometry": osm.geometry},
+                                            crs=4326), f"osm level {level}"
+                print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land; using geoBoundaries")
+        except Exception as exc:  # noqa: BLE001 — any OSM trouble falls back to geoBoundaries
+            print(f"  {iso3}: OSM failed ({exc!r:.120}); using geoBoundaries")
+    try:
+        gb = geoboundaries_full(iso3, "ADM1", client)
+    except Exception:  # noqa: BLE001 — a few small countries have no ADM1 release
+        gb = geoboundaries(iso3, "ADM0", client).assign(shapeName=meta["name_en"])
+    gb["geometry"] = gb.geometry.make_valid()
+    gb = gb.dissolve(by="shapeName", as_index=False)
+    return gpd.GeoDataFrame({"shapeName": gb["shapeName"], "name_az": None, "osm_id": None,
+                             "geometry": gb.geometry}, crs=4326), "geoboundaries"
 
 
 def fetch_coastline(bounds, client: httpx.Client) -> MultiLineString | None:
@@ -252,10 +318,27 @@ def build(iso3: str, client: httpx.Client, boundary_dir: Path = BOUNDARY_DIR) ->
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("countries", nargs="+")
+    ap.add_argument("countries", nargs="*", help="ISO3 codes; with --world, every world-catalogue country")
+    ap.add_argument("--world", action="store_true", help="all countries of data/world.json not done yet")
     a = ap.parse_args()
     with httpx.Client(timeout=400, headers={"User-Agent": USER_AGENT}) as client:
         from odlar.grid.regions import COUNTRIES
+        if a.world:
+            done = 0
+            todo = [i for i, c in COUNTRIES.items() if c.get("subregion")
+                    and not (BOUNDARY_DIR / f"{c['file']}_OSM.geojson").exists()]
+            for iso3 in todo:
+                try:
+                    gdf, source = build_world(iso3, client)
+                except Exception as exc:  # noqa: BLE001 — log and move on to the next country
+                    print(f"{iso3}: FAILED {exc!r:.200}", flush=True)
+                    continue
+                path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"
+                path.write_text(json.dumps(json.loads(gdf.to_json(drop_id=True)), separators=(",", ":")))
+                done += 1
+                print(f"{iso3}: {len(gdf)} units from {source} ({path.stat().st_size / 1e6:.1f} MB) "
+                      f"[{done}/{len(todo)}]", flush=True)
+            return
         for iso3 in a.countries:
             gdf = build_osm_only(iso3, client) if COUNTRIES[iso3].get("source") == "osm" else build(iso3, client)
             path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"

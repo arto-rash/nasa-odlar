@@ -130,7 +130,7 @@ def region_detail(s: Store, slug: str) -> dict:
     ann = s.annual[s.annual["region_id"] == rid]
     end_year = int(pd.Timestamp(s.meta["data_end"]).year)
     full = ann[(ann["year"] >= 2001) & (ann["year"] < end_year)]
-    cal = s.calendars.get(str(rid), {})
+    cal = s.calendar(rid) or {}
     d["risk"] = _risk_for(s, rid)
     d["children"] = [_region_dict(c) for c in s.regions[s.regions["parent_id"] == rid].itertuples()]
     if not pd.isna(r.parent_id):
@@ -154,7 +154,7 @@ def region_detail(s: Store, slug: str) -> dict:
 
 def weekly_series(s: Store, slug: str, start: date | None = None, end: date | None = None) -> list[dict]:
     rid = int(region_or_404(s, slug).region_id)
-    w = s.weekly[s.weekly["region_id"] == rid]
+    w = s.rows("weekly", [rid])
     if start:
         w = w[w["week"] >= pd.Timestamp(start)]
     if end:
@@ -186,7 +186,7 @@ def annual_series(s: Store, slug: str) -> dict:
 
 def calendar(s: Store, slug: str) -> dict:
     r = region_or_404(s, slug)
-    cal = s.calendars.get(str(int(r.region_id)))
+    cal = s.calendar(int(r.region_id))
     if cal is None:
         raise NotFound("no calendar")
     return {"region": _region_dict(r), **cal}
@@ -199,7 +199,7 @@ def risk_detail(s: Store, slug: str) -> dict:
     rn = s.risk_now[s.risk_now["region_id"].isin(leaf_ids)]
     fw = s.fire_weather[s.fire_weather["region_id"].isin(leaf_ids)]
     ol = s.outlook_now[s.outlook_now["region_id"].isin(leaf_ids)]
-    hist = s.risk_history[s.risk_history["region_id"].isin(leaf_ids)]
+    hist = s.rows("risk_history", leaf_ids)
     out: dict = {"region": _region_dict(r), "as_of": s.meta["data_end"], "forecast_source": s.meta.get("forecast_source")}
     if rn.empty:
         raise NotFound("no risk for region")
@@ -279,7 +279,7 @@ def hotspots(s: Store, start: date, end: date, sensor: str | None = None, region
 
 def timeline(s: Store) -> list[dict]:
     """Pilot-wide weekly totals per sensor + harmonized, for the explore scrubber."""
-    w = s.weekly[s.weekly["region_id"].isin(s.regions.loc[s.regions["level"] == "country", "region_id"])]
+    w = s.rows("weekly", s.regions.loc[s.regions["level"] == "country", "region_id"])
     g = w.groupby("week")[["modis", "viirs", "viirs_n", "harmonized", "lo", "hi"]].sum().reset_index()
     return [{"week": r.week.strftime("%Y-%m-%d"), "modis": int(r.modis), "viirs": int(r.viirs),
              "harmonized": _f(r.harmonized, 1), "lo": _f(r.lo, 1), "hi": _f(r.hi, 1)} for r in g.itertuples()]
@@ -316,7 +316,7 @@ def aoi_summary(s: Store, geometry: dict) -> dict:
     cand["week"] = cand["acq_date"] - pd.to_timedelta(cand["acq_date"].dt.day_of_week, unit="D")
     from shapely import contains_xy
     inside = cand[contains_xy(poly, cand["lon"].to_numpy(), cand["lat"].to_numpy())]
-    w = s.weekly
+    w = s.rows("weekly", inside["region_id"].dropna().unique())
     ratio = (w["harmonized"] / w["modis"].replace(0, np.nan)).rename("ratio")
     ratio_tbl = pd.concat([w[["region_id", "week"]], ratio], axis=1).set_index(["region_id", "week"])["ratio"]
     pre = inside[(inside["sensor"] == "MODIS") & (inside["week"] < PRE)]
