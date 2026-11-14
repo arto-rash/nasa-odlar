@@ -1,0 +1,63 @@
+# Build the web app (web/) on every push to master that touches it, and ship to our own server (replaces Vercel).
+# The server installs the build as a new release and rolls back by itself if
+# it does not answer. Settings: repo variable BUILD_ENV (the NEXT_PUBLIC_*
+# values, one per line) and secrets DEPLOY_SSH_KEY, DEPLOY_KNOWN_HOSTS and
+# DEPLOY_TARGET (user@host; the key only runs the deploy command there).
+name: Deploy
+
+on:
+  push:
+    branches: [master]
+    paths: ["web/**", ".github/workflows/deploy-web.yml"]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          package_json_file: web/package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - run: pnpm install --frozen-lockfile --config.strict-dep-builds=false
+
+      - name: Build
+        env:
+          BUILD_ENV: ${{ vars.BUILD_ENV }}
+          NEXT_TELEMETRY_DISABLED: 1
+        run: |
+          printf '%s\n' "$BUILD_ENV" > .env.production
+          npm run build
+
+      - name: Package
+        run: |
+          cp -r .next/static .next/standalone/.next/static
+          if [ -d public ]; then cp -r public .next/standalone/public; fi
+          tar -czf bundle.tgz -C .next/standalone .
+
+      - name: Ship
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_KNOWN_HOSTS: ${{ secrets.DEPLOY_KNOWN_HOSTS }}
+          DEPLOY_TARGET: ${{ secrets.DEPLOY_TARGET }}
+        run: |
+          install -m 600 /dev/null ~/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/deploy_key
+          printf '%s\n' "$DEPLOY_KNOWN_HOSTS" > ~/known_hosts
+          ssh -i ~/deploy_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/known_hosts "$DEPLOY_TARGET" < bundle.tgz
