@@ -9,8 +9,9 @@ from datetime import date
 import geopandas as gpd
 import numpy as np
 import pandas as pd
+import shapely
 from scipy.stats import kendalltau, theilslopes
-from shapely.geometry import shape
+from shapely.geometry import mapping, shape
 
 from odlar.calendar.engine import build_calendar
 from odlar.config import OVERLAP_START, risk_level
@@ -191,9 +192,41 @@ def list_regions(s: Store, country: str | None = None, parent: str | None = None
     return out
 
 
+WORLD_TOLERANCE = 0.1
+WORLD_MIN_ISLAND = 0.02  # square degrees (~200 km2): well under a pixel at world zoom
+
+
+def _without_specks(geom):
+    """Drop islets too small to see; a place made only of islets keeps its largest."""
+    parts = sorted(getattr(geom, "geoms", [geom]), key=lambda g: g.area, reverse=True)
+    kept = [g for g in parts if g.area >= WORLD_MIN_ISLAND] or parts[:1]
+    return shapely.multipolygons(kept) if len(kept) > 1 else kept[0]
+
+
 def regions_geojson(s: Store) -> str:
     """Every region at full map detail (the shapes are read from disk)."""
     return region_shapes(s, None, 8.0, provinces_only=False)
+
+
+def _world_outlines(s: Store) -> str:
+    """Country outlines for the whole-world view, kept in memory per store. One
+    screen pixel is at least 0.1 degree at these zooms, so borders are simplified
+    together to that (keeping them shared) and rounded to 0.01 degree."""
+    cached = getattr(s, "_outlines", None)
+    if cached is not None:
+        return cached
+    full = json.loads(region_shapes(s, None, 3.0, provinces_only=False))["features"]
+    features = [f for f in full if f["properties"]["level"] == "country"]
+    shapes = np.array([_without_specks(shape(f["geometry"]).buffer(0)) for f in features], dtype=object)
+    try:
+        slim = shapely.coverage_simplify(shapes, WORLD_TOLERANCE)
+    except shapely.errors.GEOSException:
+        slim = shapely.simplify(shapes, WORLD_TOLERANCE)
+    slim = shapely.set_precision(slim, 0.01, mode="pointwise")
+    for f, geom in zip(features, slim, strict=True):
+        f["geometry"] = mapping(geom)
+    s._outlines = json.dumps({"type": "FeatureCollection", "features": features}, separators=(",", ":"))
+    return s._outlines
 
 
 def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = None, zoom: float = 8.0,
@@ -201,6 +234,8 @@ def region_shapes(s: Store, bbox: tuple[float, float, float, float] | None = Non
     """The regions in view as GeoJSON text: country outlines only when zoomed out
     (zoom < 4), provinces simplified to ~500 m up to zoom 7, full map detail after.
     Risk and density properties are current; geometry comes pre-serialized."""
+    if zoom < 3 and bbox is None and country is None:
+        return _world_outlines(s)
     detail = "z0" if zoom < 4 else "z1" if zoom < 7 else "z2"
     where, params = ["detail = ?"], [detail]
     if zoom >= 4 and not country and provinces_only:

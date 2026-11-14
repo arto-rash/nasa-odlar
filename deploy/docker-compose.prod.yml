@@ -39,7 +39,7 @@ services:
       FIRMS_MAP_KEY: ${FIRMS_MAP_KEY}
     volumes: ["/opt/odlar/artifacts:/app/artifacts"]
     command: ["python", "-m", "odlar.refresh"]
-    mem_limit: 1700m  # big batches peak near 1.5 GB; killed first if the box runs short
+    mem_limit: 2000m  # big batches passed 1.7 GB in Nov 2026; killed first if the box runs short
     oom_score_adj: 800
 
   api:

@@ -71,6 +71,18 @@ class AnalyticsController extends Controller
         return $this->proxy('/hotspots', $request->forwarded());
     }
 
+    /** A year of sampled detections; finished years never change, so browsers keep them. */
+    public function weekPack(int $year): Response
+    {
+        $result = $this->ml->cachedGet("/week-pack/{$year}");
+
+        return response($result['body'], 200, [
+            'Content-Type' => $result['type'],
+            'Cache-Control' => $year < (int) date('Y') ? 'public, max-age=2592000, immutable' : 'public, max-age=3600',
+            'X-Cache' => $result['hit'] ? 'HIT' : 'MISS',
+        ]);
+    }
+
     public function timeline(): Response
     {
         return $this->proxy('/timeline');

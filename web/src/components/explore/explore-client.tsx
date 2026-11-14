@@ -1,6 +1,6 @@
 "use client";
 
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQueries, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Feature, FeatureCollection, Polygon } from "geojson";
 import type { MapLayerMouseEvent, MapMouseEvent } from "maplibre-gl";
 import { ArrowRight, ChevronDown, Flame, Layers, Loader2, PenLine, Trash2, X } from "lucide-react";
@@ -16,13 +16,13 @@ import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
+import { AFTERGLOW_WEEKS, packPoints, weekPackQuery, yearsFor, type WeekPack } from "@/lib/map-data";
 import { useMediaQuery } from "@/lib/use-media";
 import { fmtNum, regionName, type AppLocale } from "@/lib/format";
 import type { AoiSummary, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
 import { Timeline } from "./timeline";
 import { RegionPlace } from "@/components/ui/region-place";
 
-const AFTERGLOW_WEEKS = 3;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z").getTime() + n * 86400000));
 
@@ -62,17 +62,34 @@ export function ExploreClient({
   const viewQuery = view
     ? `&limit=${view.limit}${view.bbox ? `&bbox=${view.bbox}` : ""}${view.cell ? `&cell=${view.cell}` : ""}`
     : "";
-  const fetchWeek = (w: string) => {
+  // The whole-world view reads weeks from the year files, so moving along the
+  // timeline costs nothing. Zoomed in, each week is a query for the visible area:
+  // a dragged timeline asks only once it pauses, and the last request is cancelled.
+  const worldView = view?.bbox === null;
+  const [apiWeek, setApiWeek] = useState(week);
+  useEffect(() => {
+    const id = setTimeout(() => setApiWeek(week), playing ? 0 : 140);
+    return () => clearTimeout(id);
+  }, [week, playing]);
+  const packResults = useQueries({
+    queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y), enabled: worldView })),
+  });
+  const packs = packResults.every((r) => r.data) ? packResults.map((r) => r.data as WeekPack) : null;
+  const packsKey = packResults.map((r) => r.dataUpdatedAt).join();
+  const packFailed = packResults.some((r) => r.isError);
+  const packRate = packs?.[0]?.rate ?? 1;
+  const fetchWeek = (w: string, signal?: AbortSignal) => {
     const r = range(w);
-    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}${viewQuery}`);
+    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}${viewQuery}`, { signal });
   };
-  const { data, isFetching } = useQuery({
-    queryKey: ["hotspots", week, viewQuery],
-    queryFn: () => fetchWeek(week),
-    enabled: view !== null,
+  const { data, isFetching: weekFetching } = useQuery({
+    queryKey: ["hotspots", apiWeek, viewQuery],
+    queryFn: ({ signal }) => fetchWeek(apiWeek, signal),
+    enabled: view !== null && (!worldView || packFailed),
     placeholderData: keepPreviousData,
     staleTime: Infinity,
   });
+  const isFetching = weekFetching || (worldView && !packs && !packFailed);
   const { data: grid } = useQuery({
     queryKey: ["grid", view?.step, view?.bbox],
     queryFn: () => http<{ cells: [number, number, number][] }>(`/grid?step=${view!.step}${view!.bbox ? `&bbox=${view!.bbox}` : ""}`),
@@ -81,14 +98,18 @@ export function ExploreClient({
     staleTime: 30 * 60_000,
   });
 
-  // prefetch ahead while playing so playback stays smooth
+  // what comes next: the next files at world zoom, nearby weeks when zoomed in
   useEffect(() => {
-    for (let k = 1; k <= 3; k++) {
-      const w = timeline[index + k]?.week;
-      if (w && view) qc.prefetchQuery({ queryKey: ["hotspots", w, viewQuery], queryFn: () => fetchWeek(w), staleTime: Infinity });
+    if (!view) return;
+    const at = timeline.findIndex((p) => p.week === apiWeek);
+    for (const k of [1, 2, 3, -1]) {
+      const w = timeline[at + k]?.week;
+      if (!w) continue;
+      if (worldView) yearsFor(w).forEach((y) => void qc.prefetchQuery(weekPackQuery(y)));
+      else qc.prefetchQuery({ queryKey: ["hotspots", w, viewQuery], queryFn: ({ signal }) => fetchWeek(w, signal), staleTime: Infinity });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [index]);
+  }, [apiWeek, viewQuery, worldView]);
 
   // Playback only moves on once the next week's detections are loaded, so every
   // frame shows its own week (on a slow connection it plays slower, not frozen).
@@ -98,11 +119,15 @@ export function ExploreClient({
       setIndex((i) => {
         const next = i + 1 >= timeline.length ? 0 : i + 1;
         const w = timeline[next]?.week;
-        return w && qc.getQueryData(["hotspots", w, viewQuery]) ? next : i;
+        if (!w) return i;
+        const ready = worldView
+          ? yearsFor(w).every((y) => qc.getQueryData(["week-pack", y]))
+          : qc.getQueryData(["hotspots", w, viewQuery]);
+        return ready ? next : i;
       });
     }, 700 / speed);
     return () => clearInterval(id);
-  }, [playing, speed, timeline, qc, viewQuery]);
+  }, [playing, speed, timeline, qc, viewQuery, worldView]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -129,17 +154,26 @@ export function ExploreClient({
     window.history.replaceState(null, "", u);
   }, [week]);
 
+  const worldPoints = useMemo(
+    () => (packs ? packPoints(packs, week) : null),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [packsKey, week],
+  );
+  const usesPacks = !!worldPoints && (worldView || !data);
   const points: HotspotPoint[] = useMemo(() => {
+    if (usesPacks) return worldPoints;
     if (!data) return [];
     const w0 = new Date(week + "T00:00:00Z").getTime();
     return data.points.map(([lon, lat, s, , frp, date]) => ({
       lon, lat, sensor: s, frp,
       age: Math.max(0, Math.ceil((w0 - new Date(date + "T00:00:00Z").getTime()) / (7 * 86400000))),
     }));
-  }, [data, week]);
+  }, [data, week, usesPacks, worldPoints]);
   // a sampled answer (more points than the map draws) is scaled back to the true count
   const shown = points.filter((p) => p.age === 0 && sensors[p.sensor]).length;
-  const currentCount = data?.sampled && points.length ? Math.round((shown * data.total) / points.length) : shown;
+  const currentCount = usesPacks
+    ? shown * packRate
+    : data?.sampled && points.length ? Math.round((shown * data.total) / points.length) : shown;
 
   const aoi = useMutation({
     mutationFn: (coords: [number, number][]) =>
@@ -321,7 +355,7 @@ export function ExploreClient({
         <Timeline points={timeline} index={index} onIndex={setIndex} playing={playing} onPlay={setPlaying} speed={speed} onSpeed={setSpeed}
           open={timelineOpen} onOpen={setTimelineChoice} />
       </div>
-      {data && currentCount === 0 && !isFetching && layers.hotspots && (
+      {(data || usesPacks) && currentCount === 0 && !isFetching && layers.hotspots && (
         <p className="pointer-events-none absolute bottom-[84px] left-1/2 z-10 sm:bottom-[100px] -translate-x-1/2 rounded-md bg-panel-solid/80 px-3 py-1 text-[13px] text-dim">{t("noPoints")}</p>
       )}
     </div>

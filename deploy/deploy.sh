@@ -14,7 +14,7 @@ RSYNC=(rsync -az --delete --exclude .git --exclude node_modules --exclude vendor
 echo "==> artifacts"
 ssh "$HOST" "mkdir -p /opt/odlar/artifacts /opt/odlar/ml /opt/odlar/api /opt/odlar/deploy"
 # half-written stores of a build in progress (.staging/.new/.old) stay local
-ART_EXCLUDES=(--exclude '*.staging' --exclude '*.new' --exclude '*.old' --exclude '.incoming')
+ART_EXCLUDES=(--exclude '*.staging' --exclude '*.new' --exclude '*.old' --exclude '.incoming' --exclude week_packs)
 rsync -az --delete "${ART_EXCLUDES[@]}" "$ROOT/ml/artifacts/" "$HOST:/opt/odlar/artifacts/"
 
 if [[ "${ARTIFACTS_ONLY:-}" == "1" ]]; then

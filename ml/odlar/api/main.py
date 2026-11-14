@@ -12,10 +12,11 @@ from typing import Literal
 
 from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import FileResponse, JSONResponse
 
 from odlar.api import service
 from odlar.store import Store, get_store
+from odlar.week_packs import PACK_DIR
 
 app = FastAPI(title="ODLAR analytics", version="1.0.0",
               description="Harmonized MODIS/VIIRS fire calendar and risk engine for the South Caucasus.")
@@ -146,6 +147,15 @@ def hotspots(start: date, end: date, sensor: Literal["MODIS", "VIIRS", "modis", 
              cell: float | None = Query(None, gt=0, le=5, description="sum per grid cell of this size (degrees)"),
              s: Store = Depends(store)):
     return service.hotspots(s, start, end, sensor, region, limit, parse_bbox(bbox), cell)
+
+
+@app.get("/week-pack/{year}", dependencies=deps)
+def week_pack(year: int):
+    """A year of sampled detections for the world view (see odlar.week_packs)."""
+    path = PACK_DIR / f"{year}.bin"
+    if not path.is_file():
+        raise service.NotFound(f"no week pack for {year}")
+    return FileResponse(path, media_type="application/octet-stream")
 
 
 @app.get("/timeline", dependencies=deps)

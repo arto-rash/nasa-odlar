@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import * as Tooltip from "@radix-ui/react-tooltip";
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
+import { DataWarmup } from "./data-warmup";
 import { SmoothScroll } from "./smooth-scroll";
 
 export function Providers({ children }: { children: ReactNode }) {
@@ -17,6 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={client}>
       <Tooltip.Provider delayDuration={120} skipDelayDuration={300}>
         <SmoothScroll />
+        <DataWarmup />
         {children}
         <Toaster
           position="bottom-center"

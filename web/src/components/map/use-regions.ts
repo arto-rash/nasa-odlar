@@ -3,6 +3,7 @@ import type { FeatureCollection } from "geojson";
 import { useEffect, useState } from "react";
 import { useMap } from "@/components/map/base-map";
 import { http } from "@/lib/client";
+import { regionsViewQuery } from "@/lib/map-data";
 
 /*
  * Region polygons are loaded by the browser, never during server rendering, and
@@ -94,10 +95,8 @@ export function useViewportRegions(): { geojson: FeatureCollection | null; count
     };
   }, [map]);
   const { data } = useQuery({
-    queryKey: ["regions-view", view?.zoom, view?.bbox],
+    ...regionsViewQuery(view?.zoom, view?.bbox),
     enabled: view !== null,
-    queryFn: () => http<FeatureCollection>(`/regions/geojson?zoom=${view!.zoom}${view!.bbox ? `&bbox=${view!.bbox}` : ""}`),
-    staleTime: 10 * 60_000,
     placeholderData: keepPreviousData,
   });
   // decided by what is shown (the previous answer stays up while a new zoom loads)
