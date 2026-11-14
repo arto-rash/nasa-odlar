@@ -659,7 +659,7 @@
     "thisMonth": "Bu ay",
     "median": "Adi (median)",
     "rankLabel": "Yer",
-    "rank": "{n} ildən {rank}",
+    "rank": "{rank}/{n}",
     "rawNote": "Xam peyk məlumatı adidən {raw} dəfə çox deyərdi, çünki MODIS və VIIRS-i olduğu kimi birləşdirir, VIIRS isə xeyli çox kiçik yanğın görür. Düzəldilmiş qeyddə bu {ours} dəfədir.",
     "aria": "ODLAR qeydinə görə bu ay adidən {ratio} dəfədir; xam data {raw} dəfə deyərdi."
   }

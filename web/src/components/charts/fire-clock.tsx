@@ -288,7 +288,9 @@ export function FireClock({
           </g>
         </svg>
       )}
-      <table className="sr-only">
+      {/* a table won't shrink to sr-only's 1 px (it pushed phones sideways): hide a box around it */}
+      <div className="sr-only">
+      <table>
         <caption>{t("tableCaption")}</caption>
         <thead>
           <tr>
@@ -307,6 +309,7 @@ export function FireClock({
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   );
 }
