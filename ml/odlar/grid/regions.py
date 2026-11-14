@@ -190,7 +190,7 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
         # District twice); dissolve them so every name maps to one region.
         gdf = gdf.dissolve(by="shapeName", as_index=False)
         foreign = _foreign(iso, gdf, boundary_dir) if meta.get("source") != "split" else pd.Series(False, index=gdf.index)
-        foreign |= gdf["shapeName"].map(lambda n: (iso, n) in STRAY_UNITS)
+        foreign |= gdf["shapeName"].isin({n for i, n in STRAY_UNITS if i == iso})
         # Ground claimed by two countries' sources (e.g. the Artsvashen exclave)
         # stays with the country listed first, so every point has one region.
         if taken is not None:
