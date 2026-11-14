@@ -19,6 +19,7 @@ gateway's region table. The ML API picks the new batch up by itself.
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import queue
@@ -47,10 +48,15 @@ def load_status() -> dict:
     return json.loads(STATUS_FILE.read_text()) if STATUS_FILE.exists() else {}
 
 
-def save_status(status: dict) -> None:
-    with _status_lock:
-        tmp = STATUS_FILE.with_suffix(".tmp")
-        tmp.write_text(json.dumps(status, indent=1))
+def save_status(status: dict, name: str) -> None:
+    """Write one batch's entry. Several runners may share the file (each with its
+    own --only list), so the file is re-read under a lock and only ``name`` changes."""
+    with _status_lock, open(STATUS_FILE.with_suffix(".lock"), "w") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        disk = load_status()
+        disk[name] = status[name]
+        tmp = STATUS_FILE.with_suffix(f".{os.getpid()}.tmp")
+        tmp.write_text(json.dumps(disk, indent=1))
         os.replace(tmp, STATUS_FILE)
 
 
@@ -133,7 +139,7 @@ def main() -> None:
         while (name := uploads.get()) is not None:
             ok = ship(name)
             status[name].update({"state": "live" if ok else "ship_failed", "shipped": now()})
-            save_status(status)
+            save_status(status, name)
             print(f"{now()} {name}: {status[name]['state']}", flush=True)
 
     shipper = threading.Thread(target=uploader, daemon=False)
@@ -150,13 +156,13 @@ def main() -> None:
         name = b["name"]
         if not a.ship_only and (a.rebuild or not (BATCHES[name].store_dir / "meta.json").exists()):
             status[name] = {"state": "building", "started": now()}
-            save_status(status)
+            save_status(status, name)
             print(f"{now()} building {name} ({len(b['countries'])} countries)", flush=True)
             t0 = time.time()
             ok = build(name)
             status[name] = {"state": "built" if ok else "failed", "finished": now(),
                             "minutes": round((time.time() - t0) / 60, 1)}
-            save_status(status)
+            save_status(status, name)
             print(f"{now()} {name}: {status[name]['state']} in {status[name]['minutes']} min", flush=True)
             if not ok:
                 if name not in retried:  # once more, at the end of the queue (a fix may land meanwhile)
@@ -165,7 +171,7 @@ def main() -> None:
                 continue
         if not a.no_ship:
             status[name]["state"] = "uploading"
-            save_status(status)
+            save_status(status, name)
             uploads.put(name)
     uploads.put(None)
     shipper.join()

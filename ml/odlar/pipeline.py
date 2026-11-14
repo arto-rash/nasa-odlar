@@ -46,7 +46,9 @@ def load_weather(regions, start: date, end: date, offline: bool,
             raise RuntimeError("offline")
         w, elev = power.fetch_regions_weather(regions, date(2000, 10, 1), end - timedelta(days=7))
     except Exception as exc:  # noqa: BLE001
-        print(f"  NASA POWER unavailable ({exc}); using synthetic weather")
+        if not offline:  # a real build never falls back to made-up weather: fail, retry later
+            raise RuntimeError(f"NASA POWER unavailable: {exc}") from exc
+        print(f"  NASA POWER unavailable ({exc}); using synthetic weather (offline run)")
         w = synthetic.synthetic_weather(leaves, date(2000, 10, 1), end)
         return w, pd.Series(dtype=float), "synthetic"
     last = pd.to_datetime(w["date"]).max().date()
