@@ -25,6 +25,7 @@ import type { AoiSummary, FireEvent, ForecastMap, HotspotResponse, RiskLevel, Ti
 import { FORECAST_STOPS } from "@/components/map/layers";
 import { Timeline } from "./timeline";
 import { FireDetail, FiresLayer, FiresList, FitFire } from "./fires";
+import { StaticSourcesLayer, useStaticSources } from "./static-sources";
 import { RegionPlace } from "@/components/ui/region-place";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -50,7 +51,8 @@ export function ExploreClient({
   const [index, setIndex] = useState(() => Math.max(0, timeline.findIndex((p) => p.week === initialWeek)));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off" });
+  const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off", flares: false });
+  const { data: flares } = useStaticSources(layers.flares);
   const [sensors, setSensors] = useState({ M: true, V: true });
   const [hover, setHover] = useState<{ id?: number; slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(initialRegion);
@@ -263,6 +265,7 @@ export function ExploreClient({
         <SignatureLayer geojson={signature} />
         <HotspotLayer points={points} visible={layers.hotspots} sensors={sensors} />
         {fires && <FiresLayer events={fireData?.events ?? []} selected={fireId} onPick={setFireId} />}
+        {layers.flares && <StaticSourcesLayer data={flares} />}
         <FitFire id={fireId} />
         <AoiLayer
           drawing={drawing}
@@ -349,6 +352,12 @@ export function ExploreClient({
                   }}
                   label={tf("toggle")}
                 />
+                <Toggle on={layers.flares} onChange={(v) => setLayers((l) => ({ ...l, flares: v }))} label={t("flares")} />
+                {layers.flares && (
+                  <p className="pl-8 pr-1 text-[12px] leading-snug text-faint">
+                    {flares ? t("flaresNote", { count: flares.total }) : t("flaresLoading")}
+                  </p>
+                )}
               </div>
               <div className="mt-4 border-t border-line pt-4">
                 {!drawing && !aoiClosed ? (

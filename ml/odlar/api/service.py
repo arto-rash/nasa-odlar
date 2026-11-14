@@ -860,3 +860,26 @@ def locate(s: Store, lat: float, lon: float) -> dict:
         if from_geojson(geom).contains(pt):
             return {"region": _region_dict(s.by_id[int(rid)], s)}
     raise NotFound("no region at this location")
+
+
+STATIC_CELL_DEG = 0.01  # the cell size the static-source filter uses (odlar.ingest.firms)
+
+
+def static_sources(s: Store, bbox: tuple[float, float, float, float] | None, limit: int = 5000) -> dict:
+    """Cells removed as steady heat sources (gas flares, refineries, burning gas
+    vents): hot in at least a fifth of all months for two years or more, so not
+    vegetation fires. Their detections never enter the record."""
+    cells = getattr(s, "_static", None)
+    if cells is None:
+        frames = [pd.read_parquet(f) for d in s.dirs if (f := d.parent / "state" / "static_cells.parquet").exists()]
+        cells = pd.concat(frames, ignore_index=True).drop_duplicates() if frames else pd.DataFrame(columns=["cx", "cy"])
+        cells = pd.DataFrame({"lon": (cells["cx"].to_numpy() + 0.5) * STATIC_CELL_DEG,
+                              "lat": (cells["cy"].to_numpy() + 0.5) * STATIC_CELL_DEG})
+        s._static = cells
+    total = int(len(cells))
+    if bbox:
+        w, so, e, n = bbox
+        cells = cells[cells["lon"].between(w, e) & cells["lat"].between(so, n)]
+    pts = cells.head(limit).round(3)
+    return {"total": total, "in_view": int(len(cells)), "cell_km": 1,
+            "cells": pts[["lon", "lat"]].to_numpy().tolist()}

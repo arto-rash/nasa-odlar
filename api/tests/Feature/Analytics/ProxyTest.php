@@ -13,6 +13,7 @@ dataset('proxied routes', [
     'calendar' => ['/api/v1/regions/az-sabirabad/calendar', '/calendar/az-sabirabad'],
     'region risk' => ['/api/v1/regions/az-sabirabad/risk', '/risk/az-sabirabad'],
     'region forecast' => ['/api/v1/regions/az-sabirabad/forecast', '/forecast/az-sabirabad'],
+    'static sources' => ['/api/v1/static-sources', '/static-sources'],
     'fires now' => ['/api/v1/events', '/events'],
     'one fire' => ['/api/v1/events/40.475_44.952_20261012', '/events/40.475_44.952_20261012'],
     'risk map' => ['/api/v1/risk', '/risk'],
@@ -229,3 +230,11 @@ it('does not route a malformed fire id', function () {
 
     Http::assertNothingSent();
 });
+
+it('validates static-source queries', function (string $query) {
+    Http::fake();
+
+    $this->getJson('/api/v1/static-sources'.$query)->assertUnprocessable();
+
+    Http::assertNothingSent();
+})->with(['bad bbox' => ['?bbox=1,2'], 'big limit' => ['?limit=99999']]);

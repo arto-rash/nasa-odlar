@@ -148,3 +148,10 @@ def test_break_test(client):
     assert b["harmonized"]["p"] > b["raw"]["p"]
     o = client.get("/overview").json()["breaks"]
     assert o["raw_breaks"] >= o["corrected_breaks"] and o["raw_at_new_satellite"] >= o["corrected_at_new_satellite"]
+
+
+def test_static_sources(client):
+    r = client.get("/static-sources", params={"bbox": "44,38,51,42"}).json()
+    assert r["total"] >= r["in_view"] > 0 and len(r["cells"]) == r["in_view"]
+    lon, lat = r["cells"][0]
+    assert 44 <= lon <= 51 and 38 <= lat <= 42

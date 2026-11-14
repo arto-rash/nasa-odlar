@@ -13,6 +13,7 @@ use App\Http\Requests\RegionsGeojsonRequest;
 use App\Http\Requests\RegionsRequest;
 use App\Http\Requests\RiskRequest;
 use App\Http\Requests\SkillRequest;
+use App\Http\Requests\StaticSourcesRequest;
 use App\Http\Requests\WeeklySeriesRequest;
 use App\Services\MlClient;
 use Illuminate\Http\JsonResponse;
@@ -67,6 +68,12 @@ class AnalyticsController extends Controller
     public function events(EventsRequest $request): Response
     {
         return $this->proxy('/events', $request->forwarded());
+    }
+
+    /** Steady heat sources (gas flares and the like) removed from the record. */
+    public function staticSources(StaticSourcesRequest $request): Response
+    {
+        return $this->proxy('/static-sources', $request->forwarded());
     }
 
     /** One fire with its detections. */

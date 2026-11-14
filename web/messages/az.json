@@ -256,7 +256,10 @@
     "forecastNote": "Modelin proqnozu, adi mövsümə görə paylanıb. Bu həftə üçün hələ aşkarlama yoxdur.",
     "forecastHover": "~{value} gözlənilir · adətən {usual}",
     "forecastLoading": "Proqnoz yüklənir…",
-    "forecastEmpty": "Bu ərazi üçün hələ proqnoz yoxdur."
+    "forecastEmpty": "Bu ərazi üçün hələ proqnoz yoxdur.",
+    "flares": "Çıxarılmış istilik mənbələri",
+    "flaresNote": "Dünyada demək olar ki, il boyu isti olan {count, number} nöqtə (qaz məşəlləri, neft emalı zavodları, Yanardağ kimi yanan qaz çıxışları). Bunlar bitki yanğını deyil, ona görə aşkarlamaları qeydə daxil edilmir.",
+    "flaresLoading": "Yüklənir…"
   },
   "regions": {
     "title": "Bölgələr",

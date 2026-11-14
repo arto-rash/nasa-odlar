@@ -31,6 +31,7 @@ Route::prefix('v1')->group(function () {
         Route::get('regions/{slug}/forecast', 'forecast')->name('regions.forecast');
         Route::get('risk', 'risk')->name('risk');
         Route::get('forecast/map', 'forecastMap')->name('forecast.map');
+        Route::get('static-sources', 'staticSources')->name('static-sources');
         Route::get('events', 'events')->name('events.index');
         Route::get('events/{id}', 'event')->where('id', '-?\d+\.\d+_-?\d+\.\d+_\d{8}')->name('events.show');
         Route::get('hotspots', 'hotspots')->name('hotspots');

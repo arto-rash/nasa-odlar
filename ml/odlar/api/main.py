@@ -136,6 +136,13 @@ def fire_events(bbox: str | None = Query(None, description="west,south,east,nort
     return service.events(s, parse_bbox(bbox), region, active, limit)
 
 
+@app.get("/static-sources", dependencies=deps)
+def static_sources(bbox: str | None = Query(None, description="west,south,east,north"),
+                   limit: int = Query(5000, ge=1, le=20000), s: Store = Depends(store)):
+    """Steady heat sources (gas flares and the like) removed from the record."""
+    return service.static_sources(s, parse_bbox(bbox), limit)
+
+
 @app.get("/events/{event_id}", dependencies=deps)
 def fire_event(event_id: str = Path(..., pattern=r"^-?\d+\.\d+_-?\d+\.\d+_\d{8}$"), s: Store = Depends(store)):
     """One fire with its detections."""

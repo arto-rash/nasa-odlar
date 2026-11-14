@@ -256,7 +256,10 @@
     "forecastNote": "Outlook from the model, spread over the usual season. No detections exist yet for this week.",
     "forecastHover": "~{value} expected · usual {usual}",
     "forecastLoading": "Loading the forecast…",
-    "forecastEmpty": "No forecast for this area yet."
+    "forecastEmpty": "No forecast for this area yet.",
+    "flares": "Removed heat sources",
+    "flaresNote": "{count, number} spots worldwide that are hot almost all year (gas flares, refineries, burning gas vents such as Yanardag). They are not vegetation fires, so their detections never enter the record.",
+    "flaresLoading": "Loading…"
   },
   "regions": {
     "title": "Regions",
