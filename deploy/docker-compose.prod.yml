@@ -1,0 +1,54 @@
+# Production stack on the shared box. Nothing is published to the host: the API
+# joins the existing Caddy's network as `odlar-api`; ml and db stay internal.
+#   cd /opt/odlar/deploy && docker compose -f docker-compose.prod.yml up -d --build
+name: odlar
+
+services:
+  db:
+    image: postgis/postgis:16-3.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    command: ["postgres", "-c", "shared_buffers=64MB", "-c", "max_connections=30", "-c", "work_mem=4MB"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      retries: 10
+    mem_limit: 256m
+
+  ml:
+    build: ../ml
+    image: odlar-ml:latest
+    restart: unless-stopped
+    environment:
+      ODLAR_INTERNAL_TOKEN: ${ODLAR_INTERNAL_TOKEN}
+    volumes: ["/opt/odlar/artifacts:/app/artifacts:ro"]
+    mem_limit: 900m
+
+  api:
+    build: ../api
+    image: odlar-api:latest
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DB_HOST: db
+      ODLAR_ML_URL: http://ml:8001
+    depends_on:
+      db: { condition: service_healthy }
+      ml: { condition: service_started }
+    networks:
+      default:
+      proxy:
+        aliases: [odlar-api]
+    mem_limit: 384m
+
+networks:
+  proxy:
+    external: true
+    name: portfelim_default
+
+volumes:
+  pgdata:

@@ -1,0 +1,40 @@
+server {
+    listen ${PORT};
+    listen [::]:${PORT};
+    server_name _;
+    root /var/www/html/public;
+    index index.php;
+
+    # AOI polygons are the largest request bodies.
+    client_max_body_size 2M;
+
+    add_header X-Content-Type-Options "nosniff" always;
+
+    gzip on;
+    gzip_types application/json application/geo+json text/csv;
+    gzip_min_length 1024;
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location = /favicon.ico { access_log off; log_not_found off; }
+    location = /robots.txt  { access_log off; log_not_found off; }
+
+    error_page 404 /index.php;
+
+    location ~ \.php$ {
+        fastcgi_pass 127.0.0.1:9000;
+        fastcgi_index index.php;
+        fastcgi_param SCRIPT_FILENAME $realpath_root$fastcgi_script_name;
+        include fastcgi_params;
+        # ML calls time out at 20s with up to 2 retries.
+        fastcgi_read_timeout 90;
+        fastcgi_buffers 16 16k;
+        fastcgi_buffer_size 32k;
+    }
+
+    location ~ /\.(?!well-known).* {
+        deny all;
+    }
+}

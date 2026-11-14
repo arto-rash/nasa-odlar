@@ -1,0 +1,415 @@
+"""Query logic behind the analytics API, kept separate from FastAPI for testing."""
+
+from __future__ import annotations
+
+import io
+import json
+from datetime import date
+
+import geopandas as gpd
+import numpy as np
+import pandas as pd
+from scipy.stats import kendalltau, theilslopes
+from shapely.geometry import shape
+
+from odlar.calendar.engine import build_calendar
+from odlar.config import OVERLAP_START, risk_level
+from odlar.store import Store
+
+PRE = pd.Timestamp(OVERLAP_START)
+
+
+class NotFound(Exception):
+    pass
+
+
+def _f(v, nd: int = 3):
+    if v is None:
+        return None
+    try:
+        if pd.isna(v):
+            return None
+    except (TypeError, ValueError):
+        pass
+    if isinstance(v, (np.integer, int)):
+        return int(v)
+    return round(float(v), nd)
+
+
+def region_or_404(s: Store, slug: str):
+    r = s.by_slug.get(slug)
+    if r is None:
+        raise NotFound(f"region '{slug}' not found")
+    return r
+
+
+def _region_dict(r) -> dict:
+    return {"id": int(r.region_id), "slug": r.slug, "name_en": r.name_en, "name_az": r.name_az,
+            "country": r.country, "level": r.level, "kind": r.kind,
+            "parent_id": None if pd.isna(r.parent_id) else int(r.parent_id),
+            "area_km2": _f(r.area_km2, 1), "lat": _f(r.lat, 4), "lon": _f(r.lon, 4)}
+
+
+def _risk_for(s: Store, region_id: int) -> dict | None:
+    """Leaf: model output. Country: area-weighted aggregate of its districts."""
+    rn = s.risk_now
+    row = rn[rn["region_id"] == region_id]
+    if len(row):
+        r = row.iloc[0]
+        return {"probability": _f(r.probability, 4), "level": r.level, "expected7": _f(r.expected7, 2)}
+    kids = s.regions[s.regions["parent_id"] == region_id]
+    sub = rn[rn["region_id"].isin(kids["region_id"])]
+    if sub.empty:
+        return None
+    w = sub["region_id"].map(kids.set_index("region_id")["area_km2"])
+    p = float(np.average(sub["probability"], weights=w))
+    return {"probability": round(p, 4), "level": risk_level(p), "expected7": _f(sub["expected7"].sum(), 2),
+            "max_level": sub.sort_values("probability").iloc[-1]["level"]}
+
+
+def list_regions(s: Store) -> list[dict]:
+    end_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    ann = s.annual[(s.annual["year"] >= 2001) & (s.annual["year"] < end_year)]
+    spark = {int(k): g.sort_values("year")["harmonized"].round(1).tolist() for k, g in ann.groupby("region_id")}
+    out = []
+    for r in s.regions.itertuples():
+        d = _region_dict(r)
+        rid = int(r.region_id)
+        d["risk"] = _risk_for(s, rid)
+        vals = spark.get(rid, [])
+        d["annual"] = vals
+        d["annual_mean"] = _f(np.mean(vals), 1) if vals else None
+        d["density"] = _f(np.mean(vals) / max(float(r.area_km2), 1) * 100, 3) if vals else None
+        if vals:
+            yrs = np.arange(2001, 2001 + len(vals), dtype=float)
+            d["trend_pct"] = trend(yrs, np.asarray(vals, dtype=float))["pct_per_decade"]
+        out.append(d)
+    return out
+
+
+def regions_geojson(s: Store) -> dict:
+    gj = json.loads(json.dumps(s.regions_geojson))
+    risk = {int(k): v for k, v in ((r["id"], r["risk"]) for r in list_regions(s))}
+    ann = s.annual
+    recent_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    clim = ann[(ann["year"] >= 2003) & (ann["year"] < recent_year)].groupby("region_id")["harmonized"].mean()
+    feats = []
+    for f in gj["features"]:
+        p = f["properties"]
+        rid = int(p["region_id"])
+        rk = risk.get(rid) or {}
+        area = float(p.get("area_km2") or 1)
+        feats.append({"type": "Feature", "geometry": f["geometry"], "properties": {
+            "id": rid, "slug": p["slug"], "name_en": p["name_en"], "name_az": p["name_az"],
+            "country": p["country"], "level": p["level"],
+            "probability": rk.get("probability"), "risk_level": rk.get("level"),
+            "density": _f(clim.get(rid, 0.0) / area * 100, 3),  # mean annual detections per 100 km²
+        }})
+    return {"type": "FeatureCollection", "features": feats}
+
+
+def trend(years: np.ndarray, values: np.ndarray) -> dict:
+    """Theil–Sen slope with a Mann–Kendall (Kendall tau) significance test."""
+    m = np.isfinite(values)
+    years, values = years[m], values[m]
+    if len(values) < 6 or np.allclose(values, values[0]):
+        return {"slope": 0.0, "pct_per_decade": 0.0, "p_value": 1.0, "significant": False, "intercept": None}
+    slope, intercept, _lo, _hi = theilslopes(values, years)
+    tau = kendalltau(years, values)
+    mean = float(np.mean(values)) or 1.0
+    return {"slope": round(float(slope), 3), "intercept": round(float(intercept), 3),
+            "pct_per_decade": round(float(slope * 10 / mean * 100), 1),
+            "p_value": round(float(tau.pvalue), 4), "significant": bool(tau.pvalue < 0.05),
+            "slope_lo": round(float(_lo), 3), "slope_hi": round(float(_hi), 3)}
+
+
+def region_detail(s: Store, slug: str) -> dict:
+    r = region_or_404(s, slug)
+    rid = int(r.region_id)
+    d = _region_dict(r)
+    ann = s.annual[s.annual["region_id"] == rid]
+    end_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    full = ann[(ann["year"] >= 2001) & (ann["year"] < end_year)]
+    cal = s.calendars.get(str(rid), {})
+    d["risk"] = _risk_for(s, rid)
+    d["children"] = [_region_dict(c) for c in s.regions[s.regions["parent_id"] == rid].itertuples()]
+    if not pd.isna(r.parent_id):
+        d["parent"] = _region_dict(s.by_id[int(r.parent_id)])
+    d["stats"] = {
+        "annual_mean": _f(full["harmonized"].mean(), 1),
+        "annual_mean_raw_modis": _f(full.loc[full["year"] < 2012, "modis"].mean(), 1),
+        "annual_mean_raw_viirs": _f(full.loc[full["year"] >= 2013, "viirs"].mean(), 1),
+        "record_year": int(full.loc[full["harmonized"].idxmax(), "year"]) if len(full) else None,
+        "record_value": _f(full["harmonized"].max(), 1),
+        "density": _f(full["harmonized"].mean() / max(float(r.area_km2), 1) * 100, 3),
+        "detections_total": int(ann[["modis", "viirs"]].sum().sum()),
+        "trend": trend(full["year"].to_numpy(dtype=float), full["harmonized"].to_numpy(dtype=float)),
+        "trend_naive": trend(full["year"].to_numpy(dtype=float), full["naive"].to_numpy(dtype=float)),
+    }
+    d["season"] = cal.get("season")
+    d["current"] = cal.get("current")
+    d["anomalies"] = cal.get("anomalies", [])
+    return d
+
+
+def weekly_series(s: Store, slug: str, start: date | None = None, end: date | None = None) -> list[dict]:
+    rid = int(region_or_404(s, slug).region_id)
+    w = s.weekly[s.weekly["region_id"] == rid]
+    if start:
+        w = w[w["week"] >= pd.Timestamp(start)]
+    if end:
+        w = w[w["week"] <= pd.Timestamp(end)]
+    cols = ["week", "modis", "viirs", "viirs_n", "naive", "harmonized", "lo", "hi", "method", "frp_modis", "frp_viirs"]
+    out = w[cols].copy()
+    out["week"] = out["week"].dt.strftime("%Y-%m-%d")
+    for c in ("harmonized", "lo", "hi", "frp_modis", "frp_viirs"):
+        out[c] = out[c].astype(float).round(2)
+    return out.to_dict(orient="records")
+
+
+def annual_series(s: Store, slug: str) -> dict:
+    rid = int(region_or_404(s, slug).region_id)
+    a = s.annual[s.annual["region_id"] == rid].sort_values("year")
+    end_year = int(pd.Timestamp(s.meta["data_end"]).year)
+    rows = []
+    for r in a.itertuples():
+        rows.append({"year": int(r.year), "harmonized": _f(r.harmonized, 1), "lo": _f(r.lo, 1), "hi": _f(r.hi, 1),
+                     "modis": int(r.modis), "viirs": int(r.viirs), "viirs_n": int(r.viirs_n), "naive": int(r.naive),
+                     "partial": bool(r.year >= end_year or r.year < 2001)})
+    full = a[(a["year"] >= 2001) & (a["year"] < end_year)]
+    yrs = full["year"].to_numpy(dtype=float)
+    return {"years": rows,
+            "trend": {"harmonized": trend(yrs, full["harmonized"].to_numpy(dtype=float)),
+                      "naive": trend(yrs, full["naive"].to_numpy(dtype=float)),
+                      "modis": trend(yrs, full["modis"].to_numpy(dtype=float))}}
+
+
+def calendar(s: Store, slug: str) -> dict:
+    r = region_or_404(s, slug)
+    cal = s.calendars.get(str(int(r.region_id)))
+    if cal is None:
+        raise NotFound("no calendar")
+    return {"region": _region_dict(r), **cal}
+
+
+def risk_detail(s: Store, slug: str) -> dict:
+    r = region_or_404(s, slug)
+    rid = int(r.region_id)
+    leaf_ids = [rid] if r.level != "country" else s.regions.loc[s.regions["parent_id"] == rid, "region_id"].tolist()
+    rn = s.risk_now[s.risk_now["region_id"].isin(leaf_ids)]
+    fw = s.fire_weather[s.fire_weather["region_id"].isin(leaf_ids)]
+    ol = s.outlook_now[s.outlook_now["region_id"].isin(leaf_ids)]
+    hist = s.risk_history[s.risk_history["region_id"].isin(leaf_ids)]
+    out: dict = {"region": _region_dict(r), "as_of": s.meta["data_end"], "forecast_source": s.meta.get("forecast_source")}
+    if rn.empty:
+        raise NotFound("no risk for region")
+    if len(leaf_ids) == 1:
+        row = rn.iloc[0]
+        out["short"] = {"probability": _f(row.probability, 4), "level": row.level, "expected7": _f(row.expected7, 2),
+                        "threshold7": _f(row.threshold7, 1), "normal7": _f(row.clim_next7, 2),
+                        "recent7": _f(row.lag7, 1), "drivers": row.drivers}
+    else:
+        agg = _risk_for(s, rid)
+        top = rn.sort_values("probability", ascending=False).head(5)
+        out["short"] = {**agg, "threshold7": None, "normal7": _f(rn["clim_next7"].sum(), 2),
+                        "recent7": _f(rn["lag7"].sum(), 1), "drivers": top.iloc[0].drivers,
+                        "hotspots": [{"slug": s.by_id[int(t.region_id)].slug, "probability": _f(t.probability, 4),
+                                      "level": t.level} for t in top.itertuples()]}
+    days = fw.groupby("date").agg(danger=("danger", "mean"), tmax=("tmax", "mean"), rh=("rh", "mean"),
+                                  wind=("wind", "mean"), precip=("precip", "mean")).reset_index()
+    out["daily"] = [{"date": d.date.strftime("%Y-%m-%d"), "danger": _f(d.danger, 1), "tmax": _f(d.tmax, 1),
+                     "rh": _f(d.rh, 0), "wind": _f(d.wind, 1), "precip": _f(d.precip, 1)} for d in days.itertuples()]
+    out["outlook"] = {"weeks": 13, "q10": _f(ol["q10"].sum(), 1), "q50": _f(ol["q50"].sum(), 1),
+                      "q90": _f(ol["q90"].sum(), 1), "normal": _f(ol["clim_next13w"].sum(), 1),
+                      "normal_p10": _f(ol["clim_p10_13w"].sum(), 1), "normal_p90": _f(ol["clim_p90_13w"].sum(), 1)}
+    q50, norm = out["outlook"]["q50"] or 0, out["outlook"]["normal"] or 0
+    out["outlook"]["signal"] = ("above" if q50 > 1.2 * norm + 1 else "below" if q50 < 0.8 * norm - 1 else "normal")
+    h = hist.groupby("date").agg(probability=("probability", "mean"), actual=("target_sum7", "sum"),
+                                 threshold=("threshold7", "sum"), value=("value", "sum")).reset_index()
+    out["history"] = [{"date": x.date.strftime("%Y-%m-%d"), "probability": _f(x.probability, 4),
+                       "actual7": _f(x.actual, 1), "threshold7": _f(x.threshold, 1), "fires": _f(x.value, 1)}
+                      for x in h.itertuples()]
+    return out
+
+
+def risk_map(s: Store) -> list[dict]:
+    rn = s.risk_now
+    out = []
+    for r in rn.itertuples():
+        reg = s.by_id[int(r.region_id)]
+        out.append({"id": int(r.region_id), "slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az,
+                    "country": reg.country, "probability": _f(r.probability, 4), "level": r.level,
+                    "expected7": _f(r.expected7, 2), "driver": r.drivers[0]["code"] if r.drivers else None})
+    return sorted(out, key=lambda x: -(x["probability"] or 0))
+
+
+def hotspots(s: Store, start: date, end: date, sensor: str | None = None, region: str | None = None,
+             limit: int = 20000) -> dict:
+    if (end - start).days > 92:
+        raise ValueError("date range is limited to 92 days")
+    h = s.hotspots
+    m = (h["acq_date"] >= pd.Timestamp(start)) & (h["acq_date"] <= pd.Timestamp(end))
+    if sensor:
+        m &= h["sensor"] == sensor.upper()
+    if region:
+        r = region_or_404(s, region)
+        ids = [int(r.region_id)] if r.level != "country" else \
+            s.regions.loc[s.regions["parent_id"] == r.region_id, "region_id"].tolist()
+        m &= h["region_id"].isin(ids)
+    sel = h[m]
+    total = len(sel)
+    sel = sel.head(limit)
+    return {"total": total, "truncated": total > limit,
+            "columns": ["lon", "lat", "sensor", "satellite", "frp", "date"],
+            "points": [[round(float(x.lon), 4), round(float(x.lat), 4), x.sensor[0], x.satellite,
+                        round(float(x.frp), 1), x.acq_date.strftime("%Y-%m-%d")] for x in sel.itertuples()]}
+
+
+def timeline(s: Store) -> list[dict]:
+    """Pilot-wide weekly totals per sensor + harmonized, for the explore scrubber."""
+    w = s.weekly[s.weekly["region_id"].isin(s.regions.loc[s.regions["level"] == "country", "region_id"])]
+    g = w.groupby("week")[["modis", "viirs", "viirs_n", "harmonized", "lo", "hi"]].sum().reset_index()
+    return [{"week": r.week.strftime("%Y-%m-%d"), "modis": int(r.modis), "viirs": int(r.viirs),
+             "harmonized": _f(r.harmonized, 1), "lo": _f(r.lo, 1), "hi": _f(r.hi, 1)} for r in g.itertuples()]
+
+
+def grid(s: Store, year: int | None = None, sensor: str | None = None) -> dict:
+    g = s.grid
+    if year:
+        g = g[g["year"] == year]
+    cols = [c for c in ("MODIS", "VIIRS") if c in g]
+    if sensor:
+        cols = [sensor.upper()]
+    agg = g.groupby(["lon", "lat"])[cols].sum().sum(axis=1).reset_index(name="count")
+    agg = agg[agg["count"] > 0]
+    return {"cell_deg": 0.1, "cells": [[round(float(r.lon), 3), round(float(r.lat), 3), int(r.count)]
+                                       for r in agg.itertuples()]}
+
+
+def aoi_summary(s: Store, geometry: dict) -> dict:
+    """Calendar for an arbitrary polygon, scaled to the VIIRS record via its regions.
+
+    Before 2012 each region's harmonized/MODIS ratio for that week is applied to the
+    MODIS detections inside the polygon; from 2012 the polygon's own S-NPP
+    detections are used.
+    """
+    poly = shape(geometry)
+    if poly.is_empty or poly.geom_type not in ("Polygon", "MultiPolygon"):
+        raise ValueError("geometry must be a Polygon or MultiPolygon")
+    area = float(gpd.GeoSeries([poly], crs=4326).to_crs(6933).area.iloc[0] / 1e6)
+    if area > 60000:
+        raise ValueError("area of interest is limited to 60,000 km²")
+    h = s.hotspots
+    minx, miny, maxx, maxy = poly.bounds
+    cand = h[(h["lon"] >= minx) & (h["lon"] <= maxx) & (h["lat"] >= miny) & (h["lat"] <= maxy)]
+    from shapely import contains_xy
+    inside = cand[contains_xy(poly, cand["lon"].to_numpy(), cand["lat"].to_numpy())]
+    w = s.weekly
+    ratio = (w["harmonized"] / w["modis"].replace(0, np.nan)).rename("ratio")
+    ratio_tbl = pd.concat([w[["region_id", "week"]], ratio], axis=1).set_index(["region_id", "week"])["ratio"]
+    pre = inside[(inside["sensor"] == "MODIS") & (inside["week"] < PRE)]
+    pre_w = pre.groupby(["region_id", "week"]).size().rename("n").reset_index()
+    r = ratio_tbl.reindex(pd.MultiIndex.from_frame(pre_w[["region_id", "week"]])).to_numpy()
+    fallback = float(np.nanmedian(ratio_tbl.to_numpy())) if np.isfinite(np.nanmedian(ratio_tbl.to_numpy())) else 3.0
+    pre_w["h"] = pre_w["n"] * np.where(np.isfinite(r), r, fallback)
+    post = inside[(inside["satellite"] == "N") & (inside["week"] >= PRE)].groupby("week").size().rename("h")
+    weeks = pd.date_range(pd.Timestamp(s.meta["data_start"]) - pd.Timedelta(days=pd.Timestamp(s.meta["data_start"]).day_of_week),
+                          pd.Timestamp(s.meta["data_end"]), freq="W-MON")
+    series = pd.Series(0.0, index=weeks)
+    series = series.add(pre_w.groupby("week")["h"].sum(), fill_value=0).add(post.astype(float), fill_value=0)
+    ser = pd.DataFrame({"week": series.index, "harmonized": series.to_numpy()})
+    raw = inside.assign(naive=np.where(inside["week"] < PRE, inside["sensor"] == "MODIS", inside["sensor"] == "VIIRS"))
+    raw_w = raw[raw["naive"]].groupby("week").size().reindex(weeks, fill_value=0)
+    cal = build_calendar(ser, raw=pd.DataFrame({"week": weeks, "value": raw_w.to_numpy(dtype=float)}))
+    yearly = inside.assign(year=inside["acq_date"].dt.year).groupby(["year", "sensor"]).size().unstack(fill_value=0)
+    regions = sorted({s.by_id[int(i)].slug for i in inside["region_id"].unique()})
+    return {"area_km2": round(area, 1), "detections": int(len(inside)), "regions": regions,
+            "by_year": [{"year": int(y), **{k.lower(): int(v) for k, v in row.items()}} for y, row in yearly.iterrows()],
+            "calendar": cal}
+
+
+def harmonization_skill(s: Store, slug: str | None = None) -> dict:
+    sk = {k: v for k, v in s.skill.items() if k not in ("transfer", "loyo_annual")}
+    if slug:
+        r = region_or_404(s, slug)
+        rid = int(r.region_id)
+        sk["transfer"] = [t for t in s.skill.get("transfer", []) if t["region_id"] == rid]
+        sk["loyo_annual"] = [t for t in s.skill.get("loyo_annual", []) if t["region_id"] == rid]
+        if not sk["transfer"]:
+            # country: show the pooled curve of its largest district
+            kids = s.regions[s.regions["parent_id"] == rid].sort_values("area_km2", ascending=False)
+            if len(kids):
+                k = int(kids.iloc[0].region_id)
+                sk["transfer"] = [t for t in s.skill.get("transfer", []) if t["region_id"] == k]
+            la = pd.DataFrame([t for t in s.skill.get("loyo_annual", []) if t["region_id"] in set(kids["region_id"])])
+            if len(la):
+                sk["loyo_annual"] = la.groupby("year")[["obs", "pred", "modis"]].sum().reset_index().round(1) \
+                    .to_dict(orient="records")
+    return sk
+
+
+def export(s: Store, slug: str, kind: str, fmt: str, start: date | None, end: date | None) -> tuple[bytes, str, str]:
+    r = region_or_404(s, slug)
+    if kind == "weekly":
+        df = pd.DataFrame(weekly_series(s, slug, start, end))
+    elif kind == "annual":
+        df = pd.DataFrame(annual_series(s, slug)["years"])
+    elif kind == "hotspots":
+        st, en = start or date(2024, 1, 1), end or pd.Timestamp(s.meta["data_end"]).date()
+        h = s.hotspots
+        ids = [int(r.region_id)] if r.level != "country" else \
+            s.regions.loc[s.regions["parent_id"] == r.region_id, "region_id"].tolist()
+        df = h[h["region_id"].isin(ids) & (h["acq_date"] >= pd.Timestamp(st)) & (h["acq_date"] <= pd.Timestamp(en))]
+        df = df.drop(columns=["week"]).assign(acq_date=lambda d: d["acq_date"].dt.strftime("%Y-%m-%d"))
+    else:
+        raise ValueError("kind must be weekly, annual or hotspots")
+    name = f"odlar_{slug}_{kind}"
+    if fmt == "csv":
+        buf = io.StringIO()
+        buf.write(f"# ODLAR {kind} export — {r.name_en} — source: {s.meta['source']} — harmonized to VIIRS S-NPP scale\n")
+        df.to_csv(buf, index=False)
+        return buf.getvalue().encode(), "text/csv", f"{name}.csv"
+    if fmt == "json":
+        return df.to_json(orient="records").encode(), "application/json", f"{name}.json"
+    if fmt == "geojson":
+        if kind != "hotspots":
+            raise ValueError("geojson export is only available for hotspots")
+        feats = [{"type": "Feature", "geometry": {"type": "Point", "coordinates": [x.lon, x.lat]},
+                  "properties": {k: getattr(x, k) for k in ("sensor", "satellite", "acq_date", "frp", "confidence")}}
+                 for x in df.itertuples()]
+        return json.dumps({"type": "FeatureCollection", "features": feats}, default=str).encode(), \
+            "application/geo+json", f"{name}.geojson"
+    raise ValueError("format must be csv, json or geojson")
+
+
+def overview(s: Store) -> dict:
+    """Headline numbers for the landing page."""
+    w = s.annual[s.annual["region_id"].isin(s.regions.loc[s.regions["level"] == "country", "region_id"])]
+    tot = w.groupby("year")[["harmonized", "lo", "hi", "modis", "viirs", "naive"]].sum().reset_index()
+    sk = s.skill
+    mr = s.model_report
+    risk = risk_map(s)
+    return {
+        "meta": s.meta,
+        "pilot": tot.round(1).to_dict(orient="records"),
+        "skill": {k: sk.get(k) for k in ("bias", "raw_modis_bias", "annual_spearman", "weekly_interval_coverage",
+                                          "annual_interval_coverage", "annual_median_rel_error", "n_years")},
+        "synthetic_truth": {k: v for k, v in (sk.get("synthetic_truth") or {}).items() if k != "by_year"} or None,
+        "model": {"harmonized": mr["harmonized"]["overall"], "raw": mr["raw"]["overall"]},
+        "risk_top": risk[:8],
+        "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),
+        "n_regions": int(len(s.regions)),
+    }
+
+
+def locate(s: Store, lat: float, lon: float) -> dict:
+    """Leaf region containing a point (for "use my location")."""
+    if not (-90 <= lat <= 90 and -180 <= lon <= 180):
+        raise ValueError("lat/lon out of range")
+    from shapely.geometry import Point
+    pt = Point(lon, lat)
+    for f in s.regions_geojson["features"]:
+        p = f["properties"]
+        if p["level"] != "country" and shape(f["geometry"]).contains(pt):
+            return {"region": _region_dict(s.by_id[int(p["region_id"])])}
+    raise NotFound("no region at this location")

@@ -1,0 +1,104 @@
+"""Inference and plain-language explanations for the risk models."""
+
+from __future__ import annotations
+
+import numpy as np
+import pandas as pd
+
+from odlar.config import risk_level
+from odlar.model.features import FEATURES
+
+# feature -> (driver code, feature whose value is shown to the user)
+DRIVER_OF = {
+    "days_since_rain": ("dry_spell", "days_since_rain"),
+    "fc_precip": ("no_rain_ahead", "fc_precip"),
+    "fc_dry_days": ("no_rain_ahead", "fc_precip"),
+    "precip_7d": ("dry_month", "precip_30d"),
+    "precip_30d": ("dry_month", "precip_30d"),
+    "fc_wind_max": ("wind", "fc_wind_max"),
+    "wind_7d": ("wind", "fc_wind_max"),
+    "fc_tmax": ("heat", "fc_tmax"),
+    "tmax_7d": ("heat", "fc_tmax"),
+    "fc_rh_min": ("low_humidity", "fc_rh_min"),
+    "rh_7d": ("low_humidity", "fc_rh_min"),
+    "fc_vpd_max": ("high_vpd", "fc_vpd_max"),
+    "vpd_7d": ("high_vpd", "fc_vpd_max"),
+    "clim_next7": ("seasonal_peak", "clim_next7"),
+    "clim_p75_next7": ("seasonal_peak", "clim_next7"),
+    "clim_next30": ("seasonal_peak", "clim_next7"),
+    "doy_sin": ("seasonal_peak", "clim_next7"),
+    "doy_cos": ("seasonal_peak", "clim_next7"),
+    "lag7": ("recent_fires", "lag7"),
+    "lag14": ("recent_fires", "lag7"),
+    "anom7": ("recent_fires", "lag7"),
+    "days_since_fire": ("recent_fires", "lag7"),
+    "lag30": ("active_season", "anom30"),
+    "lag90": ("active_season", "anom30"),
+    "anom30": ("active_season", "anom30"),
+    "ytd_ratio": ("active_season", "ytd_ratio"),
+    "ndvi": ("vegetation", "ndvi"),
+    "elevation": ("landscape", "elevation"),
+    "log_area": ("landscape", "elevation"),
+    "lat": ("landscape", "elevation"),
+    "lon": ("landscape", "elevation"),
+}
+
+
+def drivers(contrib: np.ndarray, row: pd.Series, top: int = 3) -> list[dict]:
+    """Group per-feature SHAP values into named drivers; strongest first."""
+    agg: dict[str, float] = {}
+    for f, c in zip(FEATURES, contrib[: len(FEATURES)], strict=True):
+        code = DRIVER_OF.get(f, ("other", f))[0]
+        agg[code] = agg.get(code, 0.0) + float(c)
+    shown = {code: col for code, col in DRIVER_OF.values()}
+    items = sorted(agg.items(), key=lambda kv: -abs(kv[1]))
+    out = []
+    for code, impact in items:
+        if code in ("landscape", "other"):
+            continue
+        col = shown.get(code)
+        val = row.get(col) if col else None
+        out.append({"code": code, "impact": round(impact, 3), "direction": "up" if impact > 0 else "down",
+                    "value": None if val is None or pd.isna(val) else round(float(val), 2)})
+        if len(out) >= top + 1:
+            break
+    ups = [d for d in out if d["direction"] == "up"][:top]
+    downs = [d for d in out if d["direction"] == "down"][:1]
+    return ups + downs
+
+
+def short_term(models, rows: pd.DataFrame) -> pd.DataFrame:
+    """Risk for the next 7 days for each row (one per region)."""
+    p = models.proba(rows)
+    exp = models.expected(rows)
+    contrib = models.contributions(rows)
+    out = rows[["region_id", "date", "threshold7", "clim_next7", "lag7"]].copy()
+    out["probability"] = p.round(4)
+    out["level"] = [risk_level(v) for v in p]
+    out["expected7"] = exp.round(2)
+    out["drivers"] = [drivers(contrib[i], rows.iloc[i]) for i in range(len(rows))]
+    return out
+
+
+def fire_weather_daily(forecast: pd.DataFrame, weather: pd.DataFrame) -> pd.DataFrame:
+    """Day-by-day fire-weather danger (0–100) from the forecast, ranked against each
+    region's own climate record for that time of year."""
+    w = weather.assign(doy=pd.to_datetime(weather["date"]).dt.day_of_year)
+
+    def index(df: pd.DataFrame) -> pd.Series:
+        es = 0.6108 * np.exp(17.27 * df["tmax"] / (df["tmax"] + 237.3))
+        vpd = es * (1 - df["rh"].clip(0, 100) / 100)
+        return vpd / 1.5 + df["wind"] / 5 - np.minimum(df["precip"], 20) / 4
+
+    w["fwi"] = index(w)
+    f = forecast.assign(doy=pd.to_datetime(forecast["date"]).dt.day_of_year)
+    f["fwi"] = index(f)
+    out = []
+    for rid, g in f.groupby("region_id"):
+        hist = w[w["region_id"] == rid]
+        for r in g.itertuples():
+            near = hist[(hist["doy"] - r.doy).abs().pipe(lambda d: np.minimum(d, 366 - d)) <= 15]["fwi"].to_numpy()
+            pct = float((near < r.fwi).mean() * 100) if near.size else 50.0
+            out.append({"region_id": rid, "date": r.date, "danger": round(pct, 1), "tmax": round(r.tmax, 1),
+                        "rh": round(r.rh, 0), "wind": round(r.wind, 1), "precip": round(r.precip, 1)})
+    return pd.DataFrame(out)
