@@ -9,6 +9,7 @@
 from __future__ import annotations
 
 import argparse
+import fcntl
 import json
 import os
 import shutil
@@ -21,7 +22,7 @@ import pandas as pd
 
 from odlar import store
 from odlar.calendar.engine import build_calendar
-from odlar.config import BATCHES, CACHE_DIR, MODIS_START, OVERLAP_START, PRIMARY_BATCH
+from odlar.config import BATCHES, CACHE_DIR, DATA_DIR, MODIS_START, OVERLAP_START, PRIMARY_BATCH
 from odlar.grid.gridding import COUNT_COLUMNS, daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
 from odlar.harmonize.engine import aggregate_intervals, harmonize
@@ -33,6 +34,15 @@ from odlar.model.features import build_panel, daily_series
 
 def log(msg: str, t0: float) -> None:
     print(f"[{time.time() - t0:7.1f}s] {msg}", flush=True)
+
+
+def _wait_for_heavy_turn():
+    """Take the machine-wide lock for the memory-hungry part of a build; the OS
+    releases it when this process ends, however it ends."""
+    lock = (DATA_DIR / "heavy.lock").open("w")
+    print("  waiting for the memory-heavy step to be free", flush=True)
+    fcntl.flock(lock, fcntl.LOCK_EX)
+    return lock
 
 
 def load_weather(regions, start: date, end: date, offline: bool,
@@ -168,6 +178,9 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     ext = lambda s: pd.concat([s, pd.DataFrame({  # noqa: E731
         "region_id": np.repeat(leaves["region_id"].to_numpy(), len(fc["date"].unique())),
         "date": np.tile(np.sort(fc["date"].unique()), len(leaves)), "value": 0.0})], ignore_index=True)
+    # The feature panels and model fits take 10-15 GB on a big batch: one build at a
+    # time here, however many runners share the machine. Held until the process ends.
+    heavy_turn = _wait_for_heavy_turn() if not offline else None  # noqa: F841 (keeps the lock open)
     panel_h = build_panel(ext(series_h), w_ext, regions, clim_years, nd, elevation)
     panel_r = build_panel(series_r, w_dry, regions, clim_years, nd, elevation)
     future = panel_h["date"] > pd.Timestamp(end) - pd.Timedelta(days=7)
