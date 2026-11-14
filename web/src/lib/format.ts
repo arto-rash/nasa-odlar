@@ -61,6 +61,25 @@ export function countryLabel(r: Pick<RegionRef, "country" | "country_name_en" | 
   return (locale === "az" ? r.country_name_az : r.country_name_en) ?? r.country.toUpperCase();
 }
 
+/** The place fields of any region-like object (risk items use `level` for the risk level, never "country"). */
+export interface Placed {
+  country?: string;
+  level?: string;
+  country_name_en?: string;
+  country_name_az?: string;
+  state_name_en?: string;
+  state_name_az?: string;
+}
+
+/** Where a region is, for the small line under its name: "Michigan · United States",
+ *  or just the country; empty for a country itself. */
+export function placeLabel(r: Placed | undefined | null, locale: AppLocale): string {
+  if (!r?.country || r.level === "country") return "";
+  const country = (locale === "az" ? r.country_name_az : r.country_name_en) ?? r.country.toUpperCase();
+  const state = locale === "az" ? r.state_name_az : r.state_name_en;
+  return state ? `${state} · ${country}` : country;
+}
+
 /** Short name without "District"/"rayonu" suffix, for tight UI. */
 export function shortName(r: Pick<RegionRef, "name_en" | "name_az"> | undefined | null, locale: AppLocale): string {
   return regionName(r, locale).replace(/ (District|rayonu)$/u, "");

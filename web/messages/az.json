@@ -234,7 +234,10 @@
     "aoiCalendar": "Sahənin yanğın saatı",
     "aoiByYear": "İllər üzrə aşkarlamalar",
     "shown": "Xəritədə",
-    "riskNow": "Risk indi"
+    "riskNow": "Risk indi",
+    "showPanel": "{name} göstər",
+    "hidePanel": "{name} gizlət",
+    "timeline": "Zaman xətti"
   },
   "regions": {
     "title": "Bölgələr",

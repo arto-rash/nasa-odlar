@@ -17,6 +17,7 @@ import { matchScore } from "@/lib/search";
 import { useAuth, useUi } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { RegionDetail, RegionRef, RiskDetail, Subscription } from "@/lib/types";
+import { RegionPlace } from "@/components/ui/region-place";
 
 type Prefetched = { slug: string; region: RegionDetail; risk: RiskDetail };
 
@@ -100,8 +101,10 @@ function Picker({ onPick }: { onPick: (slug: string) => void }) {
           <li key={r.slug}>
             <button onClick={() => onPick(r.slug)} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left text-[16px] transition hover:bg-panel-hover active:bg-panel-hover">
               <span className="size-2.5 shrink-0 rounded-full" style={{ background: r.risk ? `var(--risk-${r.risk.level})` : "var(--line-strong)" }} />
-              <span className="flex-1">{regionName(r, locale)}</span>
-              <span className="text-[13px] text-faint">{r.country}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block">{regionName(r, locale)}</span>
+                <RegionPlace r={r} className="text-[13px]" />
+              </span>
             </button>
           </li>
         ))}
@@ -144,8 +147,11 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
     <div className="mx-auto max-w-[560px] px-4 pb-16 pt-24 sm:pt-32">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2 text-[15px] text-dim">
-          <MapPin className="size-4" />
-          {regionName(region, locale)}
+          <MapPin className="size-4 shrink-0" />
+          <span className="min-w-0">
+            <span className="block">{regionName(region, locale)}</span>
+            <RegionPlace r={region} />
+          </span>
         </p>
         <button onClick={onChange} className="rounded-md px-3 py-1.5 text-[13px] text-dim ring-1 ring-line hover:text-text">
           {t("change")}

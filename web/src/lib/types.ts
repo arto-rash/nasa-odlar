@@ -13,6 +13,9 @@ export interface RegionRef {
    *  a country's own name comes from here, not from a region row. */
   country_name_en?: string;
   country_name_az?: string;
+  /** For the local units of a split country: their state ("Michigan"). */
+  state_name_en?: string;
+  state_name_az?: string;
   level: "country" | "district" | "province";
   kind?: string;
   parent_id?: number | null;
@@ -225,6 +228,10 @@ export interface RiskMapItem {
   name_en: string;
   name_az: string;
   country: string;
+  country_name_en?: string;
+  country_name_az?: string;
+  state_name_en?: string;
+  state_name_az?: string;
   probability: number;
   level: RiskLevel;
   expected7: number;

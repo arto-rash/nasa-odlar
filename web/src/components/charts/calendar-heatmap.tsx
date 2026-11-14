@@ -3,7 +3,7 @@
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useState } from "react";
 import { useTheme } from "@/components/layout/theme-toggle";
-import { heat, heatScale } from "@/lib/colors";
+import { heat, heatScale, isActiveWeek } from "@/lib/colors";
 import { fmtNum, monthShort, weekLabel, weekMonth, type AppLocale } from "@/lib/format";
 import type { Anomaly, SeasonProfile } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
@@ -65,7 +65,7 @@ export function CalendarHeatmap({
                   width={cw - 1}
                   height={ch - 1}
                   rx={1.5}
-                  fill={v > 0 ? heat(scale(v), theme) : theme === "dark" ? "rgb(255 240 225 / 0.035)" : "rgb(40 25 10 / 0.05)"}
+                  fill={isActiveWeek(v) ? heat(scale(v), theme) : theme === "dark" ? "rgb(255 240 225 / 0.035)" : "rgb(40 25 10 / 0.05)"}
                   style={{ transition: "fill 600ms var(--ease-out-expo)" }}
                   stroke={hover && hover.yi === yi && hover.w === w ? "var(--text)" : "none"}
                   onPointerEnter={() => setHover({ yi, w, x: left + w * cw + cw / 2, y: top + yi * ch + ch / 2 })}

@@ -2,7 +2,7 @@
 
 import { scaleLinear } from "d3-scale";
 import { area, curveMonotoneX, line } from "d3-shape";
-import { Pause, Play } from "lucide-react";
+import { ChevronDown, Pause, Play } from "lucide-react";
 import { useLocale, useTranslations } from "next-intl";
 import { useMemo, useRef } from "react";
 import { cn } from "@/lib/cn";
@@ -11,7 +11,7 @@ import type { TimelinePoint } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
 
 export function Timeline({
-  points, index, onIndex, playing, onPlay, speed, onSpeed,
+  points, index, onIndex, playing, onPlay, speed, onSpeed, open = true, onOpen,
 }: {
   points: TimelinePoint[];
   index: number;
@@ -20,15 +20,29 @@ export function Timeline({
   onPlay: (p: boolean) => void;
   speed: number;
   onSpeed: (s: number) => void;
+  /** folded: just play, the date and a button to unfold (phones start folded) */
+  open?: boolean;
+  onOpen?: (open: boolean) => void;
 }) {
   const t = useTranslations("explore");
   const locale = useLocale() as AppLocale;
   const [ref, { width }] = useSize<HTMLDivElement>();
-  const h = 64;
+  const h = width > 0 && width < 420 ? 44 : 64; // shorter chart on phones
   const dragging = useRef(false);
   const xs = useMemo(() => scaleLinear().domain([0, Math.max(points.length - 1, 1)]).range([0, Math.max(width, 1)]), [points.length, width]);
   const max = useMemo(() => Math.max(...points.map((p) => Math.max(p.viirs, p.harmonized, p.modis)), 1), [points]);
   const ys = scaleLinear().domain([0, Math.sqrt(max)]).range([h, 4]);
+  const fold = onOpen && (
+    <button
+      type="button"
+      onClick={() => onOpen(!open)}
+      aria-expanded={open}
+      aria-label={t(open ? "hidePanel" : "showPanel", { name: t("timeline") })}
+      className="grid size-8 shrink-0 place-items-center rounded-full text-dim transition hover:bg-panel-hover hover:text-text"
+    >
+      <ChevronDown className={cn("size-4 transition-transform", !open && "rotate-180")} />
+    </button>
+  );
   const y = (v: number) => ys(Math.sqrt(Math.max(v, 0)));
   const paths = useMemo(() => {
     const idx = points.map((_, i) => i);
@@ -40,7 +54,7 @@ export function Timeline({
       harm: line<number>().x((i) => xs(i)).y((i) => y(points[i].harmonized)).curve(curveMonotoneX)(idx) ?? "",
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [points, xs]);
+  }, [points, xs, h]);
   const years = useMemo(() => {
     const out: { i: number; y: number }[] = [];
     points.forEach((p, i) => {
@@ -55,23 +69,39 @@ export function Timeline({
     onIndex(Math.max(0, Math.min(points.length - 1, Math.round(xs.invert(clientX - r.left)))));
   };
   const cur = points[index];
+  const play = (
+    <button
+      type="button"
+      onClick={() => onPlay(!playing)}
+      aria-label={playing ? t("pause") : t("play")}
+      className="grid size-10 shrink-0 place-items-center rounded-full bg-text text-bg transition hover:scale-105 active:scale-95 sm:size-12"
+    >
+      {playing ? <Pause className="size-4 sm:size-5" /> : <Play className="ml-0.5 size-4 sm:size-5" />}
+    </button>
+  );
+  const date = (
+    <div className="shrink-0">
+      <p className="text-[12px] font-semibold text-faint">{t("weekShort")}</p>
+      <p className="font-display tabular text-[1rem] leading-tight sm:text-[1.15rem]">
+        {cur ? fmtDate(cur.week, locale, { day: "numeric", month: "short", year: "numeric" }) : "—"}
+      </p>
+    </div>
+  );
+
+  if (!open) {
+    return (
+      <div className="glass inline-flex items-center gap-3 rounded-lg p-2 pr-2">
+        {play}
+        {date}
+        {fold}
+      </div>
+    );
+  }
 
   return (
-    <div className="glass flex items-center gap-3 rounded-lg p-2.5 pr-4 sm:gap-4">
-      <button
-        type="button"
-        onClick={() => onPlay(!playing)}
-        aria-label={playing ? t("pause") : t("play")}
-        className="grid size-12 shrink-0 place-items-center rounded-full bg-text text-bg transition hover:scale-105 active:scale-95"
-      >
-        {playing ? <Pause className="size-5" /> : <Play className="ml-0.5 size-5" />}
-      </button>
-      <div className="w-[118px] shrink-0">
-        <p className="text-[12px] font-semibold text-faint">{t("weekShort")}</p>
-        <p className="font-display tabular text-[1.15rem] leading-tight">
-          {cur ? fmtDate(cur.week, locale, { day: "numeric", month: "short", year: "numeric" }) : "—"}
-        </p>
-      </div>
+    <div className="glass flex items-center gap-2.5 rounded-lg p-2 pr-2 sm:gap-4 sm:p-2.5 sm:pr-3">
+      {play}
+      <div className="hidden w-[118px] sm:block">{date}</div>
       <div
         ref={ref}
         role="slider"
@@ -81,7 +111,8 @@ export function Timeline({
         aria-valuemax={points.length - 1}
         aria-valuenow={index}
         aria-valuetext={cur?.week}
-        className="relative h-[64px] min-w-0 flex-1 cursor-ew-resize touch-none select-none outline-none"
+        className="relative min-w-0 flex-1 cursor-ew-resize touch-none select-none outline-none"
+        style={{ height: h }}
         onPointerDown={(e) => {
           dragging.current = true;
           (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -96,7 +127,7 @@ export function Timeline({
       >
         {width > 0 && (
           <svg width={width} height={h} className="absolute inset-0 overflow-visible">
-            {years.filter((d) => d.y % (width < 640 ? 5 : 2) === 0).map((d) => (
+            {years.filter((d) => d.y % (width < 420 ? 10 : width < 640 ? 5 : 2) === 0).map((d) => (
               <g key={d.y}>
                 <line x1={xs(d.i)} x2={xs(d.i)} y1={0} y2={h} stroke="var(--line)" />
                 <text x={xs(d.i) + 3} y={10} className="fill-faint tabular-nums text-[12px]">
@@ -130,6 +161,7 @@ export function Timeline({
           </button>
         ))}
       </div>
+      {fold}
     </div>
   );
 }

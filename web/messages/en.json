@@ -234,7 +234,10 @@
     "aoiCalendar": "Fire clock for this area",
     "aoiByYear": "Detections by year",
     "shown": "On map",
-    "riskNow": "Risk now"
+    "riskNow": "Risk now",
+    "showPanel": "Show {name}",
+    "hidePanel": "Hide {name}",
+    "timeline": "Timeline"
   },
   "regions": {
     "title": "Regions",

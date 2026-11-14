@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { regionName, type AppLocale } from "@/lib/format";
 import { useRegionSearch } from "@/lib/queries";
 import type { RegionRef } from "@/lib/types";
+import { RegionPlace } from "@/components/ui/region-place";
 
 /**
  * Pick a region by typing its name: the server returns the best matches, so this
@@ -84,8 +85,10 @@ export function RegionCombobox({
               onMouseEnter={() => setActive(i)}
               className={cn("flex cursor-pointer items-baseline justify-between gap-3 px-3 py-1.5 text-[13.5px]", i === active && "bg-bg-sunken")}
             >
-              <span className="truncate">{regionName(r, locale)}</span>
-              <span className="shrink-0 text-[11.5px] uppercase text-faint">{r.country}</span>
+              <span className="min-w-0">
+                <span className="block truncate">{regionName(r, locale)}</span>
+                <RegionPlace r={r} className="text-[11.5px]" />
+              </span>
             </li>
           ))}
         </ul>

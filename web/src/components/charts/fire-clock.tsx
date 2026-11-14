@@ -4,7 +4,7 @@ import { animate, useReducedMotion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useTheme } from "@/components/layout/theme-toggle";
-import { heat, heatScale } from "@/lib/colors";
+import { heat, heatScale, isActiveWeek } from "@/lib/colors";
 import { fmtNum, monthShort, weekLabel, type AppLocale } from "@/lib/format";
 import type { Anomaly, SeasonProfile } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
@@ -136,7 +136,7 @@ export function FireClock({
                     <path
                       key={w}
                       d={d}
-                      fill={v > 0 ? heat(scale(v), theme) : theme === "dark" ? "rgb(255 240 225 / 0.035)" : "rgb(40 25 10 / 0.05)"}
+                      fill={isActiveWeek(v) ? heat(scale(v), theme) : theme === "dark" ? "rgb(255 240 225 / 0.035)" : "rgb(40 25 10 / 0.05)"}
                       style={{ transition: "fill 700ms var(--ease-out-expo)" }}
                     />
                   );

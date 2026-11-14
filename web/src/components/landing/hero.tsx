@@ -13,6 +13,7 @@ import { fmtDate, fmtPct, regionName, type AppLocale } from "@/lib/format";
 import type { Overview } from "@/lib/types";
 import { rich } from "@/lib/rich";
 import { DataBadge } from "./data-badge";
+import { RegionPlace } from "@/components/ui/region-place";
 
 const HeroMap = dynamic(() => import("./hero-map"), { ssr: false });
 
@@ -96,6 +97,7 @@ export function Hero({ overview }: { overview: Overview }) {
                 <div className="min-w-0">
                   <p className="text-[12.5px] text-faint">{t("todayTop")}</p>
                   <p className="truncate font-medium">{regionName(top, locale)}</p>
+                  <RegionPlace r={top} />
                 </div>
                 <div className="text-right">
                   <RiskBadge level={top.level} pulse />

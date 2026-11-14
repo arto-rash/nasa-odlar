@@ -54,7 +54,7 @@ export default function HeroMap() {
       onReady={onReady}
     >
       <SignatureLayer geojson={regions} />
-      {data && <SparkLayer cells={data.cells} />}
+      {data && <SparkLayer cells={data.cells} deg={1} perCell={9} />}
     </BaseMap>
   );
 }

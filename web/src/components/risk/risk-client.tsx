@@ -19,9 +19,11 @@ import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
-import { fmtDate, fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/format";
+import { fmtDate, fmtNum, fmtPct, regionName, type AppLocale, type Placed } from "@/lib/format";
 import { matchScore } from "@/lib/search";
 import { RISK_LEVELS, type RiskDetail, type RiskMapItem } from "@/lib/types";
+import { RegionPlace } from "@/components/ui/region-place";
+import { CountryCombobox } from "@/components/ui/country-combobox";
 
 const SHOW = 200;
 
@@ -43,7 +45,7 @@ export function RiskClient({
   const [selected, setSelected] = useState<string | null>(initial);
   const [country, setCountry] = useState<string>("all");
   const [q, setQ] = useState("");
-  const [hover, setHover] = useState<{ name_az: string; name_en: string; probability?: number; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<(Placed & { name_az: string; name_en: string; probability?: number; x: number; y: number }) | null>(null);
 
   useEffect(() => {
     const u = new URL(window.location.href);
@@ -111,6 +113,7 @@ export function RiskClient({
               className="pointer-events-none absolute left-0 top-0 z-20 rounded-md border border-line-strong bg-panel-solid/95 px-3 py-2 text-[13px] shadow-2xl"
             >
               <p className="font-medium">{regionName(hover, locale)}</p>
+              <RegionPlace r={hover} />
               {hover.probability != null && <p className="tabular-nums text-dim">{fmtPct(hover.probability, locale)}</p>}
             </motion.div>
           )}
@@ -127,24 +130,19 @@ export function RiskClient({
             <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.35 }} className="p-5 sm:p-6">
               <p className="text-[13.5px] leading-relaxed text-dim">{t("lead")}</p>
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <label className="flex h-9 items-center rounded-md bg-bg-sunken px-3 ring-1 ring-line">
-                  <span className="sr-only">{tc("country")}</span>
-                  <select
-                    value={country}
-                    onChange={(e) => {
-                      setCountry(e.target.value);
-                      setShown(SHOW);
-                    }}
-                    className="max-w-[180px] bg-transparent text-[13px] outline-none"
-                  >
-                    <option value="all">{tc("all")}</option>
-                    {countryCodes.map((c) => (
-                      <option key={c} value={c}>
-                        {name(c)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
+                <CountryCombobox
+                  value={country}
+                  ariaLabel={tc("country")}
+                  options={[
+                    { value: "all", label: tc("all") },
+                    ...countryCodes.map((c) => ({ value: c, label: name(c), alt: `${countryNames[c]?.en ?? ""} ${countryNames[c]?.az ?? ""}` })),
+                  ]}
+                  onChange={(v) => {
+                    setCountry(v);
+                    setShown(SHOW);
+                  }}
+                  className="w-full sm:w-[200px]"
+                />
                 <label className="flex h-9 flex-1 items-center gap-2 rounded-md bg-bg-sunken px-3 ring-1 ring-line">
                   <Search className="size-3.5 text-faint" />
                   <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("selectRegion")} className="w-full bg-transparent text-[13px] outline-none placeholder:text-faint" />
@@ -157,6 +155,7 @@ export function RiskClient({
                       <span className="w-6 tabular-nums text-[12.5px] text-faint">{i + 1}</span>
                       <span className="min-w-0 flex-1">
                         <span className="block truncate text-[13.5px]">{regionName(r, locale)}</span>
+                        <RegionPlace r={r} className="text-[11.5px]" />
                         <span className="mt-1 block h-1 overflow-hidden rounded-full bg-line">
                           <span className="block h-full rounded-full transition-all duration-700" style={{ width: `${r.probability * 100}%`, background: `var(--risk-${r.level})` }} />
                         </span>
@@ -220,7 +219,10 @@ function RiskDetailView({ slug, onBack }: { slug: string; onBack: () => void }) 
         <ArrowLeft className="size-3.5" /> {t("ranking")}
       </button>
       <div className="mt-3 flex items-start justify-between gap-3">
-        <h2 className="font-display text-[2rem] leading-tight">{regionName(data.region, locale)}</h2>
+        <div className="min-w-0">
+          <h2 className="font-display text-[2rem] leading-tight">{regionName(data.region, locale)}</h2>
+          <RegionPlace r={data.region} className="mt-1 text-[13px]" />
+        </div>
         <Link href={`/region/${slug}`} className="mt-2 shrink-0 text-[13px] text-dim underline-offset-4 hover:text-text hover:underline">
           {tc("open")} →
         </Link>

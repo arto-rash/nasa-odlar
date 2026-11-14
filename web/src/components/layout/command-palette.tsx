@@ -12,6 +12,7 @@ import { useRegionSearch } from "@/lib/queries";
 import { matchScore } from "@/lib/search";
 import { useUi } from "@/lib/store";
 import { useTheme } from "./theme-toggle";
+import { RegionPlace } from "@/components/ui/region-place";
 
 const PAGES = ["explore", "regions", "risk", "compare", "methodology", "data", "simple", "alerts"] as const;
 
@@ -94,10 +95,11 @@ export function CommandPalette() {
                         className="size-2.5 shrink-0 rounded-full"
                         style={{ background: r.risk ? RISK_COLOR[r.risk.level] : "var(--line-strong)" }}
                       />
-                      <span className="flex-1 truncate">{regionName(r, locale)}</span>
-                      <span className="text-[12.5px] text-faint">
-                        {r.level === "country" ? t("country") : r.country.toUpperCase()}
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate">{regionName(r, locale)}</span>
+                        <RegionPlace r={r} />
                       </span>
+                      {r.level === "country" && <span className="text-[12.5px] text-faint">{t("country")}</span>}
                     </Item>
                   ))}
                 </Command.Group>

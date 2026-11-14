@@ -3,7 +3,7 @@
 import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Feature, FeatureCollection, Polygon } from "geojson";
 import type { MapLayerMouseEvent, MapMouseEvent } from "maplibre-gl";
-import { ArrowRight, Flame, Layers, Loader2, PenLine, Trash2, X } from "lucide-react";
+import { ArrowRight, ChevronDown, Flame, Layers, Loader2, PenLine, Trash2, X } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -16,9 +16,11 @@ import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
+import { useMediaQuery } from "@/lib/use-media";
 import { fmtNum, regionName, type AppLocale } from "@/lib/format";
 import type { AoiSummary, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
 import { Timeline } from "./timeline";
+import { RegionPlace } from "@/components/ui/region-place";
 
 const AFTERGLOW_WEEKS = 3;
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -39,12 +41,18 @@ export function ExploreClient({
   const [speed, setSpeed] = useState(1);
   const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off" });
   const [sensors, setSensors] = useState({ M: true, V: true });
-  const [hover, setHover] = useState<{ slug: string; name_az: string; name_en: string; risk_level?: string; x: number; y: number } | null>(null);
+  const [hover, setHover] = useState<{ slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const [drawing, setDrawing] = useState(false);
   const [vertices, setVertices] = useState<[number, number][]>([]);
   const [aoiClosed, setAoiClosed] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  // phones start with both panels folded so the map has the screen; after a tap
+  // each panel keeps what the user chose
+  const phone = useMediaQuery("(max-width: 639px)");
+  const [panelChoice, setPanelChoice] = useState<boolean | null>(null);
+  const [timelineChoice, setTimelineChoice] = useState<boolean | null>(null);
+  const panelOpen = panelChoice ?? !phone;
+  const timelineOpen = timelineChoice ?? !phone;
 
   const week = timeline[index]?.week ?? initialWeek;
   const range = (w: string) => ({ start: addDays(w, -7 * AFTERGLOW_WEEKS), end: addDays(w, 6) });
@@ -195,6 +203,7 @@ export function ExploreClient({
             className="pointer-events-none fixed left-0 top-0 z-30 rounded-md border border-line-strong bg-panel-solid/95 px-3 py-2 text-[13px] shadow-2xl"
           >
             <p className="font-medium">{regionName(hover, locale)}</p>
+            <RegionPlace r={hover} />
             {hover.risk_level && <RiskBadge level={hover.risk_level as RiskLevel} className="mt-1" />}
           </motion.div>
         )}
@@ -205,14 +214,23 @@ export function ExploreClient({
         initial={{ opacity: 0, x: -16 }}
         animate={{ opacity: 1, x: 0 }}
         transition={{ delay: 0.3, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="glass absolute left-3 top-20 z-20 w-[min(300px,calc(100vw-24px))] rounded-lg p-4 sm:left-5 sm:top-24"
+        className={cn(
+          "glass absolute left-3 top-20 z-20 max-h-[calc(100dvh-210px)] overflow-y-auto rounded-lg sm:left-5 sm:top-24",
+          panelOpen ? "w-[min(300px,calc(100vw-24px))] p-4" : "w-auto px-3 py-2.5",
+        )}
       >
-        <button className="flex w-full items-center justify-between" onClick={() => setPanelOpen((o) => !o)} aria-expanded={panelOpen}>
+        <button
+          className="flex w-full items-center justify-between gap-3"
+          onClick={() => setPanelChoice(!panelOpen)}
+          aria-expanded={panelOpen}
+          aria-label={t(panelOpen ? "hidePanel" : "showPanel", { name: t("layers") })}
+        >
           <span className="flex items-center gap-2 text-[12.5px] font-semibold text-faint">
             <Layers className="size-3.5" /> {t("layers")}
           </span>
-          <span className="tabular-nums text-[12.5px] text-dim">
+          <span className="flex items-center gap-2 tabular-nums text-[12.5px] text-dim">
             {isFetching ? <Loader2 className="size-3.5 animate-spin" /> : t("pointsShown", { count: currentCount })}
+            <ChevronDown className={cn("size-4 transition-transform", panelOpen && "rotate-180")} />
           </span>
         </button>
         <AnimatePresence initial={false}>
@@ -276,7 +294,8 @@ export function ExploreClient({
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 24 }}
             transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
-            className="glass absolute bottom-[112px] right-3 top-20 z-20 w-[min(380px,calc(100vw-24px))] overflow-y-auto rounded-lg p-5 sm:right-5 sm:top-24"
+            className={cn("glass absolute right-3 top-20 z-20 w-[min(380px,calc(100vw-24px))] overflow-y-auto rounded-lg p-5 sm:right-5 sm:top-24",
+              timelineOpen ? "bottom-[96px] sm:bottom-[112px]" : "bottom-[76px] sm:bottom-[88px]")}
           >
             <button
               onClick={() => {
@@ -299,10 +318,11 @@ export function ExploreClient({
 
       {/* timeline */}
       <div className="absolute inset-x-3 bottom-3 z-20 sm:inset-x-5 sm:bottom-5">
-        <Timeline points={timeline} index={index} onIndex={setIndex} playing={playing} onPlay={setPlaying} speed={speed} onSpeed={setSpeed} />
+        <Timeline points={timeline} index={index} onIndex={setIndex} playing={playing} onPlay={setPlaying} speed={speed} onSpeed={setSpeed}
+          open={timelineOpen} onOpen={setTimelineChoice} />
       </div>
       {data && currentCount === 0 && !isFetching && layers.hotspots && (
-        <p className="pointer-events-none absolute bottom-[100px] left-1/2 z-10 -translate-x-1/2 rounded-md bg-panel-solid/80 px-3 py-1 text-[13px] text-dim">{t("noPoints")}</p>
+        <p className="pointer-events-none absolute bottom-[84px] left-1/2 z-10 sm:bottom-[100px] -translate-x-1/2 rounded-md bg-panel-solid/80 px-3 py-1 text-[13px] text-dim">{t("noPoints")}</p>
       )}
     </div>
   );
@@ -438,6 +458,7 @@ function RegionDrawer({ slug }: { slug: string }) {
     <div>
       <p className="text-[12.5px] font-semibold text-faint">{tr("clockTitle")}</p>
       <h2 className="font-display mt-1 pr-8 text-[1.7rem] leading-tight">{regionName(data.region, locale)}</h2>
+      <RegionPlace r={data.region} className="mt-1 text-[13px]" />
       {risk && (
         <div className="mt-2 flex items-center gap-2">
           <span className="text-[13px] text-faint">{t("riskNow")}</span>

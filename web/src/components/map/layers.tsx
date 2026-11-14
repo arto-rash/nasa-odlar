@@ -19,6 +19,9 @@ export const LAYER_COLORS = {
     sparkBlur: 1,
     density: [0, "rgba(0,0,0,0)", 0.12, "#3d1218", 0.3, "#7a1526", 0.5, "#c22b2a", 0.7, "#f0592a", 0.85, "#ff9a3d", 1, "#fff3d6"],
     sensor: SENSOR_HEX,
+    // ember halo behind each detection, by age (glows on the dark basemap)
+    hotspotGlow: ["interpolate", ["linear"], ["get", "a"], 0, "#ff7a2a", 1, "#c22b2a", 3, "#5a1220"] as ExpressionSpecification | null,
+    hotspotGlowOpacity: 0.38,
     hotspotStroke: "#fff4dc",
     regionLine: "#ffb37a",
     riskLine: "#0b0907",
@@ -35,6 +38,10 @@ export const LAYER_COLORS = {
     sparkBlur: 1,
     density: [0, "rgba(0,0,0,0)", 0.12, "#f6c9a0", 0.35, "#f08a4a", 0.6, "#d2452a", 0.85, "#a8262a", 1, "#6e1420"],
     sensor: SENSOR_HEX_LIGHT,
+    // on the light basemap a faint halo in the dot's own colour: an orange halo
+    // under blue dots mixes into green
+    hotspotGlow: null as ExpressionSpecification | null,
+    hotspotGlowOpacity: 0.14,
     hotspotStroke: "#2a1a12",
     regionLine: "#b5532a",
     riskLine: "#3a2a20",
@@ -129,9 +136,9 @@ export function HotspotLayer({ points, visible = true, sensors = { M: true, V: t
         5, ["*", ["case", ["==", ["get", "a"], 0], 1, 0.6], ["+", 2.5, ["*", 0.6, ["ln", ["+", 1, ["get", "f"]]]]]],
         10, ["*", ["case", ["==", ["get", "a"], 0], 1, 0.6], ["+", 10, ["*", 2.5, ["ln", ["+", 1, ["get", "f"]]]]]],
       ],
-      "circle-color": ["interpolate", ["linear"], ["get", "a"], 0, "#ff7a2a", 1, "#c22b2a", 3, "#5a1220"],
+      "circle-color": lc.hotspotGlow ?? color,
       "circle-blur": 1,
-      "circle-opacity": ["*", 0.38, fade],
+      "circle-opacity": ["*", lc.hotspotGlowOpacity, fade],
     },
   });
   useLayer({
@@ -291,15 +298,20 @@ function mulberry32(seed: number) {
 
 export function sparkField(cells: [number, number, number][], deg = 0.1, maxPerCell = 7): FC {
   const rand = mulberry32(2026);
-  const max = Math.max(...cells.map((c) => c[2]), 1);
+  // log scale against the busy end (95th percentile), not the single busiest cell:
+  // against that one, every ordinary fire region came out almost invisible
+  const sorted = cells.map((c) => c[2]).sort((a, b) => a - b);
+  const top = Math.log1p(sorted[Math.floor(sorted.length * 0.95)] ?? 1);
   const features: FC["features"] = [];
   for (const [lon, lat, n] of cells) {
-    const k = Math.max(1, Math.round(Math.sqrt(n / max) * maxPerCell));
+    const s = Math.min(1, Math.log1p(n) / Math.max(top, 1));
+    const k = Math.max(1, Math.round(s * s * maxPerCell));
     for (let i = 0; i < k; i++) {
       features.push({
         type: "Feature",
+        // scattered over the whole cell, so the field does not show the grid
         geometry: { type: "Point", coordinates: [lon + (rand() - 0.5) * deg, lat + (rand() - 0.5) * deg] },
-        properties: { w: Math.sqrt(n / max) * (0.4 + rand() * 0.6) },
+        properties: { w: s * (0.45 + rand() * 0.55) },
       });
     }
   }
@@ -307,9 +319,15 @@ export function sparkField(cells: [number, number, number][], deg = 0.1, maxPerC
 }
 
 /** Glowing ember sparks — 25 years of detections as a night-lights field. */
-export function SparkLayer({ cells, id = "sparks" }: { cells: [number, number, number][]; id?: string }) {
+export function SparkLayer({ cells, id = "sparks", deg = 0.1, perCell = 7 }: {
+  cells: [number, number, number][];
+  id?: string;
+  /** cell size of `cells`, in degrees (sparks are scattered over the cell) */
+  deg?: number;
+  perCell?: number;
+}) {
   const lc = useLayerColors();
-  const fc = useMemo(() => sparkField(cells), [cells]);
+  const fc = useMemo(() => sparkField(cells, deg, perCell), [cells, deg, perCell]);
   useGeoJson(id, fc);
   useLayer({
     id: `${id}-glow`,

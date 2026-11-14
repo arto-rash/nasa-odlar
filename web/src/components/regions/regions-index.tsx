@@ -11,6 +11,8 @@ import { Link } from "@/i18n/navigation";
 import { countryLabel, fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/format";
 import { useCountryRegions, useRegionSearch } from "@/lib/queries";
 import type { Region } from "@/lib/types";
+import { RegionPlace } from "@/components/ui/region-place";
+import { CountryCombobox } from "@/components/ui/country-combobox";
 
 type Sort = "risk" | "activity" | "trend" | "name";
 
@@ -82,23 +84,16 @@ export function RegionsIndex({ countries, initial }: { countries: Region[]; init
       </div>
 
       <div className="sticky top-[72px] z-30 mt-10 flex flex-wrap items-center gap-2 rounded-full bg-bg/80 py-2 sm:top-20">
-        <label className="flex h-9 items-center gap-2 rounded-md bg-bg-sunken px-3 ring-1 ring-line">
-          <span className="sr-only">{tc("country")}</span>
-          <select
-            value={country}
-            onChange={(e) => {
-              setCountry(e.target.value);
-              setShown(PAGE);
-            }}
-            className="max-w-[220px] bg-transparent text-[13px] outline-none"
-          >
-            {options.map((c) => (
-              <option key={c.country} value={c.country}>
-                {countryLabel(c, locale)}
-              </option>
-            ))}
-          </select>
-        </label>
+        <CountryCombobox
+          value={country}
+          ariaLabel={tc("country")}
+          options={options.map((c) => ({ value: c.country, label: countryLabel(c, locale), alt: `${c.country_name_en ?? ""} ${c.country_name_az ?? ""}` }))}
+          onChange={(v) => {
+            setCountry(v);
+            setShown(PAGE);
+          }}
+          className="w-full sm:w-[240px]"
+        />
         <label className="flex h-9 min-w-[180px] flex-1 items-center gap-2 rounded-md bg-bg-sunken px-3.5 ring-1 ring-line">
           <Search className="size-3.5 text-faint" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search")} className="w-full bg-transparent text-[13px] outline-none placeholder:text-faint" />
@@ -133,7 +128,7 @@ export function RegionsIndex({ countries, initial }: { countries: Region[]; init
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium">{regionName(r, locale)}</p>
-                    <p className="mt-0.5 text-[12.5px] text-faint">{countryLabel(r, locale)}</p>
+                    <RegionPlace r={r} className="mt-0.5 text-[12.5px]" />
                   </div>
                   {r.risk && (
                     <span className="text-right">

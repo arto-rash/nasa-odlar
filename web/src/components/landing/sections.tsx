@@ -18,6 +18,7 @@ import { useTheme } from "@/components/layout/theme-toggle";
 import { DriverLine } from "@/components/region/drivers";
 import { reasonText } from "@/components/region/reasons";
 import { rich } from "@/lib/rich";
+import { RegionPlace } from "@/components/ui/region-place";
 
 export function Numbers({ overview }: { overview: Overview }) {
   const t = useTranslations("home.numbers");
@@ -235,6 +236,7 @@ export function RiskNow({ overview }: { overview: Overview }) {
                 <span className="w-5 tabular-nums text-[13px] text-faint">{String(i + 1).padStart(2, "0")}</span>
                 <div className="min-w-0 flex-1">
                   <p className="truncate font-medium">{regionName(r, locale)}</p>
+                  <RegionPlace r={r} />
                   {r.driver && <DriverLine code={r.driver} className="mt-0.5 text-[13px] text-dim" />}
                 </div>
                 <div className="hidden w-32 sm:block">

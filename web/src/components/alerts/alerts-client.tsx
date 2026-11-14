@@ -18,6 +18,7 @@ import { RegionCombobox } from "@/components/ui/region-combobox";
 import { useAuth } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { Alert, Channel, RiskLevel, Subscription } from "@/lib/types";
+import { RegionPlace } from "@/components/ui/region-place";
 
 const THRESHOLDS: Exclude<RiskLevel, "low">[] = ["moderate", "high", "very_high", "extreme"];
 const CHANNELS: { id: Channel; icon: React.ComponentType<{ className?: string }>; live: boolean }[] = [
@@ -244,9 +245,12 @@ function SubscriptionsPanel({ subs, onChange }: { subs: Subscription[]; onChange
         {subs.map((s) => (
           <li key={s.id} className={cn("rounded-lg p-4 ring-1 ring-line transition", s.active ? "bg-panel" : "bg-panel/40 opacity-70")}>
             <div className="flex items-center justify-between gap-2">
-              <Link href={`/region/${s.region.slug}`} className="truncate font-medium hover:underline">
-                {regionName(s.region, locale)}
-              </Link>
+              <span className="min-w-0">
+                <Link href={`/region/${s.region.slug}`} className="block truncate font-medium hover:underline">
+                  {regionName(s.region, locale)}
+                </Link>
+                <RegionPlace r={s.region} />
+              </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => update.mutate({ id: s.id, body: { active: !s.active } })}

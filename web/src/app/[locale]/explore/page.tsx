@@ -22,11 +22,8 @@ export default async function ExplorePage({
   setRequestLocale(locale);
   const { w } = await searchParams;
   const timeline = await api<TimelinePoint[]>("/timeline");
-  // Default to the busiest week of the last complete year — the most telling first frame.
-  const lastYear = +timeline[timeline.length - 1].week.slice(0, 4) - 1;
-  const peak = timeline
-    .filter((p) => +p.week.slice(0, 4) === lastYear)
-    .reduce((a, b) => (b.viirs > a.viirs ? b : a), timeline[timeline.length - 1]);
-  const initialWeek = w && timeline.some((p) => p.week === w) ? w : peak.week;
+  // Open on the current week (the latest in the record) unless a link names one.
+  const latest = timeline[timeline.length - 1].week;
+  const initialWeek = w && timeline.some((p) => p.week === w) ? w : latest;
   return <ExploreClient timeline={timeline} initialWeek={initialWeek} />;
 }
