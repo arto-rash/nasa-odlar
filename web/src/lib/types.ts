@@ -263,6 +263,30 @@ export interface ForecastPayload {
   };
 }
 
+/** A fire of the last two weeks: detections grouped by place and day. */
+export interface FireEvent {
+  id: string;
+  lat: number;
+  lon: number;
+  bbox: [number, number, number, number];
+  first_seen: string;
+  last_seen: string;
+  days: number;
+  detections: number;
+  modis: number;
+  viirs: number;
+  frp_max: number | null;
+  frp_sum: number | null;
+  active: boolean;
+  /** the region holding most of its detections */
+  region: { slug: string; name_en: string; name_az: string; country: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string } | null;
+}
+
+export interface FireEventDetail extends FireEvent {
+  per_day: { date: string; modis: number; viirs: number }[];
+  points: [lon: number, lat: number, sensor: "M" | "V", frp: number, date: string][];
+}
+
 /** Expected and usual detections per region for one week ahead. */
 export interface ForecastMap {
   week: string;

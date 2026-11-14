@@ -21,9 +21,10 @@ import { cn } from "@/lib/cn";
 import { AFTERGLOW_WEEKS, packAreaFor, packPoints, weekPackQuery, yearsFor, type WeekPack } from "@/lib/map-data";
 import { useMediaQuery } from "@/lib/use-media";
 import { fmtDate, fmtNum, regionName, type AppLocale } from "@/lib/format";
-import type { AoiSummary, ForecastMap, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
+import type { AoiSummary, FireEvent, ForecastMap, HotspotResponse, RiskLevel, TimelinePoint } from "@/lib/types";
 import { FORECAST_STOPS } from "@/components/map/layers";
 import { Timeline } from "./timeline";
+import { FireDetail, FiresLayer, FiresList, FitFire } from "./fires";
 import { RegionPlace } from "@/components/ui/region-place";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -32,13 +33,17 @@ const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z"
 const FORECAST_WEEKS = 13;
 
 export function ExploreClient({
-  timeline, initialWeek, initialRegion = null,
+  timeline, initialWeek, initialRegion = null, initialFire = null,
 }: {
   timeline: TimelinePoint[];
   initialWeek: string;
   initialRegion?: string | null;
+  initialFire?: string | null;
 }) {
   const t = useTranslations("explore");
+  const tf = useTranslations("fires");
+  const [fires, setFires] = useState(!!initialFire);
+  const [fireId, setFireId] = useState<string | null>(initialFire);
   const locale = useLocale() as AppLocale;
   const qc = useQueryClient();
   const signature = useCountryShape("az");
@@ -168,8 +173,24 @@ export function ExploreClient({
   useEffect(() => {
     const u = new URL(window.location.href);
     u.searchParams.set("w", week);
+    if (fireId) u.searchParams.set("fire", fireId);
+    else u.searchParams.delete("fire");
     window.history.replaceState(null, "", u);
-  }, [week]);
+  }, [week, fireId]);
+  const { data: fireData } = useQuery({
+    queryKey: ["events", view?.bbox ?? null],
+    queryFn: () => http<{ total: number; events: FireEvent[] }>(`/events?limit=300${view?.bbox ? `&bbox=${view.bbox}` : ""}`),
+    enabled: fires && view !== null,
+    placeholderData: keepPreviousData,
+    staleTime: 10 * 60_000,
+  });
+  const goToDate = useCallback(
+    (date: string) => {
+      const i = timeline.findIndex((p, k) => p.week <= date && (timeline[k + 1]?.week ?? "9999") > date);
+      if (i >= 0) setIndex(i);
+    },
+    [timeline],
+  );
 
   const worldPoints = useMemo(
     () => (packs ? packPoints(packs, week) : null),
@@ -189,7 +210,7 @@ export function ExploreClient({
   }, [data, week, usesPacks, worldPoints, isFuture]);
   const { data: forecast, isFetching: forecastFetching } = useQuery({
     queryKey: ["forecast-map", week, view?.bbox ?? null],
-    queryFn: ({ signal }) => http<ForecastMap>(`/forecast/map?week=${week}${view?.bbox ? `&bbox=${view.bbox}` : ""}`, { signal }),
+    queryFn: () => http<ForecastMap>(`/forecast/map?week=${week}${view?.bbox ? `&bbox=${view.bbox}` : ""}`),
     enabled: isFuture && view !== null,
     placeholderData: keepPreviousData,
     staleTime: 30 * 60_000,
@@ -241,6 +262,8 @@ export function ExploreClient({
         />
         <SignatureLayer geojson={signature} />
         <HotspotLayer points={points} visible={layers.hotspots} sensors={sensors} />
+        {fires && <FiresLayer events={fireData?.events ?? []} selected={fireId} onPick={setFireId} />}
+        <FitFire id={fireId} />
         <AoiLayer
           drawing={drawing}
           vertices={vertices}
@@ -317,6 +340,15 @@ export function ExploreClient({
                 <Toggle on={layers.density} onChange={(v) => setLayers((l) => ({ ...l, density: v }))} label={t("heat")} />
                 <Toggle on={layers.regions === "risk"} onChange={(v) => setLayers((l) => ({ ...l, regions: v ? "risk" : "outline" }))} label={t("riskLayer")} />
                 <Toggle on={layers.regions !== "off"} onChange={(v) => setLayers((l) => ({ ...l, regions: v ? "outline" : "off" }))} label={t("boundaries")} />
+                <Toggle
+                  on={fires}
+                  onChange={(v) => {
+                    setFires(v);
+                    setFireId(null);
+                    if (v && isFuture) setIndex(timeline.length - 1); // fires are the last two weeks
+                  }}
+                  label={tf("toggle")}
+                />
               </div>
               <div className="mt-4 border-t border-line pt-4">
                 {!drawing && !aoiClosed ? (
@@ -359,9 +391,9 @@ export function ExploreClient({
 
       {/* right drawer: AOI result or selected region */}
       <AnimatePresence>
-        {(aoiClosed || selected) && (
+        {(aoiClosed || selected || fires) && (
           <motion.aside
-            key={aoiClosed ? "aoi" : selected}
+            key={aoiClosed ? "aoi" : fireId ? `fire-${fireId}` : (selected ?? "fires")}
             initial={{ opacity: 0, x: 24 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 24 }}
@@ -372,6 +404,8 @@ export function ExploreClient({
             <button
               onClick={() => {
                 setSelected(null);
+                if (fireId) setFireId(null);
+                else if (!selected && fires) setFires(false);
                 if (aoiClosed) {
                   setAoiClosed(false);
                   setVertices([]);
@@ -383,7 +417,15 @@ export function ExploreClient({
             >
               <X className="size-4" />
             </button>
-            {aoiClosed ? <AoiResult state={aoi} /> : selected ? <RegionDrawer slug={selected} /> : null}
+            {aoiClosed ? (
+              <AoiResult state={aoi} />
+            ) : fireId ? (
+              <FireDetail id={fireId} onBack={() => setFireId(null)} onWeek={goToDate} />
+            ) : selected ? (
+              <RegionDrawer slug={selected} />
+            ) : fires ? (
+              fireData ? <FiresList events={fireData.events} total={fireData.total} onPick={(e: FireEvent) => setFireId(e.id)} /> : <div className="skeleton mt-6 h-64 w-full" />
+            ) : null}
           </motion.aside>
         )}
       </AnimatePresence>

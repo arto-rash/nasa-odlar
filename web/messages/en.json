@@ -578,5 +578,28 @@
     "calendarTypical": "Usual for this week: ~{usual}",
     "flagStart": "Season starts",
     "flagPeak": "Peak"
+  },
+  "fires": {
+    "toggle": "Fires now (last 14 days)",
+    "title": "Fires now",
+    "lead": "Detections from the last two weeks grouped into fires: pixels next to each other on the same or the next day.",
+    "inView": "{count, plural, =0 {No fires in view} one {# fire in view} other {# fires in view}}",
+    "burning": "Seen in the last 2 days",
+    "lastSeen": "Last seen {date}",
+    "detections": "{count, plural, one {# detection} other {# detections}}",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "both": "Both satellites",
+    "viirsOnly": "VIIRS only",
+    "modisOnly": "MODIS only",
+    "frpMax": "Peak intensity {value} MW",
+    "back": "All fires",
+    "perDay": "Detections per day",
+    "seeWeek": "Show this week on the timeline",
+    "openRegion": "Open {name}",
+    "none": "No fires in the last two weeks here.",
+    "regionTitle": "Fires in the last two weeks",
+    "seeMap": "See on the map",
+    "note": "A fire here is a group of heat signals; one large burn can show as several, and small fires under clouds are missed.",
+    "count": "{count, plural, one {# fire} other {# fires}}"
   }
 }

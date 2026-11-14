@@ -204,6 +204,7 @@ class Store:
         self._calendars: OrderedDict[str, dict] = OrderedDict()
         self.table_paths = {t: [str(d / f"{t}.parquet") for d in dirs] for t in _ON_DISK}
         self.outlook_week_paths = [str(d / "outlook_weeks.parquet") for d in dirs if (d / "outlook_weeks.parquet").exists()]
+        self.event_paths = [str(d / "events_now.parquet") for d in dirs if (d / "events_now.parquet").exists()]
         self.shape_paths = [str(d / "regions_geo.parquet") for d in dirs if (d / "regions_geo.parquet").exists()]
         tiers = [ARTIFACTS_DIR / "shape_tiers" / f"{n}.parquet" for n in names]
         self.tier_paths = [str(t) for t in tiers] if all(t.exists() for t in tiers) else []  # all or none

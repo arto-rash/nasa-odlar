@@ -513,6 +513,60 @@ def forecast_map(s: Store, week: date, bbox: tuple[float, float, float, float] |
                        for a, b, c, d in rows.itertuples(index=False)]}
 
 
+def _event_dict(s: Store, e) -> dict:
+    reg = s.by_id.get(int(e.region_id))
+    place = ({"slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az, "country": reg.country, **_where(s, reg)}
+             if reg is not None else None)
+    return {"id": e.event_id, "lat": e.lat, "lon": e.lon, "bbox": [e.west, e.south, e.east, e.north],
+            "first_seen": pd.Timestamp(e.first_seen).strftime("%Y-%m-%d"),
+            "last_seen": pd.Timestamp(e.last_seen).strftime("%Y-%m-%d"), "days": int(e.days),
+            "detections": int(e.detections), "modis": int(e.modis), "viirs": int(e.viirs),
+            "frp_max": _f(e.frp_max, 1), "frp_sum": _f(e.frp_sum, 1), "active": bool(e.active), "region": place}
+
+
+def events(s: Store, bbox: tuple[float, float, float, float] | None = None, region: str | None = None,
+           active: bool = False, limit: int = 200) -> dict:
+    """Fires of the last two weeks (odlar.events), biggest first."""
+    if not s.event_paths:
+        return {"total": 0, "events": []}
+    where, params = ["TRUE"], [s.event_paths]
+    if bbox:
+        where.append("lon BETWEEN ? AND ? AND lat BETWEEN ? AND ?")
+        params += [bbox[0], bbox[2], bbox[1], bbox[3]]
+    if region:
+        where.append("list_contains(?, region_id)")
+        params.append(_leaf_ids(s, region_or_404(s, region)))
+    if active:
+        where.append("active")
+    sql = f"FROM read_parquet(?, union_by_name = true) WHERE {' AND '.join(where)}"
+    con = s.points._con()
+    total = int(con.execute(f"SELECT count(*) {sql}", params).fetchone()[0])
+    df = con.execute(f"SELECT * {sql} ORDER BY frp_sum DESC LIMIT {int(limit)}", params).df()
+    return {"total": total, "events": [_event_dict(s, e) for e in df.itertuples()]}
+
+
+def event_detail(s: Store, event_id: str) -> dict:
+    """One fire: its summary, detections per day and sensor, and the detections."""
+    if not s.event_paths:
+        raise NotFound("no such fire")
+    df = s.points._con().execute("SELECT * FROM read_parquet(?, union_by_name = true) WHERE event_id = ? LIMIT 1",
+                                 [s.event_paths, event_id]).df()
+    if df.empty:
+        raise NotFound("no such fire")
+    e = next(df.itertuples())
+    pad = 0.01
+    box = (e.west - pad, e.south - pad, e.east + pad, e.north + pad)
+    start, end = pd.Timestamp(e.first_seen).date(), pd.Timestamp(e.last_seen).date()
+    where, params = _point_filter(s, start, end, None, None, box)
+    pts = s.points.query(where, params, "lon, lat, sensor, frp, acq_date", range(start.year, end.year + 1), 5000)
+    per_day = (pts.assign(day=pd.to_datetime(pts["acq_date"]).dt.strftime("%Y-%m-%d"))
+               .groupby(["day", "sensor"]).size().unstack(fill_value=0).reindex(columns=["MODIS", "VIIRS"], fill_value=0))
+    return {**_event_dict(s, e),
+            "per_day": [{"date": d, "modis": int(r.MODIS), "viirs": int(r.VIIRS)} for d, r in per_day.iterrows()],
+            "points": [[round(float(p.lon), 4), round(float(p.lat), 4), p.sensor[0], round(float(p.frp), 1),
+                        pd.Timestamp(p.acq_date).strftime("%Y-%m-%d")] for p in pts.itertuples()]}
+
+
 def risk_map(s: Store, country: str | None = None, limit: int | None = None) -> list[dict]:
     rn = s.risk_now.sort_values("probability", ascending=False)
     if country:

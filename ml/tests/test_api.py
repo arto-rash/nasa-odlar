@@ -84,6 +84,20 @@ def test_forecast(client):
     assert m["week"] == f["weeks"][0]["week"] and isinstance(m["values"], list)
 
 
+def test_events(client):
+    r = client.get("/events?bbox=44,38,51,42&limit=5").json()
+    assert set(r) == {"total", "events"} and len(r["events"]) <= 5
+    if r["events"]:
+        sums = [e["frp_sum"] for e in r["events"]]
+        assert sums == sorted(sums, reverse=True)
+        e = r["events"][0]
+        d = client.get(f"/events/{e['id']}").json()
+        assert d["detections"] == e["detections"]
+        assert sum(x["modis"] + x["viirs"] for x in d["per_day"]) >= 1
+    assert client.get("/events/not-an-id").status_code == 422
+    assert client.get("/events/1.000_2.000_20000101").status_code == 404
+
+
 def test_hotspots_limits(client):
     h = client.get("/hotspots", params={"start": "2025-08-01", "end": "2025-08-07", "sensor": "VIIRS"}).json()
     assert h["total"] > 0 and all(p[2] == "V" for p in h["points"])

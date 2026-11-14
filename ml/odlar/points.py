@@ -76,6 +76,17 @@ def read_points(store_dir: Path, years: list[int] | None = None, tail: bool | No
     return pd.concat([pd.read_parquet(p) for p in want], ignore_index=True)
 
 
+def read_recent(store_dir: Path, since: pd.Timestamp, columns: list[str] | None = None) -> pd.DataFrame:
+    """Detections on or after ``since`` from the year and tail files, reading only
+    the row groups that can hold them (the files are in date order)."""
+    files = point_files(store_dir, None)
+    want = [p for y in sorted(files) if y >= since.year for p in files[y]]
+    cols = columns or COLUMNS
+    parts = [pd.read_parquet(p, columns=cols, filters=[("acq_date", ">=", since)]) for p in want]
+    parts = [x for x in parts if len(x)]
+    return pd.concat(parts, ignore_index=True) if parts else pd.DataFrame(columns=cols)
+
+
 def carry_over(old_store: Path, new_store: Path, skip: set[str] = frozenset()) -> None:
     """Hard-link (or copy) the old store's point files into the new one, except
     file names in ``skip`` and files the new store already has."""

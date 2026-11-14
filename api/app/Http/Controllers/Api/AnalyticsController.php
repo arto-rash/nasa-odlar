@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Exceptions\MlRequestException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\AoiSummaryRequest;
+use App\Http\Requests\EventsRequest;
 use App\Http\Requests\ForecastMapRequest;
 use App\Http\Requests\GridRequest;
 use App\Http\Requests\HotspotsRequest;
@@ -60,6 +61,18 @@ class AnalyticsController extends Controller
     public function regionRisk(string $slug): Response
     {
         return $this->proxy("/risk/{$slug}");
+    }
+
+    /** Fires of the last two weeks, biggest first. */
+    public function events(EventsRequest $request): Response
+    {
+        return $this->proxy('/events', $request->forwarded());
+    }
+
+    /** One fire with its detections. */
+    public function event(string $id): Response
+    {
+        return $this->proxy("/events/{$id}");
     }
 
     /** The days, weeks and months ahead for one region. */

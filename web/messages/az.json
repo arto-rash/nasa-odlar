@@ -578,5 +578,28 @@
     "calendarTypical": "Bu həftə üçün adi: ~{usual}",
     "flagStart": "Mövsüm başlayır",
     "flagPeak": "Pik"
+  },
+  "fires": {
+    "toggle": "İndiki yanğınlar (son 14 gün)",
+    "title": "İndiki yanğınlar",
+    "lead": "Son iki həftənin aşkarlamaları yanğınlara qruplaşdırılıb: eyni və ya növbəti gün bir-birinə bitişik piksellər.",
+    "inView": "{count, plural, =0 {Görünən ərazidə yanğın yoxdur} other {Görünən ərazidə # yanğın}}",
+    "burning": "Son 2 gündə görünüb",
+    "lastSeen": "Son dəfə {date}",
+    "detections": "{count, plural, other {# aşkarlama}}",
+    "days": "{count, plural, other {# gün}}",
+    "both": "Hər iki peyk",
+    "viirsOnly": "Yalnız VIIRS",
+    "modisOnly": "Yalnız MODIS",
+    "frpMax": "Pik intensivlik {value} MVt",
+    "back": "Bütün yanğınlar",
+    "perDay": "Günlər üzrə aşkarlamalar",
+    "seeWeek": "Bu həftəni zaman xəttində göstər",
+    "openRegion": "{name} səhifəsini aç",
+    "none": "Son iki həftədə burada yanğın olmayıb.",
+    "regionTitle": "Son iki həftənin yanğınları",
+    "seeMap": "Xəritədə gör",
+    "note": "Buradakı yanğın istilik siqnallarının qrupudur; böyük yanğın bir neçə yanğın kimi görünə bilər, buludlu havada kiçik yanğınlar görünmür.",
+    "count": "{count, plural, other {# yanğın}}"
   }
 }

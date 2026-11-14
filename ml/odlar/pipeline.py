@@ -20,7 +20,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-from odlar import store
+from odlar import events, store
 from odlar.calendar.engine import build_calendar
 from odlar.config import BATCHES, CACHE_DIR, DATA_DIR, MODIS_START, OVERLAP_START, PRIMARY_BATCH
 from odlar.grid.gridding import COUNT_COLUMNS, daily_counts, grid_cells, weekly_from_daily
@@ -253,6 +253,7 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
                                                "importance": meta["importance"]},
                     risk_now=risk_now, outlook_now=outlook_now, fire_weather=fwd, risk_history=risk_hist,
                     grid=grid, meta=meta_store, weather=weather_recent(w_ext, end), outlook_weeks=ow)
+    events.write_events(store_dir, end)
     store.write_state(state_dir, weather=weather, elevation=elevation, static_cells=static_cells,
                       daily_recent=daily[pd.to_datetime(daily["date"]) >= recent_start(end)], regions=regions)
     log(f"store written to {store_dir}", t0)

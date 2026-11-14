@@ -10,7 +10,7 @@ import os
 from datetime import date
 from typing import Literal
 
-from fastapi import Body, Depends, FastAPI, Header, HTTPException, Query, Request, Response
+from fastapi import Body, Depends, FastAPI, Header, HTTPException, Path, Query, Request, Response
 from fastapi.middleware.gzip import GZipMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 
@@ -126,6 +126,20 @@ def annual(slug: str, s: Store = Depends(store)):
 @app.get("/calendar/{slug}", dependencies=deps)
 def calendar(slug: str, s: Store = Depends(store)):
     return service.calendar(s, slug)
+
+
+@app.get("/events", dependencies=deps)
+def fire_events(bbox: str | None = Query(None, description="west,south,east,north"),
+                region: str | None = Query(None, max_length=100), active: bool = False,
+                limit: int = Query(200, ge=1, le=2000), s: Store = Depends(store)):
+    """Fires of the last two weeks, biggest first (detections grouped by place and day)."""
+    return service.events(s, parse_bbox(bbox), region, active, limit)
+
+
+@app.get("/events/{event_id}", dependencies=deps)
+def fire_event(event_id: str = Path(..., pattern=r"^-?\d+\.\d+_-?\d+\.\d+_\d{8}$"), s: Store = Depends(store)):
+    """One fire with its detections."""
+    return service.event_detail(s, event_id)
 
 
 @app.get("/forecast/map", dependencies=deps)

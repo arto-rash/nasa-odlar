@@ -9,6 +9,7 @@ import {
 import { api, ApiError } from "@/lib/upstream";
 import type { AnnualSeries, CalendarPayload, ForecastPayload, Region, RegionDetail, RiskDetail } from "@/lib/types";
 import { AheadPanel } from "@/components/region/ahead-panel";
+import { RegionFires } from "@/components/region/region-fires";
 
 export const revalidate = 600;
 
@@ -60,6 +61,9 @@ export default async function RegionPage({ params }: Props) {
             <AheadPanel f={forecast} />
           </div>
         )}
+        <div className="lg:col-span-2 empty:hidden">
+          <RegionFires slug={slug} />
+        </div>
         <div className="lg:col-span-2 grid gap-5 lg:grid-cols-[1fr_1.55fr]">
           <SeasonPanel cal={cal} />
           <NormalYearPanel cal={cal} />

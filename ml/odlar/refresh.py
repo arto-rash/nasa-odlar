@@ -31,7 +31,7 @@ import numpy as np
 import pandas as pd
 import pyarrow.parquet as pq
 
-from odlar import points, store
+from odlar import events, points, store
 from odlar.calendar.engine import build_calendar
 from odlar.config import BATCHES, MODIS_START, OVERLAP_START
 from odlar.grid.gridding import daily_counts, grid_cells, weekly_from_daily
@@ -255,6 +255,7 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
         points.link(store_dir / name, tmp / name)
     if len(tail):
         grid_cells(tail).to_parquet(tmp / "grid_tail.parquet", index=False)
+    events.write_events(tmp, end)
     swap(tmp, store_dir)
     for name, df in (("weather", weather[WEATHER_COLUMNS]), ("daily_recent", daily)):
         part = state_dir / f"{name}.parquet.new"

@@ -16,16 +16,18 @@ export default async function ExplorePage({
   params, searchParams,
 }: {
   params: Promise<{ locale: string }>;
-  searchParams: Promise<{ w?: string; r?: string }>;
+  searchParams: Promise<{ w?: string; r?: string; fire?: string }>;
 }) {
   const { locale } = await params;
   setRequestLocale(locale);
-  const { w, r } = await searchParams;
+  const { w, r, fire } = await searchParams;
   const timeline = await api<TimelinePoint[]>("/timeline");
   // Open on the current week (the latest in the record) unless a link names one.
   const latest = timeline[timeline.length - 1].week;
   const initialWeek = w && timeline.some((p) => p.week === w) ? w : latest;
   // a link from a region's calendar names the region too: it opens selected and in view
   const initialRegion = r && /^[a-z0-9-]{1,100}$/.test(r) ? r : null;
-  return <ExploreClient timeline={timeline} initialWeek={initialWeek} initialRegion={initialRegion} />;
+  // a fire from a region page or a shared link opens with the fires layer on
+  const initialFire = fire && /^-?\d+\.\d+_-?\d+\.\d+_\d{8}$/.test(fire) ? fire : null;
+  return <ExploreClient timeline={timeline} initialWeek={initialWeek} initialRegion={initialRegion} initialFire={initialFire} />;
 }
