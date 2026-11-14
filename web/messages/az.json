@@ -171,10 +171,10 @@
     "why": {
       "eyebrow": "Niyə indi",
       "title": "Arxivi tikmək üçün <hl>pəncərə bağlanır</hl>",
-      "snpp": "Suomi NPP fəaliyyətini dayandırır",
-      "snppWhen": "Noyabr 2026",
-      "modis": "MODIS missiyası başa çatır",
-      "modisWhen": "Yaxın gələcək",
+      "snpp": "Suomi NPP dayandı",
+      "snppWhen": "2 noyabr 2026 · NOAA-20 ilə körpü",
+      "modis": "MODIS söndürülür",
+      "modisWhen": "2027 (Terra yanvar, Aqua ~sentyabr)",
       "lead": "Hər iki sensorun eyni vaxtda işlədiyi ortaq dövr kalibrasiyanın yeganə mənbəyidir. Bu dövr bitdikdən sonra vahid arxiv qurmaq çox çətinləşəcək."
     }
   },

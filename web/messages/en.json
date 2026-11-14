@@ -171,10 +171,10 @@
     "why": {
       "eyebrow": "Why now",
       "title": "The window to stitch the archive <hl>is closing</hl>",
-      "snpp": "Suomi NPP retires",
-      "snppWhen": "November 2026",
-      "modis": "MODIS mission ends",
-      "modisWhen": "Near future",
+      "snpp": "Suomi NPP stopped",
+      "snppWhen": "2 November 2026 · bridged via NOAA-20",
+      "modis": "MODIS switches off",
+      "modisWhen": "2027 (Terra Jan, Aqua ~Sep)",
       "lead": "The overlap period, when both sensors fly at once, is the only basis for calibration. Once it ends, building one consistent archive gets much harder."
     }
   },
