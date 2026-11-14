@@ -89,3 +89,24 @@ def test_add_dryness_days_since_rain_resets():
     out = add_dryness(w)
     assert out["days_since_rain"].tolist() == [1, 2, 0, 1, 2, 3]
     assert (out["vpd"] > 0).all()
+
+
+def test_forecast_cell_is_fetched_once_per_run(tmp_path, monkeypatch):
+    from odlar.ingest import openmeteo
+
+    monkeypatch.setenv(openmeteo.CACHE_ENV, str(tmp_path))
+    calls = []
+
+    def respond(request):
+        lats = request.url.params["latitude"].split(",")
+        calls.append(len(lats))
+        day = {"time": ["2026-11-01"], **{k: [1.0] for k in openmeteo.DAILY}}
+        return httpx.Response(200, json=[{"daily": day} for _ in lats])
+
+    client = httpx.Client(transport=httpx.MockTransport(respond))
+    first = pd.DataFrame({"region_id": [1, 2], "lat": [40.1, 40.2], "lon": [49.1, 49.2]})
+    second = pd.DataFrame({"region_id": [3, 4], "lat": [40.3, 41.2], "lon": [48.9, 50.1]})
+    openmeteo.fetch_forecast(first, client=client, step=1.0, past_days=3)
+    out = openmeteo.fetch_forecast(second, client=client, step=1.0, past_days=3)
+    assert calls == [1, 1]  # the second batch paid only for its new cell
+    assert sorted(out["region_id"]) == [3, 4]

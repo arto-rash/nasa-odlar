@@ -44,6 +44,13 @@ HOT_COLUMNS = ["sensor", "satellite", "acq_date", "acq_time", "lat", "lon", "frp
 WEATHER_COLUMNS = ["region_id", "date", "tmax", "tmean", "rh", "wind", "precip"]
 
 
+# All batches together have ~12,000 weather points, over Open-Meteo's free 10,000 a
+# day. On one 1-degree grid shared across batches they need ~7,800. Azerbaijan's
+# batch keeps a point per region: it is the signature area and only adds ~100.
+REFRESH_STEP = 1.0
+FINE_WEATHER = {"caucasus"}
+
+
 class UpToDate(Exception):
     pass
 
@@ -163,7 +170,8 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
 
     weather = pd.read_parquet(state_dir / "weather.parquet")
     elev = pd.read_parquet(state_dir / "elevation.parquet").set_index("region_id")["elevation"]
-    weather, fc, fc_source = update_weather(weather, leaves, end, offline, b.weather_step)
+    weather, fc, fc_source = update_weather(weather, leaves, end, offline,
+                                         None if batch in FINE_WEATHER else b.weather_step or REFRESH_STEP)
     end = min(end, pd.Timestamp(weather["date"].max()).date())
     fc_obs = fc[weather.columns.intersection(fc.columns)]
     cols = ["region_id", "date", "precip", "tmax"]
@@ -294,6 +302,8 @@ def main() -> None:
         failed = []
         with tempfile.TemporaryDirectory() as tmp:
             nrt = a.nrt_dir or Path(tmp)
+            os.environ[openmeteo.CACHE_ENV] = str(Path(tmp, "open_meteo"))
+            Path(tmp, "open_meteo").mkdir()
             firms.download_global_nrt(nrt)
             for name in names:
                 args = [sys.executable, "-m", "odlar.refresh", "--batch", name, "--lookback", str(a.lookback),

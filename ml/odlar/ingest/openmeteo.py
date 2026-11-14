@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import os
 import time
+import uuid
+from pathlib import Path
 
 import httpx
 import numpy as np
@@ -13,6 +16,17 @@ DAILY = ["temperature_2m_max", "temperature_2m_mean", "relative_humidity_2m_mean
          "wind_speed_10m_mean", "precipitation_sum"]
 RENAME = {"temperature_2m_max": "tmax", "temperature_2m_mean": "tmean", "relative_humidity_2m_mean": "rh",
           "wind_speed_10m_mean": "wind", "precipitation_sum": "precip"}
+
+
+CACHE_ENV = "OPEN_METEO_CACHE"  # folder shared by one refresh's batches
+
+
+def _cached(cache_dir: str | None, past_days: int) -> pd.DataFrame | None:
+    files = list(Path(cache_dir).glob("*.parquet")) if cache_dir else []
+    if not files:
+        return None
+    rows = pd.concat([pd.read_parquet(f) for f in files], ignore_index=True)
+    return rows[rows["past"] >= past_days]
 
 
 def parse(payload: list[dict] | dict, region_ids: list[int]) -> pd.DataFrame:
@@ -33,7 +47,8 @@ def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | 
 
     With ``step`` (degrees), regions share the point at the centre of their grid
     cell: one call per cell, which keeps tens of thousands of small regions inside
-    the free daily limit (10,000 locations)."""
+    the free daily limit (10,000 locations). With ``OPEN_METEO_CACHE`` set, a cell
+    already fetched by another batch of the same run is not paid for twice."""
     client = client or httpx.Client(timeout=60)
     pts = regions[["region_id", "lat", "lon"]].copy()
     if step:
@@ -42,9 +57,17 @@ def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | 
     cells = pts.drop_duplicates(["lat", "lon"]).reset_index(drop=True)
     cells["cell"] = range(len(cells))
     pts = pts.merge(cells[["lat", "lon", "cell"]], on=["lat", "lon"])
+    cache_dir = os.environ.get(CACHE_ENV)
     frames = []
-    for i in range(0, len(cells), chunk):
-        part = cells.iloc[i:i + chunk]
+    todo = cells
+    hit = _cached(cache_dir, past_days) if step else None
+    if hit is not None:
+        found = cells.merge(hit, on=["lat", "lon"]).drop_duplicates(["cell", "date"])
+        if len(found):
+            frames.append(found[[*RENAME.values(), "date", "cell"]].rename(columns={"cell": "region_id"}))
+            todo = cells[~cells["cell"].isin(found["cell"])]
+    for i in range(0, len(todo), chunk):
+        part = todo.iloc[i:i + chunk]
         params = {
             "latitude": ",".join(f"{v:.4f}" for v in part["lat"]),
             "longitude": ",".join(f"{v:.4f}" for v in part["lon"]),
@@ -57,8 +80,13 @@ def fetch_forecast(regions: pd.DataFrame, days: int = 8, client: httpx.Client | 
                 break
             time.sleep(2 + attempt * 4)
         resp.raise_for_status()
-        frames.append(parse(resp.json(), part["cell"].tolist()))
-        if i + chunk < len(cells):
+        parsed = parse(resp.json(), part["cell"].tolist())
+        frames.append(parsed)
+        if cache_dir and step:
+            keep = parsed.merge(part[["cell", "lat", "lon"]], left_on="region_id", right_on="cell")
+            keep = keep.drop(columns=["region_id", "cell"])
+            keep.assign(past=past_days).to_parquet(Path(cache_dir) / f"{uuid.uuid4().hex}.parquet")
+        if i + chunk < len(todo):
             # every location counts as a call: stay under ~600 per minute
             time.sleep(chunk / 600 * 60)
     by_cell = pd.concat(frames, ignore_index=True).rename(columns={"region_id": "cell"})
