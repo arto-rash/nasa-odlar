@@ -8,6 +8,8 @@ use App\Http\Requests\AoiSummaryRequest;
 use App\Http\Requests\GridRequest;
 use App\Http\Requests\HotspotsRequest;
 use App\Http\Requests\RegionsGeojsonRequest;
+use App\Http\Requests\RegionsRequest;
+use App\Http\Requests\RiskRequest;
 use App\Http\Requests\SkillRequest;
 use App\Http\Requests\WeeklySeriesRequest;
 use App\Services\MlClient;
@@ -24,9 +26,9 @@ class AnalyticsController extends Controller
         return $this->proxy('/overview');
     }
 
-    public function regions(): Response
+    public function regions(RegionsRequest $request): Response
     {
-        return $this->proxy('/regions');
+        return $this->proxy('/regions', $request->forwarded());
     }
 
     public function regionsGeojson(RegionsGeojsonRequest $request): Response
@@ -59,9 +61,9 @@ class AnalyticsController extends Controller
         return $this->proxy("/risk/{$slug}");
     }
 
-    public function risk(): Response
+    public function risk(RiskRequest $request): Response
     {
-        return $this->proxy('/risk');
+        return $this->proxy('/risk', $request->forwarded());
     }
 
     public function hotspots(HotspotsRequest $request): Response

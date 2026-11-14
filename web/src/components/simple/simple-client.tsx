@@ -12,7 +12,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { http, HttpError } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { fmtNum, regionName, weekRange, type AppLocale } from "@/lib/format";
-import { useRegions } from "@/lib/queries";
+import { useCountryRegions, useRegionSearch } from "@/lib/queries";
 import { matchScore } from "@/lib/search";
 import { useAuth, useUi } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
@@ -47,8 +47,10 @@ export function SimpleClient({ initial, saved, prefetched }: { initial?: string;
 function Picker({ onPick }: { onPick: (slug: string) => void }) {
   const t = useTranslations("simple");
   const locale = useLocale() as AppLocale;
-  const { data: regions } = useRegions();
   const [q, setQ] = useState("");
+  const { data: found } = useRegionSearch(q, 30);
+  const { data: home } = useCountryRegions("az", true);
+  const regions = q.trim() ? found : home;
   const [locating, setLocating] = useState(false);
   const list = useMemo(
     () =>

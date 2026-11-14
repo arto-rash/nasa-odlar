@@ -20,7 +20,7 @@ async function load(slug: string) {
       api<CalendarPayload>(`/regions/${slug}/calendar`),
       api<AnnualSeries>(`/regions/${slug}/series/annual`),
       api<RiskDetail>(`/regions/${slug}/risk`),
-      api<Region[]>(`/regions`),
+      api<Region[]>(`/regions?parent=${slug}`),
     ]);
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) notFound();
@@ -42,8 +42,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RegionPage({ params }: Props) {
   const { locale, slug } = await params;
   setRequestLocale(locale);
-  const [region, cal, annual, risk, all] = await load(slug);
-  const children = all.filter((r) => r.parent_id === region.id);
+  const [region, cal, annual, risk, children] = await load(slug);
   return (
     <main>
       <RegionHero region={region} />

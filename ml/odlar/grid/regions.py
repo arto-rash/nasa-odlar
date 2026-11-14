@@ -138,26 +138,34 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
             gdf = gdf[~gdf.geometry.is_empty]
         country_union = gdf.geometry.union_all()
         taken = country_union if taken is None else taken.union(country_union)
+        # A big country is split into states or chunks of them ("split" entries from
+        # odlar.world_split): the state is the parent region, its slug prefixes the
+        # local units' slugs (county names repeat across states).
+        prefix = meta.get("slug", meta["code"])
         for _, r in gdf.iterrows():
-            if meta.get("source") == "osm":
+            if meta.get("source") == "split":
+                base = name_en = name_az = str(r["shapeName"]).strip()
+                kind = "district"
+            elif meta.get("source") == "osm":
                 base, name_en, name_az = _osm_names(r)
                 kind = "province"
             else:
                 base, kind = _split_name(r["shapeName"])
                 name_en, name_az = _localized(base, kind)
             rows.append({
-                "slug": f"{meta['code']}-{slugify(base)}" + ("-city" if kind == "city" else ""),
+                "slug": f"{prefix}-{slugify(base)}" + ("-city" if kind == "city" else ""),
                 "name_en": name_en,
                 "name_az": name_az,
                 "country": meta["code"],
-                "level": "district" if iso == "AZE" else "province",
+                "level": "district" if iso == "AZE" or kind == "district" else "province",
                 "kind": kind,
                 "geometry": r.geometry,
             })
         country_geom = country_union
         rows.append({
-            "slug": meta["code"], "name_en": meta["name_en"], "name_az": meta["name_az"],
-            "country": meta["code"], "level": "country", "kind": "country", "geometry": country_geom,
+            "slug": prefix, "name_en": meta["name_en"], "name_az": meta["name_az"],
+            "country": meta["code"], "level": "country", "kind": meta.get("kind", "country"),
+            "geometry": country_geom,
         })
 
     regions = gpd.GeoDataFrame(rows, crs=4326)

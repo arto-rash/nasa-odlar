@@ -13,8 +13,8 @@ import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Reveal } from "@/components/ui/reveal";
 import { http } from "@/lib/client";
 import { fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/format";
-import { useRegions } from "@/lib/queries";
-import type { AnnualSeries, Skill } from "@/lib/types";
+import { RegionCombobox } from "@/components/ui/region-combobox";
+import type { AnnualSeries, Skill, RegionRef } from "@/lib/types";
 import { useSize } from "@/lib/use-size";
 
 const SEASON_COLOR: Record<string, string> = { DJF: "#62d9e0", MAM: "#7fb38a", JJA: "#ff7a3d", SON: "#e3c35b" };
@@ -23,7 +23,7 @@ export function CompareClient({ initial, initialAnnual, initialSkill }: { initia
   const t = useTranslations("compare");
   const locale = useLocale() as AppLocale;
   const [slug, setSlug] = useState(initial);
-  const { data: regions } = useRegions();
+  const { data: picked } = useQuery({ queryKey: ["region", slug], queryFn: () => http<RegionRef>(`/regions/${slug}`) });
   const { data: annual = initialAnnual } = useQuery({
     queryKey: ["annual", slug],
     queryFn: () => http<AnnualSeries>(`/regions/${slug}/series/annual`),
@@ -34,24 +34,12 @@ export function CompareClient({ initial, initialAnnual, initialSkill }: { initia
     queryFn: () => http<Skill>(`/harmonization/skill?region=${slug}`),
     initialData: slug === initial ? initialSkill : undefined,
   });
-  const sorted = useMemo(
-    () => [...(regions ?? [])].sort((a, b) => (a.level === "country" ? -1 : 0) - (b.level === "country" ? -1 : 0) || regionName(a, locale).localeCompare(regionName(b, locale), locale)),
-    [regions, locale],
-  );
-
   return (
     <div className="mx-auto grid max-w-[1240px] gap-5 px-5 sm:px-8">
       <div className="flex flex-wrap items-center gap-3">
         <label className="flex items-center gap-3 text-[13px] text-dim">
           {t("region")}
-          <select value={slug} onChange={(e) => setSlug(e.target.value)} className="h-10 min-w-[220px] rounded-md bg-panel px-4 text-[14px] text-text ring-1 ring-line-strong outline-none">
-            {sorted.map((r) => (
-              <option key={r.slug} value={r.slug}>
-                {r.level === "country" ? "● " : ""}
-                {regionName(r, locale)}
-              </option>
-            ))}
-          </select>
+          <RegionCombobox value={slug} valueLabel={picked ? regionName(picked, locale) : undefined} onChange={(v) => setSlug(v)} className="min-w-[260px]" />
         </label>
       </div>
       <BeforeAfter annual={annual} />

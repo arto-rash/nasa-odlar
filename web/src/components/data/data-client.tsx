@@ -1,15 +1,18 @@
 "use client";
 
+import { useQuery } from "@tanstack/react-query";
 import { Check, Copy, Download, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { RegionCombobox } from "@/components/ui/region-combobox";
 import { Panel, PanelHeader } from "@/components/ui/panel";
 import { Segmented } from "@/components/ui/segmented";
+import { http } from "@/lib/client";
 import { regionName, type AppLocale } from "@/lib/format";
-import { useRegions } from "@/lib/queries";
+import type { RegionRef } from "@/lib/types";
 
 type Kind = "weekly" | "annual" | "hotspots";
 type Fmt = "csv" | "json" | "geojson";
@@ -34,8 +37,8 @@ const ENDPOINTS = [
 export function DataClient({ apiBase }: { apiBase: string }) {
   const t = useTranslations("data");
   const locale = useLocale() as AppLocale;
-  const { data: regions } = useRegions();
   const [slug, setSlug] = useState("az");
+  const { data: picked } = useQuery({ queryKey: ["region", slug], queryFn: () => http<RegionRef>(`/regions/${slug}`) });
   const [kind, setKind] = useState<Kind>("weekly");
   const [fmt, setFmt] = useState<Fmt>("csv");
   const [from, setFrom] = useState("2024-01-01");
@@ -69,13 +72,7 @@ export function DataClient({ apiBase }: { apiBase: string }) {
         <PanelHeader eyebrow={t("builder")} title={t("title")} />
         <div className="mt-6 space-y-5">
           <Field label={t("region")}>
-            <select value={slug} onChange={(e) => setSlug(e.target.value)} className="h-11 w-full rounded-lg bg-bg-sunken px-4 text-[14px] ring-1 ring-line outline-none focus:ring-ember-400">
-              {(regions ?? []).map((r) => (
-                <option key={r.slug} value={r.slug}>
-                  {regionName(r, locale)}
-                </option>
-              ))}
-            </select>
+            <RegionCombobox value={slug} valueLabel={picked ? regionName(picked, locale) : undefined} onChange={(v) => setSlug(v)} />
           </Field>
           <Field label={t("kind")}>
             <Segmented

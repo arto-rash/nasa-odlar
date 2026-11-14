@@ -247,7 +247,8 @@
     "sortTrend": "Trend",
     "density": "{value} / 100 km² / yr",
     "count": "{count} regions",
-    "annual": "annual mean"
+    "annual": "annual mean",
+    "showMore": "Show {count} more"
   },
   "region": {
     "annualMean": "Annual mean",
@@ -369,7 +370,8 @@
     "legend": "Risk level",
     "subscribe": "Get alerts for this region",
     "hotspotsIn": "Highest-risk districts",
-    "methodNote": "Probabilities are cross-fit calibrated: on days marked 30%, the threshold is exceeded about 30% of the time."
+    "methodNote": "Probabilities are cross-fit calibrated: on days marked 30%, the threshold is exceeded about 30% of the time.",
+    "showMore": "Show {count} more"
   },
   "compare": {
     "title": "Harmonization lab",

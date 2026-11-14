@@ -18,11 +18,14 @@ export default async function RegionsPage({ params }: { params: Promise<{ locale
   const { locale } = await params;
   setRequestLocale(locale);
   const t = await getTranslations("regions");
-  const regions = await api<Region[]>("/regions");
+  const [countries, initial] = await Promise.all([
+    api<Region[]>("/regions?level=country"),
+    api<Region[]>("/regions?country=az"),
+  ]);
   return (
     <main>
       <PageHeader title={t("title")} lead={t("lead")} />
-      <RegionsIndex regions={regions} />
+      <RegionsIndex countries={countries} initial={initial} />
       <Footer />
     </main>
   );

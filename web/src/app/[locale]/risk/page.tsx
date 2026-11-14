@@ -21,9 +21,18 @@ export default async function RiskPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const { r } = await searchParams;
+  // the world's top risks; a country's full list is loaded when it is picked
   const [items, overview] = await Promise.all([
-    api<RiskMapItem[]>("/risk"),
+    api<RiskMapItem[]>("/risk?limit=300"),
     api<Overview>("/overview"),
   ]);
-  return <RiskClient items={items} asOf={overview.meta.data_end} initial={r ?? null} />;
+  return (
+    <RiskClient
+      items={items}
+      asOf={overview.meta.data_end}
+      initial={r ?? null}
+      counts={overview.risk_counts}
+      countryNames={overview.country_names ?? {}}
+    />
+  );
 }

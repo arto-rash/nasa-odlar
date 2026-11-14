@@ -57,7 +57,8 @@ def save_status(status: dict) -> None:
 def ordered_batches(only: list[str] | None) -> list[dict]:
     world = json.loads(WORLD_FILE.read_text())
     batches = [b for b in world["batches"] if not only or b["name"] in only]
-    return sorted(batches, key=lambda b: (b.get("stream", False), b.get("weight", 0)))
+    # regular regions first, then the big countries' split batches, heavy ones last
+    return sorted(batches, key=lambda b: (b.get("stream", False), bool(b.get("split_of")), b.get("weight", 0)))
 
 
 def boundaries_ready(batch: dict, countries: dict) -> bool:

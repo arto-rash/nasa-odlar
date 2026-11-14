@@ -43,9 +43,25 @@ def region_or_404(s: Store, slug: str):
     return r
 
 
+_COUNTRY_NAMES: dict[str, tuple[str, str]] | None = None
+
+
+def country_names() -> dict[str, tuple[str, str]]:
+    """Country code -> (English, Azerbaijani) name. The real country entries, not
+    the state-level parents a big country is split into."""
+    global _COUNTRY_NAMES
+    if _COUNTRY_NAMES is None:
+        from odlar.grid.regions import COUNTRIES
+        _COUNTRY_NAMES = {c["code"]: (c["name_en"], c["name_az"]) for c in COUNTRIES.values()
+                          if c.get("source") != "split"}
+    return _COUNTRY_NAMES
+
+
 def _region_dict(r) -> dict:
+    cn = country_names().get(r.country, (r.country.upper(), r.country.upper()))
     return {"id": int(r.region_id), "slug": r.slug, "name_en": r.name_en, "name_az": r.name_az,
-            "country": r.country, "level": r.level, "kind": r.kind,
+            "country": r.country, "country_name_en": cn[0], "country_name_az": cn[1],
+            "level": r.level, "kind": r.kind,
             "parent_id": None if pd.isna(r.parent_id) else int(r.parent_id),
             "area_km2": _f(r.area_km2, 1), "lat": _f(r.lat, 4), "lon": _f(r.lon, 4)}
 
@@ -67,22 +83,99 @@ def _risk_for(s: Store, region_id: int) -> dict | None:
             "max_level": sub.sort_values("probability").iloc[-1]["level"]}
 
 
-def list_regions(s: Store) -> list[dict]:
+def region_summary(s: Store) -> pd.DataFrame:
+    """Per region: annual series, mean, density, decade trend and current risk,
+    computed once per loaded store (vectorized: ~25,000 regions take a second)."""
+    cached = getattr(s, "_summary", None)
+    if cached is not None:
+        return cached
     end_year = int(pd.Timestamp(s.meta["data_end"]).year)
     ann = s.annual[(s.annual["year"] >= 2001) & (s.annual["year"] < end_year)]
-    spark = {int(k): g.sort_values("year")["harmonized"].round(1).tolist() for k, g in ann.groupby("region_id")}
+    wide = ann.pivot_table(index="region_id", columns="year", values="harmonized", aggfunc="first").sort_index(axis=1)
+    v = wide.to_numpy(dtype=float)
+    years = wide.columns.to_numpy(dtype=float)
+    i, j = np.triu_indices(len(years), k=1)
+    slopes = (v[:, j] - v[:, i]) / (years[j] - years[i])
+    slope = np.nanmedian(slopes, axis=1) if slopes.size else np.zeros(len(v))  # Theil-Sen
+    mean = np.nanmean(v, axis=1) if v.size else np.zeros(len(v))
+    flat = (np.nanmax(v, axis=1) - np.nanmin(v, axis=1) == 0) | (np.sum(np.isfinite(v), axis=1) < 6)
+    out = pd.DataFrame({"region_id": wide.index.astype(int),
+                        "annual": [[float(x) for x in np.round(r[np.isfinite(r)], 1)] for r in v],
+                        "annual_mean": np.round(mean, 1),
+                        "trend_pct": np.where(flat | (mean == 0), 0.0, np.round(slope * 10 / np.where(mean == 0, 1, mean) * 100, 1))})
+    out = s.regions[["region_id", "area_km2", "parent_id"]].merge(out, on="region_id", how="left")
+    out["density"] = np.round(out["annual_mean"] / out["area_km2"].clip(lower=1) * 100, 3)
+    # current risk: leaves from the model, parents area-weighted over their leaves
+    rn = s.risk_now[["region_id", "probability", "level", "expected7"]]
+    out = out.merge(rn, on="region_id", how="left")
+    kids = out[out["probability"].notna() & out["parent_id"].notna()]
+    if len(kids):
+        w = kids["area_km2"].clip(lower=1)
+        agg = pd.DataFrame({"parent": kids["parent_id"].astype(int), "pw": kids["probability"] * w, "w": w,
+                            "e": kids["expected7"], "p": kids["probability"], "lvl": kids["level"]})
+        g = agg.groupby("parent")
+        par = pd.DataFrame({"probability": g["pw"].sum() / g["w"].sum(), "expected7": g["e"].sum(),
+                            "max_level": agg.loc[g["p"].idxmax(), ["parent", "lvl"]].set_index("parent")["lvl"]})
+        par["level"] = [risk_level(x) for x in par["probability"]]
+        m = out["probability"].isna() & out["region_id"].isin(par.index)
+        idx = out.loc[m, "region_id"]
+        for col in ("probability", "level", "expected7", "max_level"):
+            out.loc[m, col] = par[col].reindex(idx).to_numpy()
+    s._summary = out.set_index("region_id")
+    return s._summary
+
+
+def _risk_dict(row) -> dict | None:
+    if pd.isna(row.probability):
+        return None
+    d = {"probability": _f(row.probability, 4), "level": row.level, "expected7": _f(row.expected7, 2)}
+    if isinstance(getattr(row, "max_level", None), str):
+        d["max_level"] = row.max_level
+    return d
+
+
+def _search_rank(regions: pd.DataFrame, q: str) -> pd.Series:
+    """0 = name starts with the query, 1 = a word starts with it, 2 = contains it, NaN = no match."""
+    from odlar.grid.regions import slugify
+    needle = slugify(q).replace("-", " ").strip()
+    if not needle:
+        return pd.Series(np.nan, index=regions.index)
+    rank = pd.Series(np.nan, index=regions.index)
+    for col in ("name_en", "name_az", "slug"):
+        text = regions[col].fillna("").map(lambda t: slugify(str(t)).replace("-", " "))
+        r = np.where(text.str.startswith(needle), 0, np.where(text.str.contains(" " + needle, regex=False), 1,
+                     np.where(text.str.contains(needle, regex=False), 2, np.nan)))
+        rank = pd.concat([rank, pd.Series(r, index=regions.index)], axis=1).min(axis=1, skipna=True)
+    return rank
+
+
+def list_regions(s: Store, country: str | None = None, parent: str | None = None, q: str | None = None,
+                 level: str | None = None, limit: int | None = None, lite: bool = False) -> list[dict]:
+    """Regions with their risk, annual series and trend, filtered by country, parent
+    (a slug), level and a search query; ``lite`` leaves the annual series out."""
+    summ = region_summary(s)
+    regs = s.regions
+    if country:
+        regs = regs[regs["country"] == country.lower()]
+    if parent:
+        regs = regs[regs["parent_id"] == region_or_404(s, parent).region_id]
+    if level:
+        regs = regs[regs["level"] == level]
+    if q:
+        rank = _search_rank(regs, q)
+        regs = regs.assign(_rank=rank)[rank.notna()].sort_values(["_rank", "level", "name_en"])
+    if limit:
+        regs = regs.head(limit)
     out = []
-    for r in s.regions.itertuples():
+    for r in regs.itertuples():
         d = _region_dict(r)
-        rid = int(r.region_id)
-        d["risk"] = _risk_for(s, rid)
-        vals = spark.get(rid, [])
-        d["annual"] = vals
-        d["annual_mean"] = _f(np.mean(vals), 1) if vals else None
-        d["density"] = _f(np.mean(vals) / max(float(r.area_km2), 1) * 100, 3) if vals else None
-        if vals:
-            yrs = np.arange(2001, 2001 + len(vals), dtype=float)
-            d["trend_pct"] = trend(yrs, np.asarray(vals, dtype=float))["pct_per_decade"]
+        row = summ.loc[int(r.region_id)]
+        d["risk"] = _risk_dict(row)
+        if not lite:
+            d["annual"] = row.annual if isinstance(row.annual, list) else []
+        d["annual_mean"] = _f(row.annual_mean, 1)
+        d["density"] = _f(row.density, 3)
+        d["trend_pct"] = _f(row.trend_pct, 1)
         out.append(d)
     return out
 
@@ -255,8 +348,13 @@ def risk_detail(s: Store, slug: str) -> dict:
     return out
 
 
-def risk_map(s: Store) -> list[dict]:
-    rn = s.risk_now
+def risk_map(s: Store, country: str | None = None, limit: int | None = None) -> list[dict]:
+    rn = s.risk_now.sort_values("probability", ascending=False)
+    if country:
+        ids = set(s.regions.loc[s.regions["country"] == country.lower(), "region_id"].astype(int))
+        rn = rn[rn["region_id"].isin(ids)]
+    if limit:
+        rn = rn.head(limit)
     out = []
     for r in rn.itertuples():
         reg = s.by_id[int(r.region_id)]
@@ -470,6 +568,9 @@ def overview(s: Store) -> dict:
         "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),
         "n_regions": int(len(s.regions)),
         "countries": sorted(s.regions.loc[s.regions["level"] == "country", "country"].unique().tolist()),
+        "country_names": {c: {"en": country_names().get(c, (c.upper(),) * 2)[0],
+                              "az": country_names().get(c, (c.upper(),) * 2)[1]}
+                          for c in s.regions["country"].unique().tolist()},
     }
 
 

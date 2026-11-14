@@ -265,9 +265,40 @@ COUNTRY_FILES = {"modis": "MODIS_SP", "viirs-snpp": "VIIRS_SNPP_SP", "viirs-jpss
 COUNTRY_URL = FIRMS_BASE + "/data/country/{kind}/{year}/{kind}_{year}_{country}.csv"
 
 
+def in_boxes(df: pd.DataFrame, boxes: list[BBox] | None) -> pd.DataFrame:
+    """Rows inside any of ``boxes`` (all rows when ``boxes`` is None)."""
+    if not boxes or df.empty:
+        return df
+    keep = np.zeros(len(df), dtype=bool)
+    for b in boxes:
+        keep |= (df["lon"].between(b.west, b.east) & df["lat"].between(b.south, b.north)).to_numpy()
+    return df[keep]
+
+
+PARQUET_DIR = CACHE_DIR / "firms_country_pq"
+
+
 def country_file(kind: str, year: int, country: str, client: httpx.Client,
-                 cache_dir: Path = CACHE_DIR / "firms_country") -> pd.DataFrame:
-    """One yearly country file, cached on disk; an empty frame if FIRMS has none."""
+                 cache_dir: Path = CACHE_DIR / "firms_country", boxes: list[BBox] | None = None) -> pd.DataFrame:
+    """One yearly country file, normalized, cached as Parquet after the first read
+    (a big country's batches all read the same files), optionally only the rows
+    inside ``boxes``; an empty frame if FIRMS has none."""
+    pq = PARQUET_DIR / kind / f"{year}_{country}.parquet"
+    if pq.exists():
+        if not boxes:
+            return pd.read_parquet(pq)
+        filters = [[("lon", ">=", b.west), ("lon", "<=", b.east), ("lat", ">=", b.south), ("lat", "<=", b.north)]
+                   for b in boxes]
+        return pd.read_parquet(pq, filters=filters)
+    df = _country_file(kind, year, country, client, cache_dir)
+    pq.parent.mkdir(parents=True, exist_ok=True)
+    tmp = pq.with_suffix(".tmp")
+    (df if len(df) else pd.DataFrame(columns=COLUMNS)).astype({"acq_date": "datetime64[ns]"}).to_parquet(tmp, index=False)
+    os.replace(tmp, pq)
+    return in_boxes(df, boxes)
+
+
+def _country_file(kind: str, year: int, country: str, client: httpx.Client, cache_dir: Path) -> pd.DataFrame:
     path = cache_dir / kind / f"{year}_{country}.csv"
     missing = path.with_suffix(".missing")
     if missing.exists():
@@ -339,16 +370,17 @@ def download_global(start_year: int, end_year: int, global_dir: Path = GLOBAL_DI
 
 def fetch_country_archive(map_key: str, country: str, bbox: BBox | list[BBox], start: date, end: date) -> pd.DataFrame:
     """Yearly country files through last year, then the area API (science quality
-    where FIRMS has it, NRT after) for this year. NOAA-21 has no country files, so
-    its whole record comes from the area API."""
+    where FIRMS has it, NRT after) for this year, all limited to ``bbox`` (a batch
+    may hold only part of a big country). NOAA-21 has no country files, so its
+    past years come from the area API."""
     last_file_year = end.year - 1
+    boxes = bbox if isinstance(bbox, list) else [bbox]
     frames = []
     with httpx.Client(timeout=300) as http:
         for kind, source in COUNTRY_FILES.items():
             first = max(start.year, SOURCES[source][2].year)
             for year in range(first, last_file_year + 1):
-                frames.append(country_file(kind, year, country, http))
-    boxes = bbox if isinstance(bbox, list) else [bbox]
+                frames.append(country_file(kind, year, country, http, boxes=boxes))
     for box in boxes:
         frames.append(fetch_archive(map_key, date(end.year, 1, 1), end, box))
     client = FirmsClient(map_key)

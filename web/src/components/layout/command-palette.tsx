@@ -8,7 +8,7 @@ import { useEffect, useMemo, useState } from "react";
 import { usePathname, useRouter } from "@/i18n/navigation";
 import { RISK_COLOR } from "@/lib/colors";
 import { regionName, type AppLocale } from "@/lib/format";
-import { useRegions } from "@/lib/queries";
+import { useRegionSearch } from "@/lib/queries";
 import { matchScore } from "@/lib/search";
 import { useUi } from "@/lib/store";
 import { useTheme } from "./theme-toggle";
@@ -25,7 +25,7 @@ export function CommandPalette() {
   const pathname = usePathname();
   const [theme, setTheme] = useTheme();
   const [query, setQuery] = useState("");
-  const { data: regions } = useRegions();
+  const { data: regions } = useRegionSearch(query, 12);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

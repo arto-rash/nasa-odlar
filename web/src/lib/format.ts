@@ -57,6 +57,10 @@ export function regionName(r: Pick<RegionRef, "name_en" | "name_az"> | undefined
   return locale === "az" ? r.name_az : r.name_en;
 }
 
+export function countryLabel(r: Pick<RegionRef, "country" | "country_name_en" | "country_name_az">, locale: AppLocale): string {
+  return (locale === "az" ? r.country_name_az : r.country_name_en) ?? r.country.toUpperCase();
+}
+
 /** Short name without "District"/"rayonu" suffix, for tight UI. */
 export function shortName(r: Pick<RegionRef, "name_en" | "name_az"> | undefined | null, locale: AppLocale): string {
   return regionName(r, locale).replace(/ (District|rayonu)$/u, "");

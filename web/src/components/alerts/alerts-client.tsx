@@ -14,7 +14,7 @@ import { Link, useRouter } from "@/i18n/navigation";
 import { http, HttpError } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { fmtDate, fmtPct, regionName, type AppLocale } from "@/lib/format";
-import { useRegions } from "@/lib/queries";
+import { RegionCombobox } from "@/components/ui/region-combobox";
 import { useAuth } from "@/lib/store";
 import { useHydrated } from "@/lib/use-hydrated";
 import type { Alert, Channel, RiskLevel, Subscription } from "@/lib/types";
@@ -174,10 +174,10 @@ function SubscriptionsPanel({ subs, onChange }: { subs: Subscription[]; onChange
   const t = useTranslations("alerts");
   const tl = useTranslations("levels");
   const locale = useLocale() as AppLocale;
-  const { data: regions } = useRegions();
   const params = useSearchParams();
   const [adding, setAdding] = useState(Boolean(params.get("add")));
   const [slug, setSlug] = useState(params.get("add") ?? "");
+  const [pickedName, setPickedName] = useState("");
   const [threshold, setThreshold] = useState<Exclude<RiskLevel, "low">>("high");
   const [channels, setChannels] = useState<Channel[]>(["in_app", "email"]);
   const create = useMutation({
@@ -224,14 +224,7 @@ function SubscriptionsPanel({ subs, onChange }: { subs: Subscription[]; onChange
             }}
           >
             <div className="mt-4 space-y-3 rounded-lg bg-bg-sunken/60 p-4 ring-1 ring-line">
-              <select required value={slug} onChange={(e) => setSlug(e.target.value)} className="h-11 w-full rounded-md bg-panel px-3 text-[14px] ring-1 ring-line outline-none">
-                <option value="">—</option>
-                {(regions ?? []).map((r) => (
-                  <option key={r.slug} value={r.slug}>
-                    {regionName(r, locale)}
-                  </option>
-                ))}
-              </select>
+              <RegionCombobox value={slug || null} valueLabel={pickedName || undefined} onChange={(v, r) => { setSlug(v); setPickedName(regionName(r, locale)); }} leavesOnly placeholder="—" />
               <ThresholdPicker value={threshold} onChange={setThreshold} />
               <ChannelPicker value={channels} onToggle={(c) => setChannels((l) => toggle(l, c))} />
               <div className="flex gap-2">

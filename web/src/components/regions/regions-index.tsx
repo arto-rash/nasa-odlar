@@ -8,45 +8,59 @@ import { Sparkline } from "@/components/charts/sparkline";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Segmented } from "@/components/ui/segmented";
 import { Link } from "@/i18n/navigation";
-import { fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/format";
-import { matchScore } from "@/lib/search";
+import { countryLabel, fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/format";
+import { useCountryRegions, useRegionSearch } from "@/lib/queries";
 import type { Region } from "@/lib/types";
 
 type Sort = "risk" | "activity" | "trend" | "name";
 
-export function RegionsIndex({ regions }: { regions: Region[] }) {
+const HOME = ["az", "ge", "am"];
+const PAGE = 120;
+
+/**
+ * Regions of one country at a time (the world has ~25,000), plus a search over
+ * all of them. Country cards: the home countries and the one selected.
+ */
+export function RegionsIndex({ countries, initial }: { countries: Region[]; initial: Region[] }) {
   const t = useTranslations("regions");
   const tc = useTranslations("common");
   const locale = useLocale() as AppLocale;
-  const [country, setCountry] = useState<"all" | Region["country"]>("all");
+  const [country, setCountry] = useState("az");
   const [sort, setSort] = useState<Sort>("risk");
   const [q, setQ] = useState("");
-  // whatever countries the data covers, Azerbaijan (home) first
-  const countries = regions
-    .filter((r) => r.level === "country")
-    .sort((a, b) => Number(b.country === "az") - Number(a.country === "az") || regionName(a, locale).localeCompare(regionName(b, locale), locale));
-  const countryName = (code: string) => {
-    const c = countries.find((x) => x.country === code);
-    return c ? regionName(c, locale) : code.toUpperCase();
-  };
+  const [shown, setShown] = useState(PAGE);
+  const { data: byCountry } = useCountryRegions(country);
+  const { data: found } = useRegionSearch(q, 200);
+  const searching = q.trim().length > 0;
+  const source = searching ? found : (byCountry ?? (country === "az" ? initial : undefined));
+
+  // one entry per country code (a big country's states share its code), home first
+  const options = useMemo(() => {
+    const seen = new Map<string, Region>();
+    for (const c of countries) if (!seen.has(c.country)) seen.set(c.country, c);
+    return [...seen.values()].sort(
+      (a, b) => Number(HOME.includes(b.country)) - Number(HOME.includes(a.country)) ||
+        countryLabel(a, locale).localeCompare(countryLabel(b, locale), locale),
+    );
+  }, [countries, locale]);
+  const cards = countries.filter((c) => c.kind !== "state" && (HOME.includes(c.country) || c.country === country))
+    .sort((a, b) => HOME.indexOf(a.country) - HOME.indexOf(b.country));
+
   const list = useMemo(() => {
-    const l = regions
-      .filter((r) => r.level !== "country")
-      .filter((r) => country === "all" || r.country === country)
-      .filter((r) => matchScore(q, r.name_az, r.name_en) > 0);
+    const l = (source ?? []).filter((r) => r.level !== "country");
     const by: Record<Sort, (a: Region, b: Region) => number> = {
       risk: (a, b) => (b.risk?.probability ?? 0) - (a.risk?.probability ?? 0),
       activity: (a, b) => (b.density ?? 0) - (a.density ?? 0),
       trend: (a, b) => (b.trend_pct ?? 0) - (a.trend_pct ?? 0),
       name: (a, b) => regionName(a, locale).localeCompare(regionName(b, locale), locale),
     };
-    return l.sort(by[sort]);
-  }, [regions, country, q, sort, locale]);
+    return searching ? l : [...l].sort(by[sort]);
+  }, [source, sort, locale, searching]);
 
   return (
     <div className="mx-auto max-w-[1240px] px-5 sm:px-8">
       <div className="grid gap-4 md:grid-cols-3">
-        {countries.map((c, i) => (
+        {cards.map((c, i) => (
           <motion.div key={c.slug} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 + i * 0.07, duration: 0.7, ease: [0.16, 1, 0.3, 1] }}>
             <Link href={`/region/${c.slug}`} className="group glass relative block overflow-hidden rounded-lg p-5 transition hover:ring-1 hover:ring-line-strong">
               <div className="flex items-start justify-between">
@@ -68,13 +82,23 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
       </div>
 
       <div className="sticky top-[72px] z-30 mt-10 flex flex-wrap items-center gap-2 rounded-full bg-bg/80 py-2 sm:top-20">
-        <Segmented
-          label={tc("country")}
-          size="sm"
-          value={country}
-          onChange={setCountry}
-          options={[{ value: "all" as const, label: tc("all") }, ...countries.map((c) => ({ value: c.country, label: regionName(c, locale) }))]}
-        />
+        <label className="flex h-9 items-center gap-2 rounded-md bg-bg-sunken px-3 ring-1 ring-line">
+          <span className="sr-only">{tc("country")}</span>
+          <select
+            value={country}
+            onChange={(e) => {
+              setCountry(e.target.value);
+              setShown(PAGE);
+            }}
+            className="max-w-[220px] bg-transparent text-[13px] outline-none"
+          >
+            {options.map((c) => (
+              <option key={c.country} value={c.country}>
+                {countryLabel(c, locale)}
+              </option>
+            ))}
+          </select>
+        </label>
         <label className="flex h-9 min-w-[180px] flex-1 items-center gap-2 rounded-md bg-bg-sunken px-3.5 ring-1 ring-line">
           <Search className="size-3.5 text-faint" />
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("search")} className="w-full bg-transparent text-[13px] outline-none placeholder:text-faint" />
@@ -96,7 +120,7 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
 
       <motion.ul layout className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <AnimatePresence initial={false}>
-          {list.map((r) => (
+          {list.slice(0, shown).map((r) => (
             <motion.li
               layout
               key={r.slug}
@@ -109,7 +133,7 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
                     <p className="truncate text-[15px] font-medium">{regionName(r, locale)}</p>
-                    <p className="mt-0.5 text-[12.5px] text-faint">{countryName(r.country)}</p>
+                    <p className="mt-0.5 text-[12.5px] text-faint">{countryLabel(r, locale)}</p>
                   </div>
                   {r.risk && (
                     <span className="text-right">
@@ -135,6 +159,13 @@ export function RegionsIndex({ regions }: { regions: Region[] }) {
           ))}
         </AnimatePresence>
       </motion.ul>
+      {list.length > shown && (
+        <div className="mt-6 flex justify-center">
+          <button type="button" onClick={() => setShown((n) => n + PAGE * 2)} className="rounded-full bg-panel px-5 py-2 text-[13px] ring-1 ring-line-strong transition hover:ring-ember-400">
+            {t("showMore", { count: list.length - shown })}
+          </button>
+        </div>
+      )}
     </div>
   );
 }

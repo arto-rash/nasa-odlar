@@ -9,6 +9,10 @@ export interface RegionRef {
   name_en: string;
   name_az: string;
   country: string; // ISO 3166-1 alpha-2, lower case ("az", "ge", "tr", ...)
+  /** The country's name. A big country's states are "country"-level parents too, so
+   *  a country's own name comes from here, not from a region row. */
+  country_name_en?: string;
+  country_name_az?: string;
   level: "country" | "district" | "province";
   kind?: string;
   parent_id?: number | null;
@@ -244,6 +248,8 @@ export interface Overview {
   risk_top: RiskMapItem[];
   risk_counts: Partial<Record<RiskLevel, number>>;
   n_regions: number;
+  countries?: string[];
+  country_names?: Record<string, { en: string; az: string }>;
 }
 
 export interface Meta {

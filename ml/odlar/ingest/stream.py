@@ -39,7 +39,7 @@ def country_year(map_key: str, country: str, bbox: firms.BBox | list[firms.BBox]
     if year <= last_file_year:
         for kind, source in firms.COUNTRY_FILES.items():
             if year >= firms.SOURCES[source][2].year:
-                frames.append(firms.country_file(kind, year, country, http))
+                frames.append(firms.country_file(kind, year, country, http, boxes=boxes))
         if firms.NOAA21_HISTORY:
             n21 = firms.SOURCES["VIIRS_NOAA21_NRT"][2]
             if year >= n21.year:

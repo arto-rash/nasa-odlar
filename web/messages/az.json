@@ -247,7 +247,8 @@
     "sortTrend": "Trend",
     "density": "{value} / 100 km² / il",
     "count": "{count} bölgə",
-    "annual": "illik orta"
+    "annual": "illik orta",
+    "showMore": "Daha {count} göstər"
   },
   "region": {
     "annualMean": "İllik orta",
@@ -369,7 +370,8 @@
     "legend": "Risk səviyyəsi",
     "subscribe": "Bu bölgə üçün bildiriş al",
     "hotspotsIn": "Ən riskli rayonlar",
-    "methodNote": "Ehtimallar çarpaz kalibrlənib: 30% deyilən günlərin təxminən 30%-də hədd həqiqətən keçilir."
+    "methodNote": "Ehtimallar çarpaz kalibrlənib: 30% deyilən günlərin təxminən 30%-də hədd həqiqətən keçilir.",
+    "showMore": "Daha {count} göstər"
   },
   "compare": {
     "title": "Harmonizasiya laboratoriyası",

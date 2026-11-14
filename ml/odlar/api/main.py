@@ -82,8 +82,12 @@ def meta(s: Store = Depends(store)):
 
 
 @app.get("/regions", dependencies=deps)
-def regions(s: Store = Depends(store)):
-    return service.list_regions(s)
+def regions(country: str | None = Query(None, max_length=3), parent: str | None = Query(None, max_length=100),
+            q: str | None = Query(None, max_length=80), level: str | None = Query(None, max_length=20),
+            limit: int | None = Query(None, ge=1, le=50000), lite: bool = False, s: Store = Depends(store)):
+    """All regions, or filtered: by country code, parent region slug, level or a
+    search query (best matches first); ``lite`` leaves out the annual series."""
+    return service.list_regions(s, country, parent, q, level, limit, lite)
 
 
 @app.get("/regions/geojson", dependencies=deps)
@@ -124,8 +128,10 @@ def calendar(slug: str, s: Store = Depends(store)):
 
 
 @app.get("/risk", dependencies=deps)
-def risk_map(s: Store = Depends(store)):
-    return service.risk_map(s)
+def risk_map(country: str | None = Query(None, max_length=3), limit: int | None = Query(None, ge=1, le=50000),
+             s: Store = Depends(store)):
+    """Current 7-day risk per province, highest first; optionally one country or the top ``limit``."""
+    return service.risk_map(s, country, limit)
 
 
 @app.get("/risk/{slug}", dependencies=deps)

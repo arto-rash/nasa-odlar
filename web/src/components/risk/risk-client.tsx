@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
+import { keepPreviousData, useQuery } from "@tanstack/react-query";
 import type { MapLayerMouseEvent } from "maplibre-gl";
 import { ArrowLeft, ArrowRight, BellPlus, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -16,7 +16,6 @@ import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
 import { DriverList } from "@/components/region/drivers";
 import { InfoTip } from "@/components/ui/info-tip";
 import { RiskBadge } from "@/components/ui/risk-badge";
-import { Segmented } from "@/components/ui/segmented";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
@@ -24,12 +23,17 @@ import { fmtDate, fmtNum, fmtPct, regionName, type AppLocale } from "@/lib/forma
 import { matchScore } from "@/lib/search";
 import { RISK_LEVELS, type RiskDetail, type RiskMapItem } from "@/lib/types";
 
+const SHOW = 200;
+
 export function RiskClient({
-  items, asOf, initial,
+  items, asOf, initial, counts, countryNames,
 }: {
   items: RiskMapItem[];
   asOf: string;
   initial: string | null;
+  /** risk levels over every province, not just the loaded list */
+  counts: Partial<Record<string, number>>;
+  countryNames: Record<string, { en: string; az: string }>;
 }) {
   const t = useTranslations("risk");
   const signature = useCountryShape("az");
@@ -48,23 +52,25 @@ export function RiskClient({
     window.history.replaceState(null, "", u);
   }, [selected]);
 
+  const [shown, setShown] = useState(SHOW);
+  // "all": the world's top risks (server-ranked); a country: its full list
+  const { data: countryItems } = useQuery({
+    queryKey: ["risk-country", country],
+    enabled: country !== "all",
+    queryFn: () => http<RiskMapItem[]>(`/risk?country=${country}`),
+    placeholderData: keepPreviousData,
+  });
   const list = useMemo(
-    () =>
-      items
-        .filter((r) => country === "all" || r.country === country)
-        .filter((r) => matchScore(q, r.name_az, r.name_en) > 0),
-    [items, country, q],
+    () => (country === "all" ? items : (countryItems ?? [])).filter((r) => matchScore(q, r.name_az, r.name_en) > 0),
+    [items, countryItems, country, q],
   );
-  // Countries present in the data, Azerbaijan first
+  const name = (c: string) => countryNames[c]?.[locale] ?? c.toUpperCase();
+  // every country with data, Azerbaijan first
   const countryCodes = useMemo(
-    () => [...new Set(items.map((r) => r.country))].sort((a, b) => (a === "az" ? -1 : b === "az" ? 1 : a.localeCompare(b))),
-    [items],
+    () => Object.keys(countryNames).sort((a, b) => (a === "az" ? -1 : b === "az" ? 1 : name(a).localeCompare(name(b), locale))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [countryNames, locale],
   );
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    for (const r of items) c[r.level] = (c[r.level] ?? 0) + 1;
-    return c;
-  }, [items]);
 
   const onHover = useCallback((p: { name_az: string; name_en: string; probability?: number } | null, e?: MapLayerMouseEvent) => {
     setHover(p && e ? { ...p, x: e.point.x, y: e.point.y } : null);
@@ -121,20 +127,31 @@ export function RiskClient({
             <motion.div key="list" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} transition={{ duration: 0.35 }} className="p-5 sm:p-6">
               <p className="text-[13.5px] leading-relaxed text-dim">{t("lead")}</p>
               <div className="mt-5 flex flex-wrap items-center gap-2">
-                <Segmented
-                  label={tc("country")}
-                  size="sm"
-                  value={country}
-                  onChange={setCountry}
-                  options={[{ value: "all", label: tc("all") }, ...countryCodes.map((c) => ({ value: c, label: c.toUpperCase() }))]}
-                />
+                <label className="flex h-9 items-center rounded-md bg-bg-sunken px-3 ring-1 ring-line">
+                  <span className="sr-only">{tc("country")}</span>
+                  <select
+                    value={country}
+                    onChange={(e) => {
+                      setCountry(e.target.value);
+                      setShown(SHOW);
+                    }}
+                    className="max-w-[180px] bg-transparent text-[13px] outline-none"
+                  >
+                    <option value="all">{tc("all")}</option>
+                    {countryCodes.map((c) => (
+                      <option key={c} value={c}>
+                        {name(c)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
                 <label className="flex h-9 flex-1 items-center gap-2 rounded-md bg-bg-sunken px-3 ring-1 ring-line">
                   <Search className="size-3.5 text-faint" />
                   <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("selectRegion")} className="w-full bg-transparent text-[13px] outline-none placeholder:text-faint" />
                 </label>
               </div>
               <ol className="mt-4 space-y-1">
-                {list.map((r, i) => (
+                {list.slice(0, shown).map((r, i) => (
                   <li key={r.slug}>
                     <button onClick={() => setSelected(r.slug)} className="group flex w-full items-center gap-3 rounded-md px-2.5 py-2 text-left transition hover:bg-panel-hover">
                       <span className="w-6 tabular-nums text-[12.5px] text-faint">{i + 1}</span>
@@ -150,6 +167,11 @@ export function RiskClient({
                   </li>
                 ))}
               </ol>
+              {list.length > shown && (
+                <button type="button" onClick={() => setShown((n) => n + SHOW)} className="mt-3 w-full rounded-md py-2 text-[13px] text-dim ring-1 ring-line transition hover:ring-ember-400">
+                  {t("showMore", { count: list.length - shown })}
+                </button>
+              )}
             </motion.div>
           )}
         </AnimatePresence>
