@@ -56,10 +56,19 @@ def _clean(obj):
 SERVE_TOLERANCE = 0.0006  # degrees, ~60 m: about a pixel at zoom 11
 
 
-def serving_geometry(regions: gpd.GeoDataFrame, tolerance: float = SERVE_TOLERANCE) -> gpd.GeoDataFrame:
+def serve_tolerance(regions: gpd.GeoDataFrame) -> float:
+    """~60 m for district-sized regions (~1,000 km²), coarser for big provinces:
+    the tolerance grows with the square root of the typical region's area, so
+    every region keeps about the same number of points."""
+    median_km2 = float(regions.loc[regions["level"] != "country", "area_km2"].median())
+    return float(np.clip(SERVE_TOLERANCE * np.sqrt(max(median_km2, 1.0) / 1000.0), SERVE_TOLERANCE, 0.003))
+
+
+def serving_geometry(regions: gpd.GeoDataFrame, tolerance: float | None = None) -> gpd.GeoDataFrame:
     """Lighter polygons for the map. Leaves are simplified as one coverage, so
     neighbours keep an identical shared edge (no slivers or overlaps), and each
     country is the union of its simplified leaves."""
+    tolerance = serve_tolerance(regions) if tolerance is None else tolerance
     geo = regions.copy()
     leaf = (geo["level"] != "country").to_numpy()
     geo.loc[leaf, "geometry"] = shapely.coverage_simplify(geo.geometry[leaf].to_numpy(), tolerance)
@@ -76,7 +85,9 @@ def write_all(store_dir: Path, *, regions: gpd.GeoDataFrame, hotspots: pd.DataFr
     """Write a batch store. Detections go to per-year files (odlar.points); with
     ``hotspot_years`` only those years are written (the caller carries the rest over)."""
     store_dir.mkdir(parents=True, exist_ok=True)
-    serving_geometry(regions).to_file(store_dir / "regions.geojson", driver="GeoJSON", COORDINATE_PRECISION=5)
+    tol = serve_tolerance(regions)
+    serving_geometry(regions, tol).to_file(store_dir / "regions.geojson", driver="GeoJSON",
+                                           COORDINATE_PRECISION=5 if tol < 0.001 else 4)
     pd.DataFrame(regions.drop(columns="geometry")).to_parquet(store_dir / "regions.parquet")
     if hotspots is not None:  # None: the caller has already put the point files in place
         write_points(store_dir, hotspots, hotspot_years)

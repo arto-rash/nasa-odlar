@@ -1,4 +1,3 @@
-import type { FeatureCollection } from "geojson";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { ExploreClient } from "@/components/explore/explore-client";
@@ -22,9 +21,8 @@ export default async function ExplorePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const { w } = await searchParams;
-  const [timeline, regions, grid] = await Promise.all([
+  const [timeline, grid] = await Promise.all([
     api<TimelinePoint[]>("/timeline"),
-    api<FeatureCollection>("/regions/geojson"),
     api<{ cells: [number, number, number][] }>("/grid"),
   ]);
   // Default to the busiest week of the last complete year — the most telling first frame.
@@ -33,5 +31,5 @@ export default async function ExplorePage({
     .filter((p) => +p.week.slice(0, 4) === lastYear)
     .reduce((a, b) => (b.viirs > a.viirs ? b : a), timeline[timeline.length - 1]);
   const initialWeek = w && timeline.some((p) => p.week === w) ? w : peak.week;
-  return <ExploreClient timeline={timeline} regions={regions} cells={grid.cells} initialWeek={initialWeek} />;
+  return <ExploreClient timeline={timeline} cells={grid.cells} initialWeek={initialWeek} />;
 }

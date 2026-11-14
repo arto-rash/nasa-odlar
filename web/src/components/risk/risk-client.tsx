@@ -12,6 +12,7 @@ import { RiskDial } from "@/components/charts/risk-dial";
 import { SeriesChart } from "@/components/charts/series-chart";
 import { BaseMap, useMap } from "@/components/map/base-map";
 import { RegionsLayer, SignatureLayer } from "@/components/map/layers";
+import { useRegionsGeoJson } from "@/components/map/use-regions";
 import { DriverList } from "@/components/region/drivers";
 import { InfoTip } from "@/components/ui/info-tip";
 import { RiskBadge } from "@/components/ui/risk-badge";
@@ -24,14 +25,14 @@ import { matchScore } from "@/lib/search";
 import { RISK_LEVELS, type RiskDetail, type RiskMapItem } from "@/lib/types";
 
 export function RiskClient({
-  items, regions, asOf, initial,
+  items, asOf, initial,
 }: {
   items: RiskMapItem[];
-  regions: FeatureCollection;
   asOf: string;
   initial: string | null;
 }) {
   const t = useTranslations("risk");
+  const regions = useRegionsGeoJson();
   const tc = useTranslations("common");
   const tl = useTranslations("levels");
   const locale = useLocale() as AppLocale;
@@ -157,11 +158,11 @@ export function RiskClient({
   );
 }
 
-function FlyTo({ slug, regions }: { slug: string | null; regions: FeatureCollection }) {
+function FlyTo({ slug, regions }: { slug: string | null; regions: FeatureCollection | null }) {
   const map = useMap();
   useEffect(() => {
     if (!map || !slug) return;
-    const f = regions.features.find((x) => x.properties?.slug === slug);
+    const f = regions?.features.find((x) => x.properties?.slug === slug);
     if (!f) return;
     const coords: number[][] = [];
     const walk = (c: unknown) => (Array.isArray(c) && typeof c[0] === "number" ? coords.push(c as number[]) : Array.isArray(c) && c.forEach(walk));

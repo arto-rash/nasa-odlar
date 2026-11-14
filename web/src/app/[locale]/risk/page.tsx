@@ -1,4 +1,3 @@
-import type { FeatureCollection } from "geojson";
 import type { Metadata } from "next";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { RiskClient } from "@/components/risk/risk-client";
@@ -22,10 +21,9 @@ export default async function RiskPage({
   const { locale } = await params;
   setRequestLocale(locale);
   const { r } = await searchParams;
-  const [items, regions, overview] = await Promise.all([
+  const [items, overview] = await Promise.all([
     api<RiskMapItem[]>("/risk"),
-    api<FeatureCollection>("/regions/geojson"),
     api<Overview>("/overview"),
   ]);
-  return <RiskClient items={items} regions={regions} asOf={overview.meta.data_end} initial={r ?? null} />;
+  return <RiskClient items={items} asOf={overview.meta.data_end} initial={r ?? null} />;
 }

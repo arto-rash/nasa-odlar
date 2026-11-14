@@ -9,6 +9,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FireClock } from "@/components/charts/fire-clock";
 import { BaseMap, useMap } from "@/components/map/base-map";
+import { useRegionsGeoJson } from "@/components/map/use-regions";
 import { DensityLayer, HotspotLayer, RegionsLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
@@ -23,16 +24,16 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z").getTime() + n * 86400000));
 
 export function ExploreClient({
-  timeline, regions, cells, initialWeek,
+  timeline, cells, initialWeek,
 }: {
   timeline: TimelinePoint[];
-  regions: FeatureCollection;
   cells: [number, number, number][];
   initialWeek: string;
 }) {
   const t = useTranslations("explore");
   const locale = useLocale() as AppLocale;
   const qc = useQueryClient();
+  const regions = useRegionsGeoJson();
   const [index, setIndex] = useState(() => Math.max(0, timeline.findIndex((p) => p.week === initialWeek)));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
