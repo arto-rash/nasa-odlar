@@ -550,7 +550,8 @@
     "notFoundLead": "Axtardığınız səhifə tapılmadı.",
     "home": "Ana səhifə",
     "genericTitle": "Nə isə səhv getdi",
-    "genericLead": "Analitika xidməti hazırda cavab vermir. Bir azdan yenidən cəhd edin."
+    "genericLead": "Analitika xidməti hazırda cavab vermir. Bir azdan yenidən cəhd edin.",
+    "reload": "Səhifəni yenilə"
   },
   "ahead": {
     "title": "Qarşıda nə var",

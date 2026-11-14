@@ -550,7 +550,8 @@
     "notFoundLead": "We couldn't find the page you were looking for.",
     "home": "Home",
     "genericTitle": "Something went wrong",
-    "genericLead": "The analytics service isn't responding right now. Please try again in a moment."
+    "genericLead": "The analytics service isn't responding right now. Please try again in a moment.",
+    "reload": "Reload page"
   },
   "ahead": {
     "title": "What's ahead",
