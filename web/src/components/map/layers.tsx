@@ -81,14 +81,16 @@ export function useLayer(spec: LayerSpecification, before?: string) {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [map, spec.id]);
-  // live paint updates
+  // live paint, layout and filter updates
   const paint = JSON.stringify("paint" in spec ? spec.paint : {});
   const layout = JSON.stringify("layout" in spec ? spec.layout : {});
+  const filter = JSON.stringify("filter" in spec ? (spec.filter ?? null) : null);
   useEffect(() => {
     if (!map?.getLayer(spec.id)) return;
     for (const [k, v] of Object.entries(JSON.parse(paint) as Record<string, unknown>)) map.setPaintProperty(spec.id, k, v);
     for (const [k, v] of Object.entries(JSON.parse(layout) as Record<string, unknown>)) map.setLayoutProperty(spec.id, k, v);
-  }, [map, spec.id, paint, layout]);
+    map.setFilter(spec.id, JSON.parse(filter));
+  }, [map, spec.id, paint, layout, filter]);
 }
 
 export interface HotspotPoint {
