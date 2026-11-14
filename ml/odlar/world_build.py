@@ -138,6 +138,7 @@ def main() -> None:
 
     shipper = threading.Thread(target=uploader, daemon=False)
     shipper.start()
+    retried: set[str] = set()
     while pending:
         ready = [b for b in pending if a.ship_only or boundaries_ready(b, COUNTRIES)]
         if not ready:
@@ -158,6 +159,9 @@ def main() -> None:
             save_status(status)
             print(f"{now()} {name}: {status[name]['state']} in {status[name]['minutes']} min", flush=True)
             if not ok:
+                if name not in retried:  # once more, at the end of the queue (a fix may land meanwhile)
+                    retried.add(name)
+                    pending.append(b)
                 continue
         if not a.no_ship:
             status[name]["state"] = "uploading"
