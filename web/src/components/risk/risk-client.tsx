@@ -82,7 +82,7 @@ export function RiskClient({
   }, []);
 
   return (
-    <div className="grid min-h-dvh lg:h-dvh lg:grid-cols-[minmax(0,1fr)_440px]">
+    <div className="grid min-h-dvh grid-cols-[minmax(0,1fr)] lg:h-dvh lg:grid-cols-[minmax(0,1fr)_440px]">
       <div className="relative h-[52vh] lg:h-full">
         <BaseMap className="absolute inset-0" controlsPosition="bottom-left" terrain>
           <ViewportRegionsLayer mode="risk" selected={selected} onHover={onHover} onClick={setSelected} />
