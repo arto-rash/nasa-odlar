@@ -12,6 +12,13 @@ const nextConfig: NextConfig = {
   },
   poweredByHeader: false,
   images: { formats: ["image/avif", "image/webp"] },
+  // With the gateway configured, browser API calls are forwarded by the edge
+  // network (no function runs, nothing is billed as compute). Checked before the
+  // route handler, which stays for local runs that talk to FastAPI directly.
+  async rewrites() {
+    const api = process.env.ODLAR_API_URL?.replace(/\/$/, "");
+    return { beforeFiles: api ? [{ source: "/api/v1/:path*", destination: `${api}/:path*` }] : [] };
+  },
   async headers() {
     return [
       {

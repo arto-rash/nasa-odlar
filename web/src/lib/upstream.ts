@@ -52,15 +52,14 @@ export class ApiError extends Error {
 }
 
 /**
- * Server-side JSON fetch. Always asks the gateway, which caches every answer for
- * 10 minutes and is cleared after each data refresh. Next's own data cache is not
- * used: it outlives deployments, cannot hold answers over 2 MB, and kept serving
- * pre-refresh data after new countries were added.
+ * Server-side JSON fetch, cached for 10 minutes like the pages that use it (the
+ * data changes once a day). Answers over 2 MB are not cached by Next and are
+ * simply fetched again; the page itself is still cached.
  */
 export async function api<T>(path: string, opts: { search?: string } = {}): Promise<T> {
   const res = await upstream(path, {
     search: opts.search,
-    cache: "no-store",
+    next: { revalidate: 600 },
   } as RequestInit & { search?: string });
   if (!res.ok) {
     let message = res.statusText;
