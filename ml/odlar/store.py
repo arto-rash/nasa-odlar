@@ -57,6 +57,9 @@ def _clean(obj):
 SERVE_TOLERANCE = 0.0006  # degrees, ~60 m: about a pixel at zoom 11
 
 
+STATE_TOLERANCE = 0.0005  # degrees: region shapes the daily refresh assigns detections with
+
+
 def serve_tolerance(regions: gpd.GeoDataFrame) -> float:
     """~60 m for district-sized regions (~1,000 km²), coarser for big provinces:
     the tolerance grows with the square root of the typical region's area, so
@@ -154,8 +157,9 @@ def write_state(state_dir: Path, *, weather: pd.DataFrame, elevation: pd.Series,
     static_cells.to_parquet(state_dir / "static_cells.parquet")
     if daily_recent is not None:
         daily_recent.to_parquet(state_dir / "daily_recent.parquet", index=False)
-    if regions is not None:  # full-resolution polygons: the refresh needs no boundary files
-        regions.to_parquet(state_dir / "regions.parquet")
+    if regions is not None:  # the refresh needs no boundary files; ~50 m detail is
+        # plenty to place a detection, and full coastlines (Norway: 300 MB) are not
+        serving_geometry(regions, STATE_TOLERANCE).to_parquet(state_dir / "regions.parquet")
 
 
 def load_state_regions(state_dir: Path) -> gpd.GeoDataFrame | None:

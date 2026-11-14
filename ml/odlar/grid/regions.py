@@ -158,6 +158,7 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
                 base, kind = _split_name(r["shapeName"])
                 name_en, name_az = _localized(base, kind)
             rows.append({
+                "parent_key": prefix,
                 "slug": f"{prefix}-{slugify(base)}" + ("-city" if kind == "city" else ""),
                 "name_en": name_en,
                 "name_az": name_az,
@@ -168,6 +169,7 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
             })
         country_geom = country_union
         rows.append({
+            "parent_key": prefix,
             "slug": prefix, "name_en": meta["name_en"], "name_az": meta["name_az"],
             "country": meta["code"], "level": "country", "kind": meta.get("kind", "country"),
             "geometry": country_geom,
@@ -179,8 +181,10 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
     if dup.any():  # any other repeat: numbered, so every slug is a unique address
         regions.loc[dup, "slug"] += "-" + (regions[dup].groupby("slug").cumcount() + 2).astype(str)
     regions.insert(0, "region_id", range(b.id_offset + 1, b.id_offset + len(regions) + 1))
-    parent = {r.country: r.region_id for r in regions.itertuples() if r.level == "country"}
-    regions["parent_id"] = [None if r.level == "country" else parent[r.country] for r in regions.itertuples()]
+    # by the country entry, not the code: the states of a split country share one code
+    parent = {r.parent_key: r.region_id for r in regions.itertuples() if r.level == "country"}
+    regions["parent_id"] = [None if r.level == "country" else parent[r.parent_key] for r in regions.itertuples()]
+    regions = regions.drop(columns="parent_key")
     eq = regions.to_crs(6933)  # equal-area for km²
     regions["area_km2"] = (eq.geometry.area / 1e6).round(1)
     cent = regions.geometry.representative_point()
