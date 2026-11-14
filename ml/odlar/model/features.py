@@ -41,6 +41,8 @@ def daily_series(daily: pd.DataFrame, harm_weekly: pd.DataFrame, mode: str = "ha
     ``raw``: the naive merged record — MODIS before 2012, every VIIRS satellite after.
     """
     d = daily[["region_id", "date", "modis_t", "modis_a", "viirs_n", "viirs_j1", "viirs_j2"]].copy()
+    # S-NPP scale: S-NPP itself, or the NOAA-20/21 bridge on days it is missing
+    snpp = daily["snpp_eq"].to_numpy(dtype=float) if "snpp_eq" in daily else d["viirs_n"].to_numpy(dtype=float)
     d["date"] = pd.to_datetime(d["date"])
     d["week"] = d["date"] - pd.to_timedelta(d["date"].dt.day_of_week, unit="D")
     modis = (d["modis_t"] + d["modis_a"]).astype(float)
@@ -52,7 +54,7 @@ def daily_series(daily: pd.DataFrame, harm_weekly: pd.DataFrame, mode: str = "ha
     share = np.where(wk_modis > 0, modis / wk_modis.replace(0, np.nan), 1 / 7)
     hw = harm_weekly.set_index(["region_id", "week"])["harmonized"]
     weekly_val = hw.reindex(pd.MultiIndex.from_arrays([d["region_id"], d["week"]])).to_numpy()
-    d["value"] = np.where(pre, np.nan_to_num(weekly_val) * share, d["viirs_n"]).astype(float)
+    d["value"] = np.where(pre, np.nan_to_num(weekly_val) * share, snpp).astype(float)
     return d[["region_id", "date", "value"]]
 
 

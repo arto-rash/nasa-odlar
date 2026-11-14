@@ -25,6 +25,7 @@ from odlar.calendar.engine import build_calendar
 from odlar.config import BATCHES, CACHE_DIR, DATA_DIR, MODIS_START, OVERLAP_START, PRIMARY_BATCH
 from odlar.grid.gridding import COUNT_COLUMNS, daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
+from odlar.harmonize import bridge
 from odlar.harmonize.engine import aggregate_intervals, harmonize
 from odlar.harmonize.validate import loyo, skill_report
 from odlar.ingest import firms, ndvi, openmeteo, power, stream, synthetic
@@ -139,6 +140,12 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     log(f"aggregated: {len(daily):,} region-days, {len(weekly):,} region-weeks", t0)
 
     harm = harmonize(weekly, regions, n_boot=n_boot, seed=seed)
+    # Suomi NPP stopped in Nov 2026: its missing days continue from NOAA-20/21
+    out_from, back = bridge.window()
+    if pd.Timestamp(end) >= out_from:
+        ratios = bridge.fit_ratios(weekly, regions, until=bridge.week_of(out_from))
+        daily = bridge.apply_daily(daily, ratios, out_from, back)
+        harm.weekly = bridge.apply_weekly(harm.weekly, bridge.weekly_sums(daily), regions)
     log("harmonized", t0)
     pred, _ = loyo(weekly, regions, n_boot=loyo_boot,
                    years=[2013, 2016, 2019, 2022] if quick else None)

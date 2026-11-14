@@ -36,6 +36,7 @@ from odlar.calendar.engine import build_calendar
 from odlar.config import BATCHES, MODIS_START, OVERLAP_START
 from odlar.grid.gridding import daily_counts, grid_cells, weekly_from_daily
 from odlar.grid.regions import assign_regions, leaf_regions, load_regions
+from odlar.harmonize import bridge
 from odlar.ingest import firms, ndvi, openmeteo, synthetic
 from odlar.model import predict, train
 from odlar.model.features import build_panel, daily_series, weather_norms, weekly_clim
@@ -85,12 +86,12 @@ def harmonized_weekly(old: pd.DataFrame, weekly: pd.DataFrame, from_week: pd.Tim
 
 
 def annual_update(old: pd.DataFrame, hw: pd.DataFrame, from_year: int) -> pd.DataFrame:
-    """Recompute the annual rows from ``from_year`` on (all post-2012, so no draws)."""
+    """Recompute the annual rows from ``from_year`` on (all post-2012, so no draws; the
+    range is the sum of the weekly ranges, which only bridged weeks have)."""
     w = hw.assign(year=pd.to_datetime(hw["week"]).dt.year)
     w = w[w["year"] >= from_year]
-    new = w.groupby(["region_id", "year"], as_index=False)[["harmonized", "modis", "viirs", "viirs_n", "naive"]].sum()
-    new["lo"] = new["harmonized"]
-    new["hi"] = new["harmonized"]
+    new = w.groupby(["region_id", "year"], as_index=False)[["harmonized", "lo", "hi", "modis", "viirs", "viirs_n",
+                                                            "naive"]].sum()
     out = pd.concat([old[old["year"] < from_year], new], ignore_index=True)
     out = out.sort_values(["region_id", "year"]).reset_index(drop=True)
     return out[old.columns].astype(old.dtypes.to_dict())
@@ -172,8 +173,14 @@ def run(batch: str, end: date | None = None, lookback: int = 7, store_dir: Path 
     daily["date"] = pd.to_datetime(daily["date"])
     daily = daily[daily["date"] >= lo].sort_values(["region_id", "date"]).reset_index(drop=True)
     from_week = pd.Timestamp(since) - pd.Timedelta(days=since.weekday())
-    hw = harmonized_weekly(pd.read_parquet(store_dir / "weekly.parquet"),
-                           weekly_from_daily(daily[daily["date"] >= from_week]), from_week)
+    old_weekly = pd.read_parquet(store_dir / "weekly.parquet")
+    # Suomi NPP stopped in Nov 2026: its missing days continue from NOAA-20/21
+    out_from, back = bridge.window()
+    ratios = bridge.fit_ratios(old_weekly, regions, until=bridge.week_of(out_from))
+    daily = bridge.apply_daily(daily, ratios, out_from, back)
+    hw = harmonized_weekly(old_weekly, weekly_from_daily(daily[daily["date"] >= from_week]), from_week)
+    hw = bridge.apply_weekly(hw, bridge.weekly_sums(daily[daily["date"] >= from_week]), regions)
+    del old_weekly
     annual = annual_update(pd.read_parquet(store_dir / "annual.parquet"), hw, since.year)
     calendars = {}
     for rid, g in hw.groupby("region_id"):
@@ -289,6 +296,17 @@ def satellite_counts(old: dict, removed: pd.DataFrame, added: pd.DataFrame) -> d
     return out
 
 
+def snpp_status(nrt_dir: Path) -> None:
+    """Note in the shared status file whether Suomi NPP still sends data."""
+    path = nrt_dir / "VIIRS_SNPP_NRT.csv"
+    if not path.exists():
+        return
+    days = pd.read_csv(path, usecols=["acq_date"])["acq_date"].unique() if path.stat().st_size else []
+    st = bridge.update_status([date.fromisoformat(d) for d in days], datetime.now(UTC).date())
+    print(f"S-NPP: last seen {st.get('snpp_last_seen')}, bridged from {st.get('out_from')}"
+          + (f" until {st['back_from']}" if st.get("back_from") else ""), flush=True)
+
+
 def swap(new: Path, current: Path) -> None:
     old = current.with_name(current.name + ".old")
     shutil.rmtree(old, ignore_errors=True)
@@ -319,6 +337,7 @@ def main() -> None:
             os.environ[openmeteo.CACHE_ENV] = str(Path(tmp, "open_meteo"))
             Path(tmp, "open_meteo").mkdir()
             firms.download_global_nrt(nrt)
+            snpp_status(nrt)
             for name in names:
                 args = [sys.executable, "-m", "odlar.refresh", "--batch", name, "--lookback", str(a.lookback),
                         "--nrt-dir", str(nrt)]
