@@ -89,7 +89,7 @@ def ship(name: str) -> bool:
         ["ssh", HOST, f"cd {root} && rm -rf {name}.old && {{ [ ! -e {name} ] || mv {name} {name}.old; }} "
                       f"&& mv {stage} {name} && rm -rf {name}.old"],
         ["ssh", HOST, f"{COMPOSE} --profile jobs run --rm -T refresh python -m odlar.refresh --batch {name}; "
-                      f"{COMPOSE} exec -T api php artisan odlar:sync-regions && "
+                      f"{COMPOSE} exec -T api php -d memory_limit=1G artisan odlar:sync-regions && "
                       f"{COMPOSE} exec -T api php artisan cache:clear"],
     ]
     with (LOG_DIR / f"{name}.log").open("a") as log:
