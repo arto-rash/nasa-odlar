@@ -370,8 +370,12 @@ def main() -> None:
         from odlar.grid.regions import COUNTRIES
         if a.world:
             done = 0
-            todo = [i for i, c in COUNTRIES.items() if c.get("subregion")
-                    and not (BOUNDARY_DIR / f"{c['file']}_OSM.geojson").exists()][shard::n_shards]
+            # in the order the world build runs its batches, so batches complete one
+            # after another (instead of all waiting for an alphabetical sweep)
+            from odlar.world_build import ordered_batches
+            order = [i for b in ordered_batches(None) for i in b["countries"]]
+            todo = [i for i in order if not (BOUNDARY_DIR / f"{COUNTRIES[i]['file']}_OSM.geojson").exists()]
+            todo = todo[shard::n_shards]
             for iso3 in todo:
                 try:
                     gdf, source = build_world(iso3, client)
