@@ -56,7 +56,7 @@ def save_status(status: dict) -> None:
 
 def ordered_batches(only: list[str] | None) -> list[dict]:
     world = json.loads(WORLD_FILE.read_text())
-    batches = [b for b in world["batches"] if not only or b["name"] in only]
+    batches = [b for b in world["batches"] if (not only or b["name"] in only) and not b.get("replaced_by")]
     # regular regions first, then the big countries' split batches, heavy ones last
     return sorted(batches, key=lambda b: (b.get("stream", False), bool(b.get("split_of")), b.get("weight", 0)))
 

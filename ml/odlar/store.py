@@ -278,7 +278,16 @@ def built_batches() -> list[tuple[str, Path]]:
     from odlar.config import ARTIFACTS_DIR, BATCHES, PRIMARY_BATCH
     root = Path(os.environ.get("ODLAR_ARTIFACTS_DIR", ARTIFACTS_DIR))
     order = [PRIMARY_BATCH] + [n for n in BATCHES if n != PRIMARY_BATCH]
-    return [(n, root / n / "store") for n in order if (root / n / "store" / "meta.json").exists()]
+    built = {n for n in order if (root / n / "store" / "meta.json").exists()}
+    # a big country split into local units replaces its state-level batch only
+    # once every part is built; until then the old one is served and the parts wait
+    hidden = set()
+    for n in built:
+        iso = BATCHES[n].replaced_by
+        if iso:
+            parts = {m for m, b in BATCHES.items() if b.split_of == iso}
+            hidden |= (parts & built) if parts - built else {n}
+    return [(n, root / n / "store") for n in order if n in built and n not in hidden]
 
 
 def get_store() -> Store:

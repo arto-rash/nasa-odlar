@@ -32,6 +32,8 @@ ssh "$HOST" "rm -rf /opt/odlar/ml/artifacts"
 
 echo "==> build + up"
 ssh "$HOST" "cd /opt/odlar/deploy && docker compose -f docker-compose.prod.yml up -d --build && docker image prune -f >/dev/null && docker compose -f docker-compose.prod.yml ps"
+# the gateway caches ML responses; a new ML build may answer differently
+ssh "$HOST" "cd /opt/odlar/deploy && docker compose -f docker-compose.prod.yml exec -T api php artisan cache:clear"
 
 echo "==> refresh"
 ssh "$HOST" "/opt/odlar/deploy/refresh.sh"

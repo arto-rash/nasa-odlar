@@ -31,6 +31,8 @@ class Batch:
     id_offset: int
     firms: str = "country_files"  # or "area"
     stream: bool = False  # too many detections to hold at once: ingest year by year
+    split_of: str = ""  # ISO3 of the big country this is a part of (odlar.world_split)
+    replaced_by: str = ""  # ISO3 of a country now built in split batches instead
 
     @property
     def store_dir(self) -> Path:
@@ -55,7 +57,8 @@ WORLD_FILE = DATA_DIR / "world.json"
 if WORLD_FILE.exists():
     for _b in json.loads(WORLD_FILE.read_text())["batches"]:
         BATCHES.setdefault(_b["name"], Batch(_b["name"], tuple(_b["countries"]), _b["id_offset"],
-                                             stream=_b.get("stream", False)))
+                                             stream=_b.get("stream", False), split_of=_b.get("split_of", ""),
+                                             replaced_by=_b.get("replaced_by", "")))
 PRIMARY_BATCH = "caucasus"  # the pilot: headline numbers and the landing page
 
 STORE_DIR = BATCHES[PRIMARY_BATCH].store_dir

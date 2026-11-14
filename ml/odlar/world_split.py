@@ -137,7 +137,7 @@ def main() -> None:
     offset = max([FIRST_OFFSET - OFFSET_STEP] + [b["id_offset"] for b in batches if b["id_offset"] >= FIRST_OFFSET])
     with httpx.Client(timeout=300, headers={"User-Agent": "ODLAR/1.0"}) as client:
         for iso3 in SPLIT_LEVELS:
-            if any(b.get("split_of") == iso3 for b in batches):
+            if any(b.get("split_of") == iso3 for b in batches):  # rerun after a failure
                 print(f"{iso3}: already split", flush=True)
                 continue
             c = countries[iso3]
@@ -152,8 +152,16 @@ def main() -> None:
                 split_names.add(name)
                 batches.append({"name": name, "countries": [keys[e["file"]] for e in group], "id_offset": offset,
                                 "stream": False, "weight": sum(e["weight"] for e in group), "split_of": iso3})
-            # the whole-country batch at state level is replaced
-            batches[:] = [b for b in batches if b.get("split_of") or iso3 not in b["countries"]]
+            # the country leaves its state-level batch; a batch of that country
+            # alone stays listed as replaced, so a live one is served until every
+            # split batch is built (odlar.store.built_batches)
+            for b in batches:
+                if b.get("split_of") or iso3 not in b["countries"]:
+                    continue
+                if b["countries"] == [iso3]:
+                    b["replaced_by"] = iso3
+                else:
+                    b["countries"].remove(iso3)
             # saved after each country, so a failure later keeps this one
             WORLD_FILE.write_text(json.dumps(world, ensure_ascii=False, indent=1))
     print(f"{len(split_names)} split batches added -> {WORLD_FILE}", flush=True)
