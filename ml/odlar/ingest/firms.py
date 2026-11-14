@@ -128,25 +128,40 @@ class FirmsClient:
                  client: httpx.Client | None = None, min_interval: float = 0.15):
         if not map_key:
             raise ValueError("FIRMS_MAP_KEY is required for real ingestion")
-        self.map_key = map_key
+        # Several keys may be given, comma-separated: the transaction limit is per
+        # key, so the client moves to the next key when one hits it.
+        self.keys = [k.strip() for k in map_key.split(",") if k.strip()]
+        self._key = 0
+        self._spent: set[int] = set()
         self.cache_dir = cache_dir
         self.client = client or httpx.Client(timeout=120)
         self.min_interval = min_interval
         self._last = 0.0
 
+    @property
+    def map_key(self) -> str:
+        return self.keys[self._key]
+
     def _get(self, url: str, retries: int = 12) -> str:
-        for attempt in range(retries):
+        """GET a FIRMS URL; ``{key}`` in it is replaced by the key in use."""
+        for attempt in range(retries + 2 * len(self.keys)):
             wait = self.min_interval - (time.monotonic() - self._last)
             if wait > 0:
                 time.sleep(wait)
             self._last = time.monotonic()
             try:
-                resp = self.client.get(url)
+                resp = self.client.get(url.replace("{key}", self.map_key))
                 if "exceeding allowed transaction limit" in resp.text[:200].lower():
                     # 5,000 transactions per 10 minutes per key (large areas cost more):
-                    # wait for the window to roll over instead of failing the build
-                    print("  FIRMS transaction limit reached; waiting 2 min", flush=True)
+                    # use the next key; when every key is spent, wait for the window
+                    self._spent.add(self._key)
+                    if len(self._spent) < len(self.keys):
+                        self._key = (self._key + 1) % len(self.keys)
+                        continue
+                    print(f"  FIRMS transaction limit reached on all {len(self.keys)} key(s); waiting 2 min",
+                          flush=True)
                     time.sleep(120)
+                    self._spent.clear()
                     continue
                 if resp.status_code == 429 or resp.status_code >= 500:
                     raise httpx.HTTPStatusError("retryable", request=resp.request, response=resp)
@@ -168,7 +183,7 @@ class FirmsClient:
         if path.exists():
             text = path.read_text()
         else:
-            url = f"{FIRMS_BASE}/api/area/csv/{self.map_key}/{source}/{bbox.as_firms()}/{days}/{start:%Y-%m-%d}"
+            url = f"{FIRMS_BASE}/api/area/csv/{{key}}/{source}/{bbox.as_firms()}/{days}/{start:%Y-%m-%d}"
             text = self._get(url)
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(text)
@@ -191,7 +206,7 @@ class FirmsClient:
         return pd.concat(parts, ignore_index=True)
 
     def availability(self) -> pd.DataFrame:
-        text = self._get(f"{FIRMS_BASE}/api/data_availability/csv/{self.map_key}/all")
+        text = self._get(f"{FIRMS_BASE}/api/data_availability/csv/{{key}}/all")
         return pd.read_csv(io.StringIO(text))
 
 
