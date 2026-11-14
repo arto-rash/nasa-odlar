@@ -34,3 +34,4 @@ ml/data/world_split.log
 ml/data/world_status.lock
 ml/data/world_memory.log
 ml/data/heavy.lock
+ml/data/heavy2.lock

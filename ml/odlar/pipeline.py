@@ -36,13 +36,24 @@ def log(msg: str, t0: float) -> None:
     print(f"[{time.time() - t0:7.1f}s] {msg}", flush=True)
 
 
-def _wait_for_heavy_turn():
-    """Take the machine-wide lock for the memory-hungry part of a build; the OS
-    releases it when this process ends, however it ends."""
-    lock = (DATA_DIR / "heavy.lock").open("w")
+def _wait_for_heavy_turn(alone: bool) -> list:
+    """Take a slot of the memory-hungry part of a build: two ordinary batches may
+    run it at once, a streamed (very large) batch takes both slots. The OS releases
+    the locks when this process ends, however it ends."""
     print("  waiting for the memory-heavy step to be free", flush=True)
-    fcntl.flock(lock, fcntl.LOCK_EX)
-    return lock
+    locks = [(DATA_DIR / name).open("w") for name in ("heavy.lock", "heavy2.lock")]
+    if alone:
+        for lock in locks:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+        return locks
+    while True:
+        for lock in locks:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                return [lock]
+            except BlockingIOError:
+                pass
+        time.sleep(5)
 
 
 def load_weather(regions, start: date, end: date, offline: bool,
@@ -178,9 +189,9 @@ def run(source: str = "synthetic", n_boot: int = 200, loyo_boot: int = 40, quick
     ext = lambda s: pd.concat([s, pd.DataFrame({  # noqa: E731
         "region_id": np.repeat(leaves["region_id"].to_numpy(), len(fc["date"].unique())),
         "date": np.tile(np.sort(fc["date"].unique()), len(leaves)), "value": 0.0})], ignore_index=True)
-    # The feature panels and model fits take 10-15 GB on a big batch: one build at a
-    # time here, however many runners share the machine. Held until the process ends.
-    heavy_turn = _wait_for_heavy_turn() if not offline else None  # noqa: F841 (keeps the lock open)
+    # The feature panels and model fits take 10-15 GB on a big batch, so the runners
+    # sharing the machine take turns here. Held until the process ends.
+    heavy_turn = _wait_for_heavy_turn(b.stream) if not offline else None  # noqa: F841 (keeps the lock open)
     panel_h = build_panel(ext(series_h), w_ext, regions, clim_years, nd, elevation)
     panel_r = build_panel(series_r, w_dry, regions, clim_years, nd, elevation)
     future = panel_h["date"] > pd.Timestamp(end) - pd.Timedelta(days=7)
