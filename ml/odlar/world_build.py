@@ -20,8 +20,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import queue
 import subprocess
 import sys
+import threading
 import time
 from datetime import UTC, datetime
 
@@ -37,14 +39,18 @@ def now() -> str:
     return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+_status_lock = threading.Lock()
+
+
 def load_status() -> dict:
     return json.loads(STATUS_FILE.read_text()) if STATUS_FILE.exists() else {}
 
 
 def save_status(status: dict) -> None:
-    tmp = STATUS_FILE.with_suffix(".tmp")
-    tmp.write_text(json.dumps(status, indent=1))
-    os.replace(tmp, STATUS_FILE)
+    with _status_lock:
+        tmp = STATUS_FILE.with_suffix(".tmp")
+        tmp.write_text(json.dumps(status, indent=1))
+        os.replace(tmp, STATUS_FILE)
 
 
 def ordered_batches(only: list[str] | None) -> list[dict]:
@@ -96,8 +102,23 @@ def main() -> None:
     status = load_status()
     pending = [b for b in ordered_batches(a.only.split(",") if a.only else None)
                if b["name"] in BATCHES and (a.rebuild or not (BATCHES[b["name"]].store_dir / "meta.json").exists()
-                                            or status.get(b["name"], {}).get("state") == "built")]
+                                            or status.get(b["name"], {}).get("state") in
+                                            ("built", "uploading", "ship_failed"))]
     print(f"{now()} {len(pending)} batches to do", flush=True)
+
+    # Uploads (about 1 MB/s from here) run in the background, one at a time and
+    # in order, so the next build does not wait for the previous upload.
+    uploads: queue.Queue[str | None] = queue.Queue()
+
+    def uploader() -> None:
+        while (name := uploads.get()) is not None:
+            ok = ship(name)
+            status[name].update({"state": "live" if ok else "ship_failed", "shipped": now()})
+            save_status(status)
+            print(f"{now()} {name}: {status[name]['state']}", flush=True)
+
+    shipper = threading.Thread(target=uploader, daemon=False)
+    shipper.start()
     while pending:
         ready = [b for b in pending if boundaries_ready(b, COUNTRIES)]
         if not ready:
@@ -120,10 +141,11 @@ def main() -> None:
             if not ok:
                 continue
         if not a.no_ship:
-            ok = ship(name)
-            status[name].update({"state": "live" if ok else "ship_failed", "shipped": now()})
+            status[name]["state"] = "uploading"
             save_status(status)
-            print(f"{now()} {name}: {status[name]['state']}", flush=True)
+            uploads.put(name)
+    uploads.put(None)
+    shipper.join()
     print(f"{now()} done", flush=True)
 
 

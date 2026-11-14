@@ -353,9 +353,15 @@ def fetch_batch(map_key: str, batch, regions, start: date, end: date) -> pd.Data
     by_code = {m["code"]: m for m in COUNTRIES.values()}
     frames = []
     for r, box in zip(regions[regions["level"] == "country"].itertuples(), batch_bboxes(batch, regions), strict=True):
-        name = by_code[r.country]["firms_name"]
+        name = by_code[r.country].get("firms_name")
+        if not name:  # FIRMS has no file for some microstates: no detections on record
+            print(f"  FIRMS: no country files for {r.country}; skipped", flush=True)
+            continue
         print(f"  FIRMS {name}: country files + area API {box.as_firms()}", flush=True)
         frames.append(fetch_country_archive(map_key, name, box, start, end))
+    frames = [f for f in frames if len(f)]
+    if not frames:
+        raise ValueError(f"no FIRMS detections at all for batch {batch.name}")
     df = pd.concat(frames, ignore_index=True)
     return df.drop_duplicates(subset=["satellite", "acq_date", "acq_time", "lat", "lon"]).reset_index(drop=True)
 
