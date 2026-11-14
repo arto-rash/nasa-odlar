@@ -72,7 +72,8 @@ def build(boundary_dir: Path = BOUNDARY_DIR) -> dict:
             continue  # no OSM country relation to take boundaries from
         countries[iso3] = {
             "code": iso2.lower(), "iso2": iso2, "name_en": en, "name_az": o.get("az") or en,
-            "file": f"world/{iso3}_ADM1",  # world boundaries: outside git and the server image "osm_level": 4, "source": "osm", "firms_name": firms_name,
+            # world boundaries live in data/boundaries/world/, outside git and the server image
+            "file": f"world/{iso3}_ADM1", "osm_level": 4, "source": "osm", "firms_name": firms_name,
             "subregion": SUBREGION_FIX.get(iso3) or c.get("UNSDG-subregion") or "Other",
             "n_adm1": int(c["admUnitCount"]), "weight": firms.get(firms_name, 0) if firms_name else 0,
         }

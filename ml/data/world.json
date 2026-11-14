@@ -6,6 +6,9 @@
    "name_en": "Afghanistan",
    "name_az": "Əfqanıstan",
    "file": "world/AFG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Afghanistan",
    "subregion": "Southern Asia",
    "n_adm1": 34,
    "weight": 8079
@@ -16,6 +19,9 @@
    "name_en": "Angola",
    "name_az": "Anqola",
    "file": "world/AGO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Angola",
    "subregion": "Middle Africa",
    "n_adm1": 18,
    "weight": 30472843
@@ -26,6 +32,9 @@
    "name_en": "Albania",
    "name_az": "Albaniya",
    "file": "world/ALB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Albania",
    "subregion": "Southern Europe",
    "n_adm1": 12,
    "weight": 63237
@@ -36,6 +45,9 @@
    "name_en": "Andorra",
    "name_az": "Andorra",
    "file": "world/AND_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Andorra",
    "subregion": "Southern Europe",
    "n_adm1": 7,
    "weight": 208
@@ -46,6 +58,9 @@
    "name_en": "United Arab Emirates",
    "name_az": "Birləşmiş Ərəb Əmirlikləri",
    "file": "world/ARE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "United_Arab_Emirates",
    "subregion": "Western Asia",
    "n_adm1": 7,
    "weight": 16938
@@ -56,6 +71,9 @@
    "name_en": "Argentina",
    "name_az": "Argentina",
    "file": "world/ARG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Argentina",
    "subregion": "South America",
    "n_adm1": 23,
    "weight": 4043604
@@ -66,6 +84,9 @@
    "name_en": "Antigua and Barbuda",
    "name_az": "Antiqua və Barbuda",
    "file": "world/ATG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Antigua_and_Barbuda",
    "subregion": "Caribbean",
    "n_adm1": 8,
    "weight": 206
@@ -76,6 +97,9 @@
    "name_en": "Australia",
    "name_az": "Avstraliya",
    "file": "world/AUS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Australia",
    "subregion": "Australia/New Zealand",
    "n_adm1": 9,
    "weight": 18232002
@@ -86,6 +110,9 @@
    "name_en": "Austria",
    "name_az": "Avstriya",
    "file": "world/AUT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Austria",
    "subregion": "Western Europe",
    "n_adm1": 9,
    "weight": 39590
@@ -96,6 +123,9 @@
    "name_en": "Burundi",
    "name_az": "Burundi",
    "file": "world/BDI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Burundi",
    "subregion": "Eastern Africa",
    "n_adm1": 18,
    "weight": 85223
@@ -106,6 +136,9 @@
    "name_en": "Belgium",
    "name_az": "Belçika",
    "file": "world/BEL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Belgium",
    "subregion": "Western Europe",
    "n_adm1": 3,
    "weight": 36077
@@ -116,6 +149,9 @@
    "name_en": "Benin",
    "name_az": "Benin",
    "file": "world/BEN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Benin",
    "subregion": "Western Africa",
    "n_adm1": 12,
    "weight": 674354
@@ -126,6 +162,9 @@
    "name_en": "Burkina Faso",
    "name_az": "Burkina-Faso",
    "file": "world/BFA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Burkina_Faso",
    "subregion": "Western Africa",
    "n_adm1": 13,
    "weight": 1652062
@@ -136,6 +175,9 @@
    "name_en": "Bangladesh",
    "name_az": "Banqladeş",
    "file": "world/BGD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bangladesh",
    "subregion": "Southern Asia",
    "n_adm1": 8,
    "weight": 149070
@@ -146,6 +188,9 @@
    "name_en": "Bulgaria",
    "name_az": "Bolqarıstan",
    "file": "world/BGR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bulgaria",
    "subregion": "Eastern Europe",
    "n_adm1": 28,
    "weight": 113083
@@ -156,6 +201,9 @@
    "name_en": "Bahrain",
    "name_az": "Bəhreyn",
    "file": "world/BHR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bahrain",
    "subregion": "Western Asia",
    "n_adm1": 4,
    "weight": 984
@@ -166,6 +214,9 @@
    "name_en": "Bahamas",
    "name_az": "Baham adaları",
    "file": "world/BHS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bahamas",
    "subregion": "Caribbean",
    "n_adm1": 32,
    "weight": 22608
@@ -176,6 +227,9 @@
    "name_en": "Bosnia and Herzegovina",
    "name_az": "Bosniya və Herseqovina",
    "file": "world/BIH_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bosnia_and_Herzegovina",
    "subregion": "Southern Europe",
    "n_adm1": 3,
    "weight": 50791
@@ -186,6 +240,9 @@
    "name_en": "Belarus",
    "name_az": "Belarus",
    "file": "world/BLR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Belarus",
    "subregion": "Eastern Europe",
    "n_adm1": 7,
    "weight": 48912
@@ -196,6 +253,9 @@
    "name_en": "Belize",
    "name_az": "Beliz",
    "file": "world/BLZ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Belize",
    "subregion": "Central America",
    "n_adm1": 6,
    "weight": 188816
@@ -206,6 +266,9 @@
    "name_en": "Bolivia",
    "name_az": "Boliviya",
    "file": "world/BOL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bolivia",
    "subregion": "South America",
    "n_adm1": 9,
    "weight": 17400745
@@ -216,6 +279,9 @@
    "name_en": "Brazil",
    "name_az": "Braziliya",
    "file": "world/BRA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Brazil",
    "subregion": "South America",
    "n_adm1": 27,
    "weight": 42592737
@@ -226,6 +292,9 @@
    "name_en": "Barbados",
    "name_az": "Barbados",
    "file": "world/BRB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Barbados",
    "subregion": "Caribbean",
    "n_adm1": 11,
    "weight": 1012
@@ -236,6 +305,9 @@
    "name_en": "Brunei",
    "name_az": "Bruney",
    "file": "world/BRN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Brunei_Darussalam",
    "subregion": "South-Eastern Asia",
    "n_adm1": 4,
    "weight": 5586
@@ -246,6 +318,9 @@
    "name_en": "Bhutan",
    "name_az": "Butan",
    "file": "world/BTN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Bhutan",
    "subregion": "Southern Asia",
    "n_adm1": 20,
    "weight": 16746
@@ -256,6 +331,9 @@
    "name_en": "Botswana",
    "name_az": "Botsvana",
    "file": "world/BWA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Botswana",
    "subregion": "Southern Africa",
    "n_adm1": 10,
    "weight": 674113
@@ -266,6 +344,9 @@
    "name_en": "Central African Republic",
    "name_az": "Mərkəzi Afrika Respublikası",
    "file": "world/CAF_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Central_African_Republic",
    "subregion": "Middle Africa",
    "n_adm1": 17,
    "weight": 10486796
@@ -276,6 +357,9 @@
    "name_en": "Canada",
    "name_az": "Kanada",
    "file": "world/CAN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Canada",
    "subregion": "Northern America",
    "n_adm1": 13,
    "weight": 12052143
@@ -286,6 +370,9 @@
    "name_en": "Switzerland",
    "name_az": "İsveçrə",
    "file": "world/CHE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Switzerland",
    "subregion": "Western Europe",
    "n_adm1": 26,
    "weight": 4008
@@ -296,6 +383,9 @@
    "name_en": "Chile",
    "name_az": "Çili",
    "file": "world/CHL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Chile",
    "subregion": "South America",
    "n_adm1": 16,
    "weight": 526327
@@ -306,6 +396,9 @@
    "name_en": "China",
    "name_az": "Çin",
    "file": "world/CHN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "China",
    "subregion": "Eastern Asia",
    "n_adm1": 34,
    "weight": 8082755
@@ -316,6 +409,9 @@
    "name_en": "Ivory Coast",
    "name_az": "Fil Dişi Sahili",
    "file": "world/CIV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cote_d_Ivoire",
    "subregion": "Western Africa",
    "n_adm1": 14,
    "weight": 1810184
@@ -326,6 +422,9 @@
    "name_en": "Cameroon",
    "name_az": "Kamerun",
    "file": "world/CMR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cameroon",
    "subregion": "Middle Africa",
    "n_adm1": 10,
    "weight": 3088067
@@ -336,6 +435,9 @@
    "name_en": "Democratic Republic of the Congo",
    "name_az": "Konqo Demokratik Respublikası",
    "file": "world/COD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Democratic_Republic_of_the_Congo",
    "subregion": "Middle Africa",
    "n_adm1": 26,
    "weight": 40903559
@@ -346,6 +448,9 @@
    "name_en": "Congo-Brazzaville",
    "name_az": "Konqo Respublikası",
    "file": "world/COG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Republic_of_Congo",
    "subregion": "Middle Africa",
    "n_adm1": 12,
    "weight": 2445462
@@ -356,6 +461,9 @@
    "name_en": "Colombia",
    "name_az": "Kolumbiya",
    "file": "world/COL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Colombia",
    "subregion": "South America",
    "n_adm1": 33,
    "weight": 1945326
@@ -366,6 +474,9 @@
    "name_en": "Comoros",
    "name_az": "Komor adaları",
    "file": "world/COM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Comoros",
    "subregion": "Eastern Africa",
    "n_adm1": 3,
    "weight": 5982
@@ -376,6 +487,9 @@
    "name_en": "Cape Verde",
    "name_az": "Cape Verde",
    "file": "world/CPV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cape_Verde",
    "subregion": "Western Africa",
    "n_adm1": 22,
    "weight": 288
@@ -386,6 +500,9 @@
    "name_en": "Costa Rica",
    "name_az": "Kosta-Rika",
    "file": "world/CRI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Costa_Rica",
    "subregion": "Central America",
    "n_adm1": 7,
    "weight": 99009
@@ -396,6 +513,9 @@
    "name_en": "Cuba",
    "name_az": "Kuba",
    "file": "world/CUB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cuba",
    "subregion": "Caribbean",
    "n_adm1": 16,
    "weight": 586719
@@ -406,6 +526,9 @@
    "name_en": "Cyprus",
    "name_az": "Kipr",
    "file": "world/CYP_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cyprus",
    "subregion": "Western Asia",
    "n_adm1": 6,
    "weight": 3924
@@ -416,6 +539,9 @@
    "name_en": "Czechia",
    "name_az": "Çexiya",
    "file": "world/CZE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Czech_Republic",
    "subregion": "Eastern Europe",
    "n_adm1": 14,
    "weight": 10445
@@ -426,6 +552,9 @@
    "name_en": "Germany",
    "name_az": "Almaniya",
    "file": "world/DEU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Germany",
    "subregion": "Western Europe",
    "n_adm1": 16,
    "weight": 191073
@@ -436,6 +565,9 @@
    "name_en": "Djibouti",
    "name_az": "Cibuti",
    "file": "world/DJI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Djibouti",
    "subregion": "Eastern Africa",
    "n_adm1": 6,
    "weight": 4523
@@ -446,6 +578,9 @@
    "name_en": "Dominica",
    "name_az": "Dominika",
    "file": "world/DMA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Dominica",
    "subregion": "Caribbean",
    "n_adm1": 10,
    "weight": 205
@@ -456,6 +591,9 @@
    "name_en": "Denmark",
    "name_az": "Danimarka",
    "file": "world/DNK_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Denmark",
    "subregion": "Northern Europe",
    "n_adm1": 5,
    "weight": 5591
@@ -466,6 +604,9 @@
    "name_en": "Dominican Republic",
    "name_az": "Dominikan Respublikası",
    "file": "world/DOM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Dominican_Republic",
    "subregion": "Caribbean",
    "n_adm1": 32,
    "weight": 78915
@@ -476,6 +617,9 @@
    "name_en": "Algeria",
    "name_az": "Əlcəzair",
    "file": "world/DZA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Algeria",
    "subregion": "Northern Africa",
    "n_adm1": 48,
    "weight": 352881
@@ -486,6 +630,9 @@
    "name_en": "Ecuador",
    "name_az": "Ekvador",
    "file": "world/ECU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Ecuador",
    "subregion": "South America",
    "n_adm1": 24,
    "weight": 540673
@@ -496,6 +643,9 @@
    "name_en": "Egypt",
    "name_az": "Misir",
    "file": "world/EGY_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Egypt",
    "subregion": "Northern Africa",
    "n_adm1": 27,
    "weight": 100212
@@ -506,6 +656,9 @@
    "name_en": "Eritrea",
    "name_az": "Eritreya",
    "file": "world/ERI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Eritrea",
    "subregion": "Eastern Africa",
    "n_adm1": 6,
    "weight": 24395
@@ -516,6 +669,9 @@
    "name_en": "Spain",
    "name_az": "İspaniya",
    "file": "world/ESP_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Spain",
    "subregion": "Southern Europe",
    "n_adm1": 19,
    "weight": 167436
@@ -526,6 +682,9 @@
    "name_en": "Estonia",
    "name_az": "Estoniya",
    "file": "world/EST_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Estonia",
    "subregion": "Northern Europe",
    "n_adm1": 15,
    "weight": 1765
@@ -536,6 +695,9 @@
    "name_en": "Ethiopia",
    "name_az": "Efiopiya",
    "file": "world/ETH_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Ethiopia",
    "subregion": "Eastern Africa",
    "n_adm1": 11,
    "weight": 3291682
@@ -546,6 +708,9 @@
    "name_en": "Finland",
    "name_az": "Finlandiya",
    "file": "world/FIN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Finland",
    "subregion": "Northern Europe",
    "n_adm1": 19,
    "weight": 13302
@@ -556,6 +721,9 @@
    "name_en": "Fiji",
    "name_az": "Fici",
    "file": "world/FJI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Fiji",
    "subregion": "Melanesia",
    "n_adm1": 4,
    "weight": 27679
@@ -566,6 +734,9 @@
    "name_en": "France",
    "name_az": "Fransa",
    "file": "world/FRA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "France",
    "subregion": "Western Europe",
    "n_adm1": 13,
    "weight": 108007
@@ -576,6 +747,9 @@
    "name_en": "Federated States of Micronesia",
    "name_az": "Mikroneziya Federativ Ştatları",
    "file": "world/FSM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Micronesia",
    "n_adm1": 4,
    "weight": 0
@@ -586,6 +760,9 @@
    "name_en": "Gabon",
    "name_az": "Qabon",
    "file": "world/GAB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Gabon",
    "subregion": "Middle Africa",
    "n_adm1": 9,
    "weight": 246611
@@ -596,6 +773,9 @@
    "name_en": "United Kingdom",
    "name_az": "Böyük Britaniya",
    "file": "world/GBR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "United_Kingdom",
    "subregion": "Northern Europe",
    "n_adm1": 4,
    "weight": 26575
@@ -606,6 +786,9 @@
    "name_en": "Ghana",
    "name_az": "Qana",
    "file": "world/GHA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Ghana",
    "subregion": "Western Africa",
    "n_adm1": 16,
    "weight": 3590583
@@ -616,6 +799,9 @@
    "name_en": "Guinea",
    "name_az": "Qvineya",
    "file": "world/GIN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Guinea",
    "subregion": "Western Africa",
    "n_adm1": 8,
    "weight": 5430482
@@ -626,6 +812,9 @@
    "name_en": "The Gambia",
    "name_az": "Qambiya",
    "file": "world/GMB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "The_Gambia",
    "subregion": "Western Africa",
    "n_adm1": 8,
    "weight": 107012
@@ -636,6 +825,9 @@
    "name_en": "Guinea-Bissau",
    "name_az": "Qvineya-Bisau",
    "file": "world/GNB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Guinea-Bissau",
    "subregion": "Western Africa",
    "n_adm1": 9,
    "weight": 400429
@@ -646,6 +838,9 @@
    "name_en": "Equatorial Guinea",
    "name_az": "Ekvatorial Qvineya",
    "file": "world/GNQ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Equatorial_Guinea",
    "subregion": "Middle Africa",
    "n_adm1": 7,
    "weight": 19276
@@ -656,6 +851,9 @@
    "name_en": "Greece",
    "name_az": "Yunanıstan",
    "file": "world/GRC_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Greece",
    "subregion": "Southern Europe",
    "n_adm1": 8,
    "weight": 102412
@@ -666,6 +864,9 @@
    "name_en": "Grenada",
    "name_az": "Grenada",
    "file": "world/GRD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Caribbean",
    "n_adm1": 7,
    "weight": 0
@@ -676,6 +877,9 @@
    "name_en": "Greenland",
    "name_az": "Qrenlandiya",
    "file": "world/GRL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Greenland",
    "subregion": "Northern America",
    "n_adm1": 6,
    "weight": 1220
@@ -686,6 +890,9 @@
    "name_en": "Guatemala",
    "name_az": "Qvatemala",
    "file": "world/GTM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Guatemala",
    "subregion": "Central America",
    "n_adm1": 22,
    "weight": 922518
@@ -696,6 +903,9 @@
    "name_en": "Guyana",
    "name_az": "Qayana",
    "file": "world/GUY_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Guyana",
    "subregion": "South America",
    "n_adm1": 10,
    "weight": 434833
@@ -706,6 +916,9 @@
    "name_en": "Honduras",
    "name_az": "Honduras",
    "file": "world/HND_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Honduras",
    "subregion": "Central America",
    "n_adm1": 18,
    "weight": 828487
@@ -716,6 +929,9 @@
    "name_en": "Croatia",
    "name_az": "Xorvatiya",
    "file": "world/HRV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Croatia",
    "subregion": "Southern Europe",
    "n_adm1": 21,
    "weight": 19483
@@ -726,6 +942,9 @@
    "name_en": "Haiti",
    "name_az": "Haiti Respublikası",
    "file": "world/HTI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Haiti",
    "subregion": "Caribbean",
    "n_adm1": 10,
    "weight": 22484
@@ -736,6 +955,9 @@
    "name_en": "Hungary",
    "name_az": "Macarıstan",
    "file": "world/HUN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Hungary",
    "subregion": "Eastern Europe",
    "n_adm1": 20,
    "weight": 20973
@@ -746,6 +968,9 @@
    "name_en": "Indonesia",
    "name_az": "İndoneziya",
    "file": "world/IDN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Indonesia",
    "subregion": "South-Eastern Asia",
    "n_adm1": 34,
    "weight": 1865779
@@ -756,6 +981,9 @@
    "name_en": "India",
    "name_az": "Hindistan",
    "file": "world/IND_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "India",
    "subregion": "Southern Asia",
    "n_adm1": 36,
    "weight": 5822801
@@ -766,6 +994,9 @@
    "name_en": "Ireland",
    "name_az": "İrlandiya",
    "file": "world/IRL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Ireland",
    "subregion": "Northern Europe",
    "n_adm1": 4,
    "weight": 1638
@@ -776,6 +1007,9 @@
    "name_en": "Iraq",
    "name_az": "İrak",
    "file": "world/IRQ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Iraq",
    "subregion": "Western Asia",
    "n_adm1": 18,
    "weight": 3116424
@@ -786,6 +1020,9 @@
    "name_en": "Iceland",
    "name_az": "İslandiya",
    "file": "world/ISL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Iceland",
    "subregion": "Northern Europe",
    "n_adm1": 8,
    "weight": 153995
@@ -796,6 +1033,9 @@
    "name_en": "Israel",
    "name_az": "İsrail",
    "file": "world/ISR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Israel",
    "subregion": "Western Asia",
    "n_adm1": 6,
    "weight": 24684
@@ -806,6 +1046,9 @@
    "name_en": "Italy",
    "name_az": "İtaliya",
    "file": "world/ITA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Italy",
    "subregion": "Southern Europe",
    "n_adm1": 5,
    "weight": 269574
@@ -816,6 +1059,9 @@
    "name_en": "Jamaica",
    "name_az": "Jamaica",
    "file": "world/JAM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Jamaica",
    "subregion": "Caribbean",
    "n_adm1": 14,
    "weight": 11152
@@ -826,6 +1072,9 @@
    "name_en": "Jordan",
    "name_az": "İordaniya",
    "file": "world/JOR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Jordan",
    "subregion": "Western Asia",
    "n_adm1": 12,
    "weight": 5328
@@ -836,6 +1085,9 @@
    "name_en": "Japan",
    "name_az": "Yaponiya",
    "file": "world/JPN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Japan",
    "subregion": "Eastern Asia",
    "n_adm1": 47,
    "weight": 258885
@@ -846,6 +1098,9 @@
    "name_en": "Kazakhstan",
    "name_az": "Qazaxıstan",
    "file": "world/KAZ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Kazakhstan",
    "subregion": "Central Asia",
    "n_adm1": 16,
    "weight": 585518
@@ -856,6 +1111,9 @@
    "name_en": "Kenya",
    "name_az": "Keniya",
    "file": "world/KEN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Kenya",
    "subregion": "Eastern Africa",
    "n_adm1": 47,
    "weight": 243893
@@ -866,6 +1124,9 @@
    "name_en": "Kyrgyzstan",
    "name_az": "Qırğızıstan",
    "file": "world/KGZ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Kyrgyzstan",
    "subregion": "Central Asia",
    "n_adm1": 7,
    "weight": 16519
@@ -876,6 +1137,9 @@
    "name_en": "Cambodia",
    "name_az": "Kamboca",
    "file": "world/KHM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Cambodia",
    "subregion": "South-Eastern Asia",
    "n_adm1": 25,
    "weight": 2097217
@@ -886,6 +1150,9 @@
    "name_en": "Kiribati",
    "name_az": "Kiribati",
    "file": "world/KIR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Micronesia",
    "n_adm1": 3,
    "weight": 0
@@ -896,6 +1163,9 @@
    "name_en": "Saint Kitts and Nevis",
    "name_az": "Saint Kitts and Nevis",
    "file": "world/KNA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Saint_Kitts_and_Nevis",
    "subregion": "Caribbean",
    "n_adm1": 14,
    "weight": 520
@@ -906,6 +1176,9 @@
    "name_en": "South Korea",
    "name_az": "Cənubi Koreya",
    "file": "world/KOR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Republic_of_Korea",
    "subregion": "Eastern Asia",
    "n_adm1": 17,
    "weight": 86275
@@ -916,6 +1189,9 @@
    "name_en": "Kuwait",
    "name_az": "Küveyt",
    "file": "world/KWT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Kuwait",
    "subregion": "Western Asia",
    "n_adm1": 6,
    "weight": 47060
@@ -926,6 +1202,9 @@
    "name_en": "Laos",
    "name_az": "Laos",
    "file": "world/LAO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Lao_PDR",
    "subregion": "South-Eastern Asia",
    "n_adm1": 18,
    "weight": 3639386
@@ -936,6 +1215,9 @@
    "name_en": "Lebanon",
    "name_az": "Livan",
    "file": "world/LBN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Lebanon",
    "subregion": "Western Asia",
    "n_adm1": 9,
    "weight": 18087
@@ -946,6 +1228,9 @@
    "name_en": "Liberia",
    "name_az": "Liberiya",
    "file": "world/LBR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Liberia",
    "subregion": "Western Africa",
    "n_adm1": 15,
    "weight": 924021
@@ -956,6 +1241,9 @@
    "name_en": "Libya",
    "name_az": "Liviya",
    "file": "world/LBY_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Libya",
    "subregion": "Northern Africa",
    "n_adm1": 22,
    "weight": 463365
@@ -966,6 +1254,9 @@
    "name_en": "Saint Lucia",
    "name_az": "Seynt Lusiya",
    "file": "world/LCA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Saint_Lucia",
    "subregion": "Caribbean",
    "n_adm1": 10,
    "weight": 283
@@ -976,6 +1267,9 @@
    "name_en": "Liechtenstein",
    "name_az": "Liechtenstein",
    "file": "world/LIE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Western Europe",
    "n_adm1": 11,
    "weight": 0
@@ -986,6 +1280,9 @@
    "name_en": "Sri Lanka",
    "name_az": "Şri-Lanka",
    "file": "world/LKA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Sri_Lanka",
    "subregion": "Southern Asia",
    "n_adm1": 9,
    "weight": 42582
@@ -996,6 +1293,9 @@
    "name_en": "Lesotho",
    "name_az": "Lesoto",
    "file": "world/LSO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Lesotho",
    "subregion": "Southern Africa",
    "n_adm1": 10,
    "weight": 96799
@@ -1006,6 +1306,9 @@
    "name_en": "Lithuania",
    "name_az": "Litva",
    "file": "world/LTU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Lithuania",
    "subregion": "Northern Europe",
    "n_adm1": 10,
    "weight": 2307
@@ -1016,6 +1319,9 @@
    "name_en": "Luxembourg",
    "name_az": "Lüksemburq",
    "file": "world/LUX_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Luxembourg",
    "subregion": "Western Europe",
    "n_adm1": 12,
    "weight": 1921
@@ -1026,6 +1332,9 @@
    "name_en": "Latvia",
    "name_az": "Latviya",
    "file": "world/LVA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Latvia",
    "subregion": "Northern Europe",
    "n_adm1": 43,
    "weight": 2636
@@ -1036,6 +1345,9 @@
    "name_en": "Morocco",
    "name_az": "Mərakeş",
    "file": "world/MAR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Morocco",
    "subregion": "Northern Africa",
    "n_adm1": 12,
    "weight": 13661
@@ -1046,6 +1358,9 @@
    "name_en": "Monaco",
    "name_az": "Monako",
    "file": "world/MCO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Western Europe",
    "n_adm1": 1,
    "weight": 0
@@ -1056,6 +1371,9 @@
    "name_en": "Moldova",
    "name_az": "Moldova",
    "file": "world/MDA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Moldova",
    "subregion": "Eastern Europe",
    "n_adm1": 37,
    "weight": 12058
@@ -1066,6 +1384,9 @@
    "name_en": "Madagascar",
    "name_az": "Madaqaskar",
    "file": "world/MDG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Madagascar",
    "subregion": "Eastern Africa",
    "n_adm1": 22,
    "weight": 5479476
@@ -1076,6 +1397,9 @@
    "name_en": "Maldives",
    "name_az": "Maldiv",
    "file": "world/MDV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Maldives",
    "subregion": "Southern Asia",
    "n_adm1": 21,
    "weight": 906
@@ -1086,6 +1410,9 @@
    "name_en": "Mexico",
    "name_az": "Meksika",
    "file": "world/MEX_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mexico",
    "subregion": "Central America",
    "n_adm1": 32,
    "weight": 6472979
@@ -1096,6 +1423,9 @@
    "name_en": "Marshall Islands",
    "name_az": "Marşall adaları",
    "file": "world/MHL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Micronesia",
    "n_adm1": 24,
    "weight": 0
@@ -1106,6 +1436,9 @@
    "name_en": "North Macedonia",
    "name_az": "North Macedonia",
    "file": "world/MKD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Macedonia_Former_Yugoslav_Republic_of",
    "subregion": "Southern Europe",
    "n_adm1": 8,
    "weight": 91446
@@ -1116,6 +1449,9 @@
    "name_en": "Mali",
    "name_az": "Mali",
    "file": "world/MLI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mali",
    "subregion": "Western Africa",
    "n_adm1": 9,
    "weight": 2820620
@@ -1126,6 +1462,9 @@
    "name_en": "Malta",
    "name_az": "Malta",
    "file": "world/MLT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Malta",
    "subregion": "Southern Europe",
    "n_adm1": 68,
    "weight": 283
@@ -1136,6 +1475,9 @@
    "name_en": "Myanmar",
    "name_az": "Myanma",
    "file": "world/MMR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Myanmar",
    "subregion": "South-Eastern Asia",
    "n_adm1": 14,
    "weight": 4314827
@@ -1146,6 +1488,9 @@
    "name_en": "Montenegro",
    "name_az": "Monteneqro",
    "file": "world/MNE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Montenegro",
    "subregion": "Southern Europe",
    "n_adm1": 23,
    "weight": 25505
@@ -1156,6 +1501,9 @@
    "name_en": "Mongolia",
    "name_az": "Monqolustan",
    "file": "world/MNG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mongolia",
    "subregion": "Eastern Asia",
    "n_adm1": 22,
    "weight": 53792
@@ -1166,6 +1514,9 @@
    "name_en": "Mozambique",
    "name_az": "Mozambik",
    "file": "world/MOZ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mozambique",
    "subregion": "Eastern Africa",
    "n_adm1": 10,
    "weight": 12501762
@@ -1176,6 +1527,9 @@
    "name_en": "Mauritania",
    "name_az": "Mavritaniya",
    "file": "world/MRT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mauritania",
    "subregion": "Western Africa",
    "n_adm1": 13,
    "weight": 54985
@@ -1186,6 +1540,9 @@
    "name_en": "Mauritius",
    "name_az": "Mavriki",
    "file": "world/MUS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Mauritius",
    "subregion": "Eastern Africa",
    "n_adm1": 12,
    "weight": 3072
@@ -1196,6 +1553,9 @@
    "name_en": "Malawi",
    "name_az": "Malavi",
    "file": "world/MWI_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Malawi",
    "subregion": "Eastern Africa",
    "n_adm1": 3,
    "weight": 615845
@@ -1206,6 +1566,9 @@
    "name_en": "Malaysia",
    "name_az": "Malayziya",
    "file": "world/MYS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Malaysia",
    "subregion": "South-Eastern Asia",
    "n_adm1": 16,
    "weight": 237427
@@ -1216,6 +1579,9 @@
    "name_en": "Namibia",
    "name_az": "Namibiya",
    "file": "world/NAM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Namibia",
    "subregion": "Southern Africa",
    "n_adm1": 14,
    "weight": 488063
@@ -1226,6 +1592,9 @@
    "name_en": "Niger",
    "name_az": "Niger",
    "file": "world/NER_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Niger",
    "subregion": "Western Africa",
    "n_adm1": 6,
    "weight": 189082
@@ -1236,6 +1605,9 @@
    "name_en": "Nigeria",
    "name_az": "Nigeriya",
    "file": "world/NGA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Nigeria",
    "subregion": "Western Africa",
    "n_adm1": 37,
    "weight": 5651895
@@ -1246,6 +1618,9 @@
    "name_en": "Nicaragua",
    "name_az": "Nikaraqua",
    "file": "world/NIC_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Nicaragua",
    "subregion": "Central America",
    "n_adm1": 17,
    "weight": 644591
@@ -1256,6 +1631,9 @@
    "name_en": "Niue",
    "name_az": "Niue",
    "file": "world/NIU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Polynesia",
    "n_adm1": 14,
    "weight": 0
@@ -1266,6 +1644,9 @@
    "name_en": "Netherlands",
    "name_az": "Niderland",
    "file": "world/NLD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Netherlands",
    "subregion": "Western Europe",
    "n_adm1": 12,
    "weight": 24587
@@ -1276,6 +1657,9 @@
    "name_en": "Norway",
    "name_az": "Norveç",
    "file": "world/NOR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Norway",
    "subregion": "Northern Europe",
    "n_adm1": 11,
    "weight": 4339
@@ -1286,6 +1670,9 @@
    "name_en": "Nepal",
    "name_az": "Nepal",
    "file": "world/NPL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Nepal",
    "subregion": "Southern Asia",
    "n_adm1": 7,
    "weight": 540892
@@ -1296,6 +1683,9 @@
    "name_en": "Nauru",
    "name_az": "Nauru",
    "file": "world/NRU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Micronesia",
    "n_adm1": 14,
    "weight": 0
@@ -1306,6 +1696,9 @@
    "name_en": "New Zealand",
    "name_az": "Yeni Zelandiya",
    "file": "world/NZL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "New_Zealand",
    "subregion": "Australia/New Zealand",
    "n_adm1": 17,
    "weight": 34797
@@ -1316,6 +1709,9 @@
    "name_en": "Oman",
    "name_az": "Oman",
    "file": "world/OMN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Oman",
    "subregion": "Western Asia",
    "n_adm1": 7,
    "weight": 51489
@@ -1326,6 +1722,9 @@
    "name_en": "Pakistan",
    "name_az": "Pakistan",
    "file": "world/PAK_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Pakistan",
    "subregion": "Southern Asia",
    "n_adm1": 7,
    "weight": 972881
@@ -1336,6 +1735,9 @@
    "name_en": "Panama",
    "name_az": "Panama",
    "file": "world/PAN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Panama",
    "subregion": "Central America",
    "n_adm1": 13,
    "weight": 122965
@@ -1346,6 +1748,9 @@
    "name_en": "Peru",
    "name_az": "Peru",
    "file": "world/PER_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Peru",
    "subregion": "South America",
    "n_adm1": 26,
    "weight": 1697898
@@ -1356,6 +1761,9 @@
    "name_en": "Philippines",
    "name_az": "Filippin",
    "file": "world/PHL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Philippines",
    "subregion": "South-Eastern Asia",
    "n_adm1": 17,
    "weight": 500711
@@ -1366,6 +1774,9 @@
    "name_en": "Palau",
    "name_az": "Palau",
    "file": "world/PLW_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Micronesia",
    "n_adm1": 16,
    "weight": 0
@@ -1376,6 +1787,9 @@
    "name_en": "Papua New Guinea",
    "name_az": "Papua-Yeni Qvineya",
    "file": "world/PNG_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Papua_New_Guinea",
    "subregion": "Melanesia",
    "n_adm1": 22,
    "weight": 357148
@@ -1386,6 +1800,9 @@
    "name_en": "Poland",
    "name_az": "Polşa",
    "file": "world/POL_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Poland",
    "subregion": "Eastern Europe",
    "n_adm1": 16,
    "weight": 45648
@@ -1396,6 +1813,9 @@
    "name_en": "North Korea",
    "name_az": "Koreya Xalq Demokratik Respublikası",
    "file": "world/PRK_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Dem_Rep_Korea",
    "subregion": "Eastern Asia",
    "n_adm1": 11,
    "weight": 38421
@@ -1406,6 +1826,9 @@
    "name_en": "Portugal",
    "name_az": "Portuqaliya",
    "file": "world/PRT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Portugal",
    "subregion": "Southern Europe",
    "n_adm1": 20,
    "weight": 252905
@@ -1416,6 +1839,9 @@
    "name_en": "Paraguay",
    "name_az": "Paraqvay",
    "file": "world/PRY_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Paraguay",
    "subregion": "South America",
    "n_adm1": 18,
    "weight": 3346661
@@ -1426,6 +1852,9 @@
    "name_en": "Qatar",
    "name_az": "Qətər",
    "file": "world/QAT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Qatar",
    "subregion": "Western Asia",
    "n_adm1": 8,
    "weight": 33139
@@ -1436,6 +1865,9 @@
    "name_en": "Romania",
    "name_az": "Rumıniya",
    "file": "world/ROU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Romania",
    "subregion": "Eastern Europe",
    "n_adm1": 42,
    "weight": 138633
@@ -1446,6 +1878,9 @@
    "name_en": "Russia",
    "name_az": "Rusiya",
    "file": "world/RUS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Russian_Federation",
    "subregion": "Eastern Europe",
    "n_adm1": 83,
    "weight": 20558662
@@ -1456,6 +1891,9 @@
    "name_en": "Rwanda",
    "name_az": "Ruanda",
    "file": "world/RWA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Rwanda",
    "subregion": "Eastern Africa",
    "n_adm1": 5,
    "weight": 19071
@@ -1466,6 +1904,9 @@
    "name_en": "Saudi Arabia",
    "name_az": "Səudiyyə Ərəbistanı",
    "file": "world/SAU_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Saudi_Arabia",
    "subregion": "Western Asia",
    "n_adm1": 13,
    "weight": 272795
@@ -1476,6 +1917,9 @@
    "name_en": "Sudan",
    "name_az": "Sudan",
    "file": "world/SDN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Sudan",
    "subregion": "Northern Africa",
    "n_adm1": 19,
    "weight": 3242716
@@ -1486,6 +1930,9 @@
    "name_en": "Senegal",
    "name_az": "Seneqal",
    "file": "world/SEN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Senegal",
    "subregion": "Western Africa",
    "n_adm1": 14,
    "weight": 1535302
@@ -1496,6 +1943,9 @@
    "name_en": "Singapore",
    "name_az": "Sinqapur",
    "file": "world/SGP_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Singapore",
    "subregion": "South-Eastern Asia",
    "n_adm1": 5,
    "weight": 208
@@ -1506,6 +1956,9 @@
    "name_en": "Solomon Islands",
    "name_az": "Solomon adaları",
    "file": "world/SLB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Solomon_Islands",
    "subregion": "Melanesia",
    "n_adm1": 10,
    "weight": 1872
@@ -1516,6 +1969,9 @@
    "name_en": "Sierra Leone",
    "name_az": "Syerra-Leone",
    "file": "world/SLE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Sierra_Leone",
    "subregion": "Western Africa",
    "n_adm1": 4,
    "weight": 2123703
@@ -1526,6 +1982,9 @@
    "name_en": "El Salvador",
    "name_az": "Salvador",
    "file": "world/SLV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "El_Salvador",
    "subregion": "Central America",
    "n_adm1": 14,
    "weight": 91165
@@ -1536,6 +1995,9 @@
    "name_en": "San Marino",
    "name_az": "San Marino",
    "file": "world/SMR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Southern Europe",
    "n_adm1": 9,
    "weight": 0
@@ -1546,6 +2008,9 @@
    "name_en": "Somalia",
    "name_az": "Somali",
    "file": "world/SOM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Somalia",
    "subregion": "Eastern Africa",
    "n_adm1": 18,
    "weight": 20398
@@ -1556,6 +2021,9 @@
    "name_en": "Serbia",
    "name_az": "Serbiya",
    "file": "world/SRB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Serbia",
    "subregion": "Southern Europe",
    "n_adm1": 25,
    "weight": 105461
@@ -1566,6 +2034,9 @@
    "name_en": "South Sudan",
    "name_az": "Cənubi Sudan",
    "file": "world/SSD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "South_Sudan",
    "subregion": "Eastern Africa",
    "n_adm1": 10,
    "weight": 14477411
@@ -1576,6 +2047,9 @@
    "name_en": "São Tomé and Príncipe",
    "name_az": "São Tomé and Príncipe",
    "file": "world/STP_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Sao_Tome_and_Principe",
    "subregion": "Middle Africa",
    "n_adm1": 2,
    "weight": 801
@@ -1586,6 +2060,9 @@
    "name_en": "Suriname",
    "name_az": "surinamə",
    "file": "world/SUR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Suriname",
    "subregion": "South America",
    "n_adm1": 10,
    "weight": 128471
@@ -1596,6 +2073,9 @@
    "name_en": "Slovakia",
    "name_az": "Slovakiya",
    "file": "world/SVK_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Slovakia",
    "subregion": "Eastern Europe",
    "n_adm1": 8,
    "weight": 18262
@@ -1606,6 +2086,9 @@
    "name_en": "Slovenia",
    "name_az": "Sloveniya",
    "file": "world/SVN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Slovenia",
    "subregion": "Southern Europe",
    "n_adm1": 2,
    "weight": 2197
@@ -1616,6 +2099,9 @@
    "name_en": "Sweden",
    "name_az": "İsveç",
    "file": "world/SWE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Sweden",
    "subregion": "Northern Europe",
    "n_adm1": 21,
    "weight": 13468
@@ -1626,6 +2112,9 @@
    "name_en": "Eswatini",
    "name_az": "Esvatini",
    "file": "world/SWZ_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Swaziland",
    "subregion": "Southern Africa",
    "n_adm1": 4,
    "weight": 204933
@@ -1636,6 +2125,9 @@
    "name_en": "Seychelles",
    "name_az": "Seyşel adaları",
    "file": "world/SYC_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Seychelles",
    "subregion": "Eastern Africa",
    "n_adm1": 26,
    "weight": 202
@@ -1646,6 +2138,9 @@
    "name_en": "Syria",
    "name_az": "Suriya",
    "file": "world/SYR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Syria",
    "subregion": "Western Asia",
    "n_adm1": 14,
    "weight": 156576
@@ -1656,6 +2151,9 @@
    "name_en": "Chad",
    "name_az": "Çad",
    "file": "world/TCD_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Chad",
    "subregion": "Middle Africa",
    "n_adm1": 23,
    "weight": 3016814
@@ -1666,6 +2164,9 @@
    "name_en": "Togo",
    "name_az": "Toqo",
    "file": "world/TGO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Togo",
    "subregion": "Western Africa",
    "n_adm1": 5,
    "weight": 512708
@@ -1676,6 +2177,9 @@
    "name_en": "Thailand",
    "name_az": "Tailand",
    "file": "world/THA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Thailand",
    "subregion": "South-Eastern Asia",
    "n_adm1": 77,
    "weight": 1545203
@@ -1686,6 +2190,9 @@
    "name_en": "Tajikistan",
    "name_az": "Tacikistan",
    "file": "world/TJK_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Tajikistan",
    "subregion": "Central Asia",
    "n_adm1": 5,
    "weight": 9369
@@ -1696,6 +2203,9 @@
    "name_en": "Turkmenistan",
    "name_az": "Türkmənistan",
    "file": "world/TKM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Turkmenistan",
    "subregion": "Central Asia",
    "n_adm1": 6,
    "weight": 96574
@@ -1706,6 +2216,9 @@
    "name_en": "East Timor",
    "name_az": "Şərqi Timor",
    "file": "world/TLS_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Timor-Leste",
    "subregion": "South-Eastern Asia",
    "n_adm1": 13,
    "weight": 19072
@@ -1716,6 +2229,9 @@
    "name_en": "Tonga",
    "name_az": "Tonqa",
    "file": "world/TON_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Tonga",
    "subregion": "Polynesia",
    "n_adm1": 5,
    "weight": 1584
@@ -1726,6 +2242,9 @@
    "name_en": "Trinidad and Tobago",
    "name_az": "Trinidan və Tobaqo",
    "file": "world/TTO_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Trinidad_and_Tobago",
    "subregion": "Caribbean",
    "n_adm1": 14,
    "weight": 14408
@@ -1736,6 +2255,9 @@
    "name_en": "Tunisia",
    "name_az": "Tunis",
    "file": "world/TUN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Tunisia",
    "subregion": "Northern Africa",
    "n_adm1": 24,
    "weight": 12027
@@ -1746,6 +2268,9 @@
    "name_en": "Tuvalu",
    "name_az": "Tuvalu",
    "file": "world/TUV_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": null,
    "subregion": "Polynesia",
    "n_adm1": 8,
    "weight": 0
@@ -1756,6 +2281,9 @@
    "name_en": "Taiwan",
    "name_az": "Tayvan",
    "file": "world/TWN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Taiwan",
    "subregion": "Eastern Asia",
    "n_adm1": 22,
    "weight": 24828
@@ -1766,6 +2294,9 @@
    "name_en": "Tanzania",
    "name_az": "Tanzaniya",
    "file": "world/TZA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Tanzania",
    "subregion": "Eastern Africa",
    "n_adm1": 30,
    "weight": 6549142
@@ -1776,6 +2307,9 @@
    "name_en": "Uganda",
    "name_az": "Uqanda",
    "file": "world/UGA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Uganda",
    "subregion": "Eastern Africa",
    "n_adm1": 4,
    "weight": 944839
@@ -1786,6 +2320,9 @@
    "name_en": "Ukraine",
    "name_az": "Ukrayna",
    "file": "world/UKR_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Ukraine",
    "subregion": "Eastern Europe",
    "n_adm1": 27,
    "weight": 1896955
@@ -1796,6 +2333,9 @@
    "name_en": "Uruguay",
    "name_az": "Uruqvay",
    "file": "world/URY_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Uruguay",
    "subregion": "South America",
    "n_adm1": 19,
    "weight": 47320
@@ -1806,6 +2346,9 @@
    "name_en": "United States",
    "name_az": "Amerika Birləşmiş Ştatları",
    "file": "world/USA_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "United_States",
    "subregion": "Northern America",
    "n_adm1": 56,
    "weight": 10006305
@@ -1816,6 +2359,9 @@
    "name_en": "Uzbekistan",
    "name_az": "Özbəkistan",
    "file": "world/UZB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Uzbekistan",
    "subregion": "Central Asia",
    "n_adm1": 14,
    "weight": 167740
@@ -1826,6 +2372,9 @@
    "name_en": "Saint Vincent and the Grenadines",
    "name_az": "Seynt Vinsent və Qrenada",
    "file": "world/VCT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Saint_Vincent_and_the_Grenadines",
    "subregion": "Caribbean",
    "n_adm1": 6,
    "weight": 208
@@ -1836,6 +2385,9 @@
    "name_en": "Venezuela",
    "name_az": "Venesuela",
    "file": "world/VEN_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Venezuela",
    "subregion": "South America",
    "n_adm1": 25,
    "weight": 7199079
@@ -1846,6 +2398,9 @@
    "name_en": "Vietnam",
    "name_az": "Vyetnam",
    "file": "world/VNM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Vietnam",
    "subregion": "South-Eastern Asia",
    "n_adm1": 64,
    "weight": 1349337
@@ -1856,6 +2411,9 @@
    "name_en": "Vanuatu",
    "name_az": "Vanuatu",
    "file": "world/VUT_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Vanuatu",
    "subregion": "Melanesia",
    "n_adm1": 6,
    "weight": 5756
@@ -1866,6 +2424,9 @@
    "name_en": "Samoa",
    "name_az": "Samoa",
    "file": "world/WSM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Samoa",
    "subregion": "Polynesia",
    "n_adm1": 11,
    "weight": 1631
@@ -1876,6 +2437,9 @@
    "name_en": "Yemen",
    "name_az": "Yəmən",
    "file": "world/YEM_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Yemen",
    "subregion": "Western Asia",
    "n_adm1": 22,
    "weight": 6530
@@ -1886,6 +2450,9 @@
    "name_en": "South Africa",
    "name_az": "Cənub Afrika",
    "file": "world/ZAF_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "South_Africa",
    "subregion": "Southern Africa",
    "n_adm1": 9,
    "weight": 4676852
@@ -1896,6 +2463,9 @@
    "name_en": "Zambia",
    "name_az": "Zambiya",
    "file": "world/ZMB_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Zambia",
    "subregion": "Eastern Africa",
    "n_adm1": 10,
    "weight": 16450393
@@ -1906,6 +2476,9 @@
    "name_en": "Zimbabwe",
    "name_az": "Zimbabve",
    "file": "world/ZWE_ADM1",
+   "osm_level": 4,
+   "source": "osm",
+   "firms_name": "Zimbabwe",
    "subregion": "Eastern Africa",
    "n_adm1": 10,
    "weight": 1538061
