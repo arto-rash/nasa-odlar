@@ -179,11 +179,12 @@ def build_panel(series: pd.DataFrame, weather: pd.DataFrame, regions: pd.DataFra
 
     # Labels
     cs = p.groupby("region_id")["value"].cumsum()
-    p["target_sum7"] = cs.groupby(p["region_id"]).shift(-HORIZON) - cs
+    # differences of running sums: rounding can leave a zero week at -1e-12
+    p["target_sum7"] = (cs.groupby(p["region_id"]).shift(-HORIZON) - cs).clip(lower=0)
     p["threshold7"] = np.maximum(p["clim_p75_next7"], 1.0)
     p["target_event"] = (p["target_sum7"] > p["threshold7"]).astype(float).where(p["target_sum7"].notna())
     cs_wk = cs.groupby(p["region_id"]).shift(-OUTLOOK_WEEKS * 7)
-    p["target_sum13w"] = cs_wk - cs
+    p["target_sum13w"] = (cs_wk - cs).clip(lower=0)
     return p
 
 
