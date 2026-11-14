@@ -3,7 +3,7 @@
 import { useQuery } from "@tanstack/react-query";
 import type { Map as MlMap } from "maplibre-gl";
 import { useReducedMotion } from "motion/react";
-import { useRegionsGeoJson } from "@/components/map/use-regions";
+import { useCountryShape } from "@/components/map/use-regions";
 import { BaseMap } from "@/components/map/base-map";
 import { SignatureLayer, SparkLayer } from "@/components/map/layers";
 import { http } from "@/lib/client";
@@ -17,7 +17,7 @@ export default function HeroMap() {
     queryFn: () => http<{ cells: [number, number, number][] }>("/grid"),
     staleTime: 30 * 60_000,
   });
-  const regions = useRegionsGeoJson();
+  const regions = useCountryShape("az");
 
   const onReady = (map: MlMap) => {
     if (reduce) {

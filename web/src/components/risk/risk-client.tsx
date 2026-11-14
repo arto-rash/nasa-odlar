@@ -1,7 +1,6 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
-import type { FeatureCollection } from "geojson";
 import type { MapLayerMouseEvent } from "maplibre-gl";
 import { ArrowLeft, ArrowRight, BellPlus, Search } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
@@ -11,8 +10,9 @@ import { DailyStrip } from "@/components/charts/daily-strip";
 import { RiskDial } from "@/components/charts/risk-dial";
 import { SeriesChart } from "@/components/charts/series-chart";
 import { BaseMap, useMap } from "@/components/map/base-map";
-import { RegionsLayer, SignatureLayer } from "@/components/map/layers";
-import { useRegionsGeoJson } from "@/components/map/use-regions";
+import { SignatureLayer } from "@/components/map/layers";
+import { useCountryShape } from "@/components/map/use-regions";
+import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
 import { DriverList } from "@/components/region/drivers";
 import { InfoTip } from "@/components/ui/info-tip";
 import { RiskBadge } from "@/components/ui/risk-badge";
@@ -32,7 +32,7 @@ export function RiskClient({
   initial: string | null;
 }) {
   const t = useTranslations("risk");
-  const regions = useRegionsGeoJson();
+  const signature = useCountryShape("az");
   const tc = useTranslations("common");
   const tl = useTranslations("levels");
   const locale = useLocale() as AppLocale;
@@ -74,9 +74,9 @@ export function RiskClient({
     <div className="grid min-h-dvh lg:h-dvh lg:grid-cols-[minmax(0,1fr)_440px]">
       <div className="relative h-[52vh] lg:h-full">
         <BaseMap className="absolute inset-0" controlsPosition="bottom-left" terrain>
-          <RegionsLayer geojson={regions} mode="risk" selected={selected} onHover={onHover} onClick={setSelected} />
-          <SignatureLayer geojson={regions} />
-          <FlyTo slug={selected} regions={regions} />
+          <ViewportRegionsLayer mode="risk" selected={selected} onHover={onHover} onClick={setSelected} />
+          <SignatureLayer geojson={signature} />
+          <FlyTo slug={selected} />
         </BaseMap>
         <div className="pointer-events-none absolute inset-x-0 top-0 h-40 bg-gradient-to-b from-bg/90 to-transparent" />
         <div className="pointer-events-none absolute left-4 top-20 z-10 max-w-[520px] sm:left-6 sm:top-24">
@@ -158,19 +158,20 @@ export function RiskClient({
   );
 }
 
-function FlyTo({ slug, regions }: { slug: string | null; regions: FeatureCollection | null }) {
+// Fly to the selected region: its centre, zoomed by its size (shapes are loaded by view).
+function FlyTo({ slug }: { slug: string | null }) {
   const map = useMap();
+  const { data } = useQuery({
+    queryKey: ["region", slug],
+    enabled: !!slug,
+    queryFn: () => http<{ lat?: number; lon?: number; area_km2?: number }>(`/regions/${slug}`),
+  });
   useEffect(() => {
-    if (!map || !slug) return;
-    const f = regions?.features.find((x) => x.properties?.slug === slug);
-    if (!f) return;
-    const coords: number[][] = [];
-    const walk = (c: unknown) => (Array.isArray(c) && typeof c[0] === "number" ? coords.push(c as number[]) : Array.isArray(c) && c.forEach(walk));
-    walk((f.geometry as { coordinates: unknown }).coordinates);
-    const xs = coords.map((c) => c[0]);
-    const ys = coords.map((c) => c[1]);
-    map.fitBounds([[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)]], { padding: 80, maxZoom: 8.5, duration: 1400 });
-  }, [map, slug, regions]);
+    if (!map || !slug || data?.lat == null || data?.lon == null) return;
+    const span = Math.sqrt(Math.max(data.area_km2 ?? 1000, 1));
+    const zoom = Math.max(3.5, Math.min(8.5, 11.2 - Math.log2(span)));
+    map.flyTo({ center: [data.lon, data.lat], zoom, duration: 1400 });
+  }, [map, slug, data]);
   return null;
 }
 

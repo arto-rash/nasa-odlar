@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\AoiSummaryRequest;
 use App\Http\Requests\GridRequest;
 use App\Http\Requests\HotspotsRequest;
+use App\Http\Requests\RegionsGeojsonRequest;
 use App\Http\Requests\SkillRequest;
 use App\Http\Requests\WeeklySeriesRequest;
 use App\Services\MlClient;
@@ -28,9 +29,9 @@ class AnalyticsController extends Controller
         return $this->proxy('/regions');
     }
 
-    public function regionsGeojson(): Response
+    public function regionsGeojson(RegionsGeojsonRequest $request): Response
     {
-        return $this->proxy('/regions/geojson');
+        return $this->proxy('/regions/geojson', $request->forwarded());
     }
 
     public function region(string $slug): Response

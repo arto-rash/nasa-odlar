@@ -9,8 +9,9 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FireClock } from "@/components/charts/fire-clock";
 import { BaseMap, useMap } from "@/components/map/base-map";
-import { useRegionsGeoJson } from "@/components/map/use-regions";
-import { DensityLayer, HotspotLayer, RegionsLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
+import { useCountryShape } from "@/components/map/use-regions";
+import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
+import { DensityLayer, HotspotLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
@@ -33,7 +34,7 @@ export function ExploreClient({
   const t = useTranslations("explore");
   const locale = useLocale() as AppLocale;
   const qc = useQueryClient();
-  const regions = useRegionsGeoJson();
+  const signature = useCountryShape("az");
   const [index, setIndex] = useState(() => Math.max(0, timeline.findIndex((p) => p.week === initialWeek)));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
@@ -136,15 +137,14 @@ export function ExploreClient({
     <div className="fixed inset-0 bg-bg">
       <BaseMap className="absolute inset-0 [&_.maplibregl-ctrl-top-right]:!top-[84px] [&_.maplibregl-ctrl-top-right]:!right-2 sm:[&_.maplibregl-ctrl-top-right]:!right-3" controlsPosition="top-right" options={{ doubleClickZoom: false }}>
         <DensityLayer cells={cells} visible={layers.density} />
-        <RegionsLayer
-          geojson={regions}
+        <ViewportRegionsLayer
           mode={layers.regions === "off" ? "outline" : layers.regions}
           visible={layers.regions !== "off"}
           selected={selected}
           onHover={drawing ? undefined : onHover}
           onClick={drawing ? undefined : setSelected}
         />
-        <SignatureLayer geojson={regions} />
+        <SignatureLayer geojson={signature} />
         <HotspotLayer points={points} visible={layers.hotspots} sensors={sensors} />
         <AoiLayer
           drawing={drawing}
