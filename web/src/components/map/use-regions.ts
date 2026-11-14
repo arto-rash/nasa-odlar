@@ -15,18 +15,60 @@ import { http } from "@/lib/client";
  */
 
 type View = { zoom: number; bbox: string | null };
+type Map = NonNullable<ReturnType<typeof useMap>>;
 
-function viewOf(map: NonNullable<ReturnType<typeof useMap>>): View {
-  const z = map.getZoom();
-  if (z < 4) return { zoom: 2, bbox: null };
-  const step = z < 7 ? 5 : 1;
+/** The visible area widened to a grid of ``step`` degrees (plus one cell), as "w,s,e,n". */
+function snappedBounds(map: Map, step: number): string {
   const b = map.getBounds();
   const snap = (v: number, up: boolean) => (up ? Math.ceil(v / step) : Math.floor(v / step)) * step;
   const w = Math.max(-180, snap(b.getWest(), false) - step);
   const s = Math.max(-85, snap(b.getSouth(), false) - step);
   const e = Math.min(180, snap(b.getEast(), true) + step);
   const n = Math.min(85, snap(b.getNorth(), true) + step);
-  return { zoom: z < 7 ? 5 : 8, bbox: `${w},${s},${e},${n}` };
+  return `${w},${s},${e},${n}`;
+}
+
+function viewOf(map: Map): View {
+  const z = map.getZoom();
+  if (z < 4) return { zoom: 2, bbox: null };
+  return { zoom: z < 7 ? 5 : 8, bbox: snappedBounds(map, z < 7 ? 5 : 1) };
+}
+
+/**
+ * What a fire map should ask for at the current view: individual detections in
+ * the visible area from zoom 5, detections summed per grid cell when zoomed out
+ * (``cell``, degrees), and the density grid's cell size (``step``).
+ */
+export type PointView = { cell: number | null; bbox: string | null; step: number };
+
+function pointViewOf(map: Map): PointView {
+  const z = map.getZoom();
+  if (z < 3) return { cell: 1, bbox: null, step: 1 };
+  if (z < 5) return { cell: 0.25, bbox: snappedBounds(map, 5), step: 0.25 };
+  return { cell: null, bbox: snappedBounds(map, 1), step: 0.1 };
+}
+
+/** Reports the PointView whenever the map stops moving. Use inside <BaseMap>. */
+export function MapViewWatcher({ onChange }: { onChange: (v: PointView) => void }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!map) return;
+    let last = "";
+    const update = () => {
+      const v = pointViewOf(map);
+      const key = `${v.cell}|${v.bbox}|${v.step}`;
+      if (key !== last) {
+        last = key;
+        onChange(v);
+      }
+    };
+    update();
+    map.on("moveend", update);
+    return () => {
+      map.off("moveend", update);
+    };
+  }, [map, onChange]);
+  return null;
 }
 
 /** Regions in view, and whether they are countries (zoomed out) or provinces. Use inside <BaseMap>. */

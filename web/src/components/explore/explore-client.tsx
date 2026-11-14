@@ -9,7 +9,7 @@ import { useLocale, useTranslations } from "next-intl";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FireClock } from "@/components/charts/fire-clock";
 import { BaseMap, useMap } from "@/components/map/base-map";
-import { useCountryShape } from "@/components/map/use-regions";
+import { MapViewWatcher, useCountryShape, type PointView } from "@/components/map/use-regions";
 import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
 import { DensityLayer, HotspotLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
 import { RiskBadge } from "@/components/ui/risk-badge";
@@ -25,10 +25,9 @@ const iso = (d: Date) => d.toISOString().slice(0, 10);
 const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z").getTime() + n * 86400000));
 
 export function ExploreClient({
-  timeline, cells, initialWeek,
+  timeline, initialWeek,
 }: {
   timeline: TimelinePoint[];
-  cells: [number, number, number][];
   initialWeek: string;
 }) {
   const t = useTranslations("explore");
@@ -49,22 +48,34 @@ export function ExploreClient({
 
   const week = timeline[index]?.week ?? initialWeek;
   const range = (w: string) => ({ start: addDays(w, -7 * AFTERGLOW_WEEKS), end: addDays(w, 6) });
+  // What the map shows decides what is fetched (see MapViewWatcher): points in
+  // view, or per-cell sums when zoomed out.
+  const [view, setView] = useState<PointView | null>(null);
+  const viewQuery = view ? `${view.bbox ? `&bbox=${view.bbox}` : ""}${view.cell ? `&cell=${view.cell}` : ""}` : "";
   const fetchWeek = (w: string) => {
     const r = range(w);
-    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}&limit=30000`);
+    return http<HotspotResponse>(`/hotspots?start=${r.start}&end=${r.end}&limit=30000${viewQuery}`);
   };
   const { data, isFetching } = useQuery({
-    queryKey: ["hotspots", week],
+    queryKey: ["hotspots", week, viewQuery],
     queryFn: () => fetchWeek(week),
+    enabled: view !== null,
     placeholderData: keepPreviousData,
     staleTime: Infinity,
+  });
+  const { data: grid } = useQuery({
+    queryKey: ["grid", view?.step, view?.bbox],
+    queryFn: () => http<{ cells: [number, number, number][] }>(`/grid?step=${view!.step}${view!.bbox ? `&bbox=${view!.bbox}` : ""}`),
+    enabled: view !== null && layers.density,
+    placeholderData: keepPreviousData,
+    staleTime: 30 * 60_000,
   });
 
   // prefetch ahead while playing so playback stays smooth
   useEffect(() => {
     for (let k = 1; k <= 3; k++) {
       const w = timeline[index + k]?.week;
-      if (w) qc.prefetchQuery({ queryKey: ["hotspots", w], queryFn: () => fetchWeek(w), staleTime: Infinity });
+      if (w && view) qc.prefetchQuery({ queryKey: ["hotspots", w, viewQuery], queryFn: () => fetchWeek(w), staleTime: Infinity });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [index]);
@@ -108,7 +119,9 @@ export function ExploreClient({
       age: Math.max(0, Math.ceil((w0 - new Date(date + "T00:00:00Z").getTime()) / (7 * 86400000))),
     }));
   }, [data, week]);
-  const currentCount = points.filter((p) => p.age === 0 && sensors[p.sensor]).length;
+  // zoomed out, each point is a grid cell carrying its detection count
+  const currentCount = points.filter((p) => p.age === 0 && sensors[p.sensor])
+    .reduce((n, p) => n + (data?.cell_deg ? p.frp : 1), 0);
 
   const aoi = useMutation({
     mutationFn: (coords: [number, number][]) =>
@@ -136,7 +149,8 @@ export function ExploreClient({
   return (
     <div className="fixed inset-0 bg-bg">
       <BaseMap className="absolute inset-0 [&_.maplibregl-ctrl-top-right]:!top-[84px] [&_.maplibregl-ctrl-top-right]:!right-2 sm:[&_.maplibregl-ctrl-top-right]:!right-3" controlsPosition="top-right" options={{ doubleClickZoom: false }}>
-        <DensityLayer cells={cells} visible={layers.density} />
+        <MapViewWatcher onChange={setView} />
+        <DensityLayer cells={grid?.cells ?? []} visible={layers.density} />
         <ViewportRegionsLayer
           mode={layers.regions === "off" ? "outline" : layers.regions}
           visible={layers.regions !== "off"}

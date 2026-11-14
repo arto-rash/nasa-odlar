@@ -19,6 +19,8 @@ class HotspotsRequest extends ProxyQueryRequest
             'limit' => ['nullable', 'integer', 'min:1', 'max:50000'],
             // west,south,east,north in degrees, for map-viewport queries
             'bbox' => ['nullable', 'string', 'max:80', 'regex:/^-?\d+(\.\d+)?(,-?\d+(\.\d+)?){3}$/'],
+            // sum detections per grid cell of this size (degrees), for zoomed-out maps
+            'cell' => ['nullable', 'numeric', 'gt:0', 'max:5'],
         ];
     }
 

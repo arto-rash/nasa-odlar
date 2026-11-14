@@ -94,15 +94,7 @@ def regions_geojson(bbox: str | None = Query(None, description="west,south,east,
     gateway's region sync). With bbox/zoom/country: only the shapes in view."""
     if bbox is None and zoom is None and country is None:
         return Response(service.regions_geojson(s), media_type="application/geo+json")
-    box = None
-    if bbox:
-        try:
-            box = tuple(float(v) for v in bbox.split(","))
-        except ValueError as exc:
-            raise ValueError("bbox must be west,south,east,north") from exc
-        if len(box) != 4:
-            raise ValueError("bbox must be west,south,east,north")
-    return Response(service.region_shapes(s, box, 8.0 if zoom is None else zoom, country),
+    return Response(service.region_shapes(s, parse_bbox(bbox), 8.0 if zoom is None else zoom, country),
                     media_type="application/geo+json")
 
 
@@ -145,16 +137,9 @@ def risk(slug: str, s: Store = Depends(store)):
 def hotspots(start: date, end: date, sensor: Literal["MODIS", "VIIRS", "modis", "viirs"] | None = None,
              region: str | None = None, limit: int = Query(20000, le=50000),
              bbox: str | None = Query(None, description="west,south,east,north in degrees"),
+             cell: float | None = Query(None, gt=0, le=5, description="sum per grid cell of this size (degrees)"),
              s: Store = Depends(store)):
-    box = None
-    if bbox:
-        try:
-            box = tuple(float(v) for v in bbox.split(","))
-        except ValueError as exc:
-            raise ValueError("bbox must be west,south,east,north") from exc
-        if len(box) != 4:
-            raise ValueError("bbox must be west,south,east,north")
-    return service.hotspots(s, start, end, sensor, region, limit, box)
+    return service.hotspots(s, start, end, sensor, region, limit, parse_bbox(bbox), cell)
 
 
 @app.get("/timeline", dependencies=deps)
@@ -163,8 +148,22 @@ def timeline(s: Store = Depends(store)):
 
 
 @app.get("/grid", dependencies=deps)
-def grid(year: int | None = None, sensor: Literal["MODIS", "VIIRS"] | None = None, s: Store = Depends(store)):
-    return service.grid(s, year, sensor)
+def grid(year: int | None = None, sensor: Literal["MODIS", "VIIRS"] | None = None,
+         bbox: str | None = Query(None, description="west,south,east,north in degrees"),
+         step: float = Query(0.1, ge=0.1, le=5), s: Store = Depends(store)):
+    return service.grid(s, year, sensor, parse_bbox(bbox), step)
+
+
+def parse_bbox(bbox: str | None) -> tuple[float, float, float, float] | None:
+    if not bbox:
+        return None
+    try:
+        box = tuple(float(v) for v in bbox.split(","))
+    except ValueError as exc:
+        raise ValueError("bbox must be west,south,east,north") from exc
+    if len(box) != 4:
+        raise ValueError("bbox must be west,south,east,north")
+    return box
 
 
 @app.post("/aoi/summary", dependencies=deps)

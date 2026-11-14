@@ -316,6 +316,9 @@ export interface HotspotResponse {
   total: number;
   truncated: boolean;
   columns: string[];
+  /** Set when detections are summed per grid cell: each point is a cell centre,
+   *  its fifth value the detection count (not FRP) and its date the week's Monday. */
+  cell_deg?: number;
   points: [number, number, "M" | "V", string, number, string][];
 }
 

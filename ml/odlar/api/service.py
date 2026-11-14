@@ -284,11 +284,26 @@ def _point_filter(s: Store, start: date, end: date, sensor: str | None = None, r
 
 
 def hotspots(s: Store, start: date, end: date, sensor: str | None = None, region: str | None = None,
-             limit: int = 20000, bbox: tuple[float, float, float, float] | None = None) -> dict:
+             limit: int = 20000, bbox: tuple[float, float, float, float] | None = None,
+             cell: float | None = None) -> dict:
+    """Detections between two dates. With ``cell`` (degrees), detections are summed
+    per grid cell, sensor and week for zoomed-out maps: each row is a cell centre,
+    with the detection count in place of FRP and the week's Monday as its date."""
     if (end - start).days > 92:
         raise ValueError("date range is limited to 92 days")
     where, params = _point_filter(s, start, end, sensor, region, bbox)
     years = range(start.year, end.year + 1)
+    if cell:
+        c = max(0.05, float(cell))
+        sel = s.points.query(
+            where + " GROUP BY 1, 2, 3, 5", params,
+            f"(floor(lon / {c}) + 0.5) * {c} AS lon, (floor(lat / {c}) + 0.5) * {c} AS lat, sensor, "
+            "any_value(satellite) AS satellite, date_trunc('week', acq_date) AS acq_date, count(*) AS frp",
+            years, limit)
+        return {"total": int(sel["frp"].sum()) if len(sel) else 0, "truncated": len(sel) >= limit, "cell_deg": c,
+                "columns": ["lon", "lat", "sensor", "satellite", "count", "week"],
+                "points": [[round(float(x.lon), 3), round(float(x.lat), 3), x.sensor[0], x.satellite, int(x.frp),
+                            x.acq_date.strftime("%Y-%m-%d")] for x in sel.itertuples()]}
     total = s.points.count(where, params, years)
     sel = s.points.query(where, params, "lon, lat, sensor, satellite, frp, acq_date", years, limit)
     return {"total": total, "truncated": total > limit,
@@ -305,16 +320,28 @@ def timeline(s: Store) -> list[dict]:
              "harmonized": _f(r.harmonized, 1), "lo": _f(r.lo, 1), "hi": _f(r.hi, 1)} for r in g.itertuples()]
 
 
-def grid(s: Store, year: int | None = None, sensor: str | None = None) -> dict:
+def grid(s: Store, year: int | None = None, sensor: str | None = None,
+         bbox: tuple[float, float, float, float] | None = None, step: float = 0.1) -> dict:
+    """Detection density on a regular grid: 0.1° cells, or coarser ``step`` cells
+    (summed) for zoomed-out maps; optionally only within ``bbox``."""
+    step = max(0.1, float(step))
     cols = [sensor.upper()] if sensor else ["MODIS", "VIIRS"]
     total = " + ".join(f'coalesce("{c}", 0)' for c in cols)
-    where = "year = ?" if year else "TRUE"
+    where, params = ["TRUE"], []
+    if year:
+        where.append("year = ?")
+        params.append(year)
+    if bbox:
+        where.append("lon BETWEEN ? AND ? AND lat BETWEEN ? AND ?")
+        params += [bbox[0], bbox[2], bbox[1], bbox[3]]
+    cell = f"(floor(lon / {step}) + 0.5) * {step}", f"(floor(lat / {step}) + 0.5) * {step}"
     agg = s.points._con().execute(
-        f"SELECT lon, lat, sum({total}) AS count FROM read_parquet(?, union_by_name = true) WHERE {where} "
-        "GROUP BY lon, lat HAVING sum(" + total + ") > 0",
-        [s.grid_paths, *([year] if year else [])]).df()
-    return {"cell_deg": 0.1, "cells": [[round(float(r.lon), 3), round(float(r.lat), 3), int(r.count)]
-                                       for r in agg.itertuples()]}
+        f"SELECT {cell[0]} AS lon, {cell[1]} AS lat, sum({total}) AS count "
+        f"FROM read_parquet(?, union_by_name = true) WHERE {' AND '.join(where)} "
+        f"GROUP BY 1, 2 HAVING sum({total}) > 0",
+        [s.grid_paths, *params]).df()
+    return {"cell_deg": step, "cells": [[round(float(r.lon), 3), round(float(r.lat), 3), int(r.count)]
+                                        for r in agg.itertuples()]}
 
 
 def aoi_summary(s: Store, geometry: dict) -> dict:

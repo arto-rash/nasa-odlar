@@ -13,8 +13,9 @@ import { http } from "@/lib/client";
 export default function HeroMap() {
   const reduce = useReducedMotion();
   const { data } = useQuery({
-    queryKey: ["grid"],
-    queryFn: () => http<{ cells: [number, number, number][] }>("/grid"),
+    queryKey: ["grid", 1],
+    // 1° cells: the globe shows the whole world, where 0.1° would be far too many
+    queryFn: () => http<{ cells: [number, number, number][] }>("/grid?step=1"),
     staleTime: 30 * 60_000,
   });
   const regions = useCountryShape("az");

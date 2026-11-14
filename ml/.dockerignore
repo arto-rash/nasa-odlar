@@ -1,8 +1,7 @@
+artifacts
+data/cache
+data/boundaries/world
+data/world_logs
 .venv
 **/__pycache__
 .pytest_cache
-.ruff_cache
-.hypothesis
-data/cache
-tests
-*.egg-info

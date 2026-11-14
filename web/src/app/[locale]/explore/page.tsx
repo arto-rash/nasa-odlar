@@ -21,15 +21,12 @@ export default async function ExplorePage({
   const { locale } = await params;
   setRequestLocale(locale);
   const { w } = await searchParams;
-  const [timeline, grid] = await Promise.all([
-    api<TimelinePoint[]>("/timeline"),
-    api<{ cells: [number, number, number][] }>("/grid"),
-  ]);
+  const timeline = await api<TimelinePoint[]>("/timeline");
   // Default to the busiest week of the last complete year — the most telling first frame.
   const lastYear = +timeline[timeline.length - 1].week.slice(0, 4) - 1;
   const peak = timeline
     .filter((p) => +p.week.slice(0, 4) === lastYear)
     .reduce((a, b) => (b.viirs > a.viirs ? b : a), timeline[timeline.length - 1]);
   const initialWeek = w && timeline.some((p) => p.week === w) ? w : peak.week;
-  return <ExploreClient timeline={timeline} cells={grid.cells} initialWeek={initialWeek} />;
+  return <ExploreClient timeline={timeline} initialWeek={initialWeek} />;
 }

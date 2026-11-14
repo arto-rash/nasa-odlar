@@ -13,7 +13,9 @@ RSYNC=(rsync -az --delete --exclude .git --exclude node_modules --exclude vendor
 
 echo "==> artifacts"
 ssh "$HOST" "mkdir -p /opt/odlar/artifacts /opt/odlar/ml /opt/odlar/api /opt/odlar/deploy"
-rsync -az --delete "$ROOT/ml/artifacts/" "$HOST:/opt/odlar/artifacts/"
+# half-written stores of a build in progress (.staging/.new/.old) stay local
+ART_EXCLUDES=(--exclude '*.staging' --exclude '*.new' --exclude '*.old')
+rsync -az --delete "${ART_EXCLUDES[@]}" "$ROOT/ml/artifacts/" "$HOST:/opt/odlar/artifacts/"
 
 if [[ "${ARTIFACTS_ONLY:-}" == "1" ]]; then
   rsync -az "$ROOT/deploy/refresh.sh" "$HOST:/opt/odlar/deploy/"
@@ -25,8 +27,8 @@ echo "==> code"
 "${RSYNC[@]}" "$ROOT/ml/" "$HOST:/opt/odlar/ml/"
 "${RSYNC[@]}" "$ROOT/api/" "$HOST:/opt/odlar/api/"
 rsync -az "$ROOT/deploy/docker-compose.prod.yml" "$ROOT/deploy/refresh.sh" "$HOST:/opt/odlar/deploy/"
-# the ML image bakes a fallback copy of the artifacts
-rsync -az --delete "$ROOT/ml/artifacts/" "$HOST:/opt/odlar/ml/artifacts/"
+# artifacts are not baked into the image (the stack mounts /opt/odlar/artifacts)
+ssh "$HOST" "rm -rf /opt/odlar/ml/artifacts"
 
 echo "==> build + up"
 ssh "$HOST" "cd /opt/odlar/deploy && docker compose -f docker-compose.prod.yml up -d --build && docker image prune -f >/dev/null && docker compose -f docker-compose.prod.yml ps"
