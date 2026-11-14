@@ -26,6 +26,7 @@ import { FORECAST_STOPS } from "@/components/map/layers";
 import { Timeline } from "./timeline";
 import { FireDetail, FiresLayer, FiresList, FitFire } from "./fires";
 import { StaticSourcesLayer, useStaticSources } from "./static-sources";
+import { ImageryLayers } from "@/components/map/imagery";
 import { RegionPlace } from "@/components/ui/region-place";
 
 const iso = (d: Date) => d.toISOString().slice(0, 10);
@@ -51,7 +52,8 @@ export function ExploreClient({
   const [index, setIndex] = useState(() => Math.max(0, timeline.findIndex((p) => p.week === initialWeek)));
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
-  const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off", flares: false });
+  const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off", flares: false,
+    imagery: "map" as "map" | "satellite", nasaDay: true });
   const { data: flares } = useStaticSources(layers.flares);
   const [sensors, setSensors] = useState({ M: true, V: true });
   const [hover, setHover] = useState<{ id?: number; slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
@@ -94,6 +96,10 @@ export function ExploreClient({
     const id = setTimeout(() => setApiWeek(week), playing ? 0 : 140);
     return () => clearTimeout(id);
   }, [week, playing]);
+  // NASA's picture for the satellite view: the last day of the week shown (not
+  // after yesterday, the newest day NASA has), and none for forecast weeks
+  const [yesterday] = useState(() => new Date(Date.now() - 864e5).toISOString().slice(0, 10));
+  const nasaDay = isFuture ? null : [addDays(apiWeek, 6), yesterday].sort()[0];
   const packResults = useQueries({
     // with no file for the view, the world's (if loaded) shows until the query answers
     queries: yearsFor(week).map((y) => ({ ...weekPackQuery(y, packArea ?? "world"), enabled: packArea !== null && !isFuture })),
@@ -266,6 +272,7 @@ export function ExploreClient({
         <HotspotLayer points={points} visible={layers.hotspots} sensors={sensors} />
         {fires && <FiresLayer events={fireData?.events ?? []} selected={fireId} onPick={setFireId} />}
         {layers.flares && <StaticSourcesLayer data={flares} />}
+        {layers.imagery === "satellite" && <ImageryLayers day={layers.nasaDay ? nasaDay : null} />}
         <FitFire id={fireId} />
         <AoiLayer
           drawing={drawing}
@@ -335,6 +342,26 @@ export function ExploreClient({
           {panelOpen && (
             <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
               <div className="mt-3 space-y-1">
+                <div className="mb-2 grid grid-cols-2 gap-1 rounded-lg bg-bg-sunken/70 p-1 ring-1 ring-line" role="radiogroup" aria-label={t("basemap")}>
+                  {(["map", "satellite"] as const).map((k) => (
+                    <button
+                      key={k}
+                      role="radio"
+                      aria-checked={layers.imagery === k}
+                      onClick={() => setLayers((l) => ({ ...l, imagery: k }))}
+                      className={cn("rounded-md px-3 py-1.5 text-[13px] transition", layers.imagery === k ? "bg-text font-medium text-bg" : "text-dim hover:text-text")}
+                    >
+                      {t(k === "map" ? "basemapMap" : "basemapSatellite")}
+                    </button>
+                  ))}
+                </div>
+                {layers.imagery === "satellite" && (
+                  <>
+                    <Toggle on={layers.nasaDay} onChange={(v) => setLayers((l) => ({ ...l, nasaDay: v }))}
+                      label={nasaDay ? t("nasaDay", { date: nasaDay }) : t("nasaDayNone")} />
+                    <p className="pl-8 pr-1 text-[12px] leading-snug text-faint">{t("nasaDayNote")}</p>
+                  </>
+                )}
                 <Toggle on={layers.hotspots} onChange={(v) => setLayers((l) => ({ ...l, hotspots: v }))} label={t("hotspots")} />
                 <div className="flex gap-1.5 pl-8">
                   <SensorChip on={sensors.M} color="var(--modis)" label={t("legendModis")} onClick={() => setSensors((s) => ({ ...s, M: !s.M }))} />

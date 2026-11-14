@@ -260,7 +260,13 @@
     "forecastEmpty": "Bu ərazi üçün hələ proqnoz yoxdur.",
     "flares": "Çıxarılmış istilik mənbələri",
     "flaresNote": "Dünyada demək olar ki, il boyu isti olan {count, number} nöqtə (qaz məşəlləri, neft emalı zavodları, Yanardağ kimi yanan qaz çıxışları). Bunlar bitki yanğını deyil, ona görə aşkarlamaları qeydə daxil edilmir.",
-    "flaresLoading": "Yüklənir…"
+    "flaresLoading": "Yüklənir…",
+    "basemap": "Əsas xəritə",
+    "basemapMap": "Xəritə",
+    "basemapSatellite": "Peyk",
+    "nasaDay": "NASA görüntüsü, {date}",
+    "nasaDayNone": "Günün NASA görüntüsü",
+    "nasaDayNote": "NASA-nın həmin günə aid real rəngli görüntüsü (NOAA-20 üzərində VIIRS; 2018-dən əvvəl MODIS): tüstü və təzə yanıq izləri görünür. Buludlar yeri örtür; yaxınlaşdırdıqda daha kəskin buludsuz mozaika görünür."
   },
   "regions": {
     "title": "Bölgələr",

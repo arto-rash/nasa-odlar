@@ -260,7 +260,13 @@
     "forecastEmpty": "No forecast for this area yet.",
     "flares": "Removed heat sources",
     "flaresNote": "{count, number} spots worldwide that are hot almost all year (gas flares, refineries, burning gas vents such as Yanardag). They are not vegetation fires, so their detections never enter the record.",
-    "flaresLoading": "Loading…"
+    "flaresLoading": "Loading…",
+    "basemap": "Base map",
+    "basemapMap": "Map",
+    "basemapSatellite": "Satellite",
+    "nasaDay": "NASA image of {date}",
+    "nasaDayNone": "NASA image of the day",
+    "nasaDayNote": "NASA's true-colour picture of that day (VIIRS on NOAA-20; MODIS before 2018): smoke and fresh burn scars show. Clouds hide the ground; zoom in for the sharper cloud-free mosaic."
   },
   "regions": {
     "title": "Regions",
