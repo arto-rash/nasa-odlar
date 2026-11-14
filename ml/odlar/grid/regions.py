@@ -142,12 +142,17 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
         # odlar.world_split): the state is the parent region, its slug prefixes the
         # local units' slugs (county names repeat across states).
         prefix = meta.get("slug", meta["code"])
+        # 'Tashkent' (the city) and 'Tashkent Region': the short form only where it is unique
+        short = gdf["shapeName"].map(lambda n: _osm_names({"shapeName": n})[0])
+        clash = set(short[short.duplicated(keep=False)])
         for _, r in gdf.iterrows():
             if meta.get("source") == "split":
                 base = name_en = name_az = str(r["shapeName"]).strip()
                 kind = "district"
             elif meta.get("source") == "osm":
                 base, name_en, name_az = _osm_names(r)
+                if base in clash:
+                    base = name_en = str(r["shapeName"]).strip()
                 kind = "province"
             else:
                 base, kind = _split_name(r["shapeName"])
@@ -170,6 +175,9 @@ def load_regions(batch: str = PRIMARY_BATCH, boundary_dir: Path = BOUNDARY_DIR) 
 
     regions = gpd.GeoDataFrame(rows, crs=4326)
     regions = regions.sort_values(["country", "level", "slug"]).reset_index(drop=True)
+    dup = regions["slug"].duplicated()
+    if dup.any():  # any other repeat: numbered, so every slug is a unique address
+        regions.loc[dup, "slug"] += "-" + (regions[dup].groupby("slug").cumcount() + 2).astype(str)
     regions.insert(0, "region_id", range(b.id_offset + 1, b.id_offset + len(regions) + 1))
     parent = {r.country: r.region_id for r in regions.itertuples() if r.level == "country"}
     regions["parent_id"] = [None if r.level == "country" else parent[r.country] for r in regions.itertuples()]
