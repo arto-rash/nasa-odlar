@@ -26,7 +26,7 @@ export function Numbers({ overview }: { overview: Overview }) {
   const items = [
     { v: <Ticker value={25} />, l: t("years") },
     { v: <Ticker value={5} />, l: t("satellites") },
-    { v: <Ticker value={overview.n_regions - 3} />, l: t("regions") },
+    { v: <Ticker value={overview.n_regions} />, l: t("regions") },
     { v: <Ticker value={overview.meta.n_hotspots} format={(x) => fmtCompact(x, locale)} />, l: t("hotspots") },
     {
       v: <Ticker value={overview.skill.bias * 100} digits={1} format={(x) => `${x >= 0 ? "+" : ""}${fmtNum(x, locale, 1)}%`} />,

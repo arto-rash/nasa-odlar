@@ -895,7 +895,8 @@ def overview(s: Store) -> dict:
         "model": {"harmonized": mr["harmonized"]["overall"], "raw": mr["raw"]["overall"]},
         "risk_top": risk[:8],
         "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),
-        "n_regions": int(len(s.regions)),
+        # districts and provinces (each country uses one or the other); country rows are not units
+        "n_regions": int((s.regions["level"] != "country").sum()),
         "breaks": breaks_summary(s),
         "countries": sorted(s.regions.loc[s.regions["level"] == "country", "country"].unique().tolist()),
         "country_names": {c: {"en": country_names().get(c, (c.upper(),) * 2)[0],

@@ -25,6 +25,9 @@ def test_overview(client):
     assert abs(d["skill"]["bias"]) < 0.15 and d["skill"]["raw_modis_bias"] < -0.4
     assert d["model"]["harmonized"]["brier_skill"] > d["model"]["raw"]["brier_skill"]
     assert d["pilot"] and d["risk_top"]
+    # districts and provinces only: country rows are not counted
+    units = [r for r in client.get("/regions").json() if r["level"] != "country"]
+    assert d["n_regions"] == len(units)
 
 
 def test_regions_and_geojson(client):

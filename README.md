@@ -2,7 +2,7 @@
 
 NASA Space Apps Challenge 2026 · **MODIS and VIIRS Hot Spots**
 
-ODLAR harmonizes NASA's split active-fire archive into one consistent 25-year record. MODIS (1 km, 2000–) and VIIRS (375 m, 2012–) are not comparable as they stand. On that record it builds a burning-activity calendar for every district, answers "is this month normal here?", and forecasts fire risk against that history: for the next 7 days, and as a 13-week outlook. It covers **193 countries, 27,092 districts**, updated every day from NASA FIRMS; Azerbaijan is the home pilot.
+ODLAR harmonizes NASA's split active-fire archive into one consistent 25-year record. MODIS (1 km, 2000–) and VIIRS (375 m, 2012–) are not comparable as they stand. On that record it builds a burning-activity calendar for every district, answers "is this month normal here?", and forecasts fire risk against that history: for the next 7 days, and as a 13-week outlook. It covers **193 countries, 27,083 districts and provinces**, updated every day from NASA FIRMS; Azerbaijan is the home pilot.
 
 - **Live app:** https://odlar.app (az / en)
 - **API:** https://odlar.app/api/v1/status
