@@ -662,5 +662,33 @@
     "rank": "{rank} of {n}",
     "rawNote": "Raw satellite data would say {raw}× the usual, because it joins MODIS and VIIRS as they are and VIIRS sees far more small fires. Corrected, it is {ours}×.",
     "aria": "This month is {ratio} times the usual on ODLAR's record; raw data would say {raw} times."
+  },
+  "wind": {
+    "from": {
+      "n": "north",
+      "ne": "north-east",
+      "e": "east",
+      "se": "south-east",
+      "s": "south",
+      "sw": "south-west",
+      "w": "west",
+      "nw": "north-west"
+    },
+    "to": {
+      "n": "north",
+      "ne": "north-east",
+      "e": "east",
+      "se": "south-east",
+      "s": "south",
+      "sw": "south-west",
+      "w": "west",
+      "nw": "north-west"
+    },
+    "fromTo": "from the {from}, pushing fires {to}",
+    "gusts": "gusts {value} m/s",
+    "speed": "{value} m/s",
+    "fireTitle": "Wind, {date}",
+    "fireLine": "{speed} m/s, gusts up to {gust} m/s, {dir}.",
+    "day": "Wind {speed} m/s, gusts {gust} m/s, {dir}"
   }
 }

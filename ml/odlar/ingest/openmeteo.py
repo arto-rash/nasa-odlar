@@ -12,10 +12,13 @@ import numpy as np
 import pandas as pd
 
 FORECAST_URL = "https://api.open-meteo.com/v1/forecast"
+# Gusts and the dominant direction (where the wind comes from, degrees) say how hard
+# and which way a burning fire is pushed. Seven variables: still one call per place.
 DAILY = ["temperature_2m_max", "temperature_2m_mean", "relative_humidity_2m_mean",
-         "wind_speed_10m_mean", "precipitation_sum"]
+         "wind_speed_10m_mean", "precipitation_sum", "wind_gusts_10m_max", "wind_direction_10m_dominant"]
 RENAME = {"temperature_2m_max": "tmax", "temperature_2m_mean": "tmean", "relative_humidity_2m_mean": "rh",
-          "wind_speed_10m_mean": "wind", "precipitation_sum": "precip"}
+          "wind_speed_10m_mean": "wind", "precipitation_sum": "precip", "wind_gusts_10m_max": "gust",
+          "wind_direction_10m_dominant": "wdir"}
 
 
 CACHE_ENV = "OPEN_METEO_CACHE"  # folder shared by one refresh's batches
@@ -34,7 +37,10 @@ def parse(payload: list[dict] | dict, region_ids: list[int]) -> pd.DataFrame:
     frames = []
     for rid, item in zip(region_ids, items, strict=True):
         daily = item["daily"]
-        df = pd.DataFrame({RENAME[k]: daily[k] for k in DAILY})
+        n = len(daily["time"])
+        # a variable the service leaves out comes back empty instead of failing the batch
+        df = pd.DataFrame({RENAME[k]: pd.to_numeric(pd.Series(daily.get(k) or [None] * n), errors="coerce")
+                           for k in DAILY})
         df["date"] = pd.to_datetime(daily["time"])
         df["region_id"] = rid
         frames.append(df)

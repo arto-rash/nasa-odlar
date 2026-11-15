@@ -662,5 +662,33 @@
     "rank": "{rank}/{n}",
     "rawNote": "Xam peyk məlumatı adidən {raw} dəfə çox deyərdi, çünki MODIS və VIIRS-i olduğu kimi birləşdirir, VIIRS isə xeyli çox kiçik yanğın görür. Düzəldilmiş qeyddə bu {ours} dəfədir.",
     "aria": "ODLAR qeydinə görə bu ay adidən {ratio} dəfədir; xam data {raw} dəfə deyərdi."
+  },
+  "wind": {
+    "from": {
+      "n": "şimaldan",
+      "ne": "şimal-şərqdən",
+      "e": "şərqdən",
+      "se": "cənub-şərqdən",
+      "s": "cənubdan",
+      "sw": "cənub-qərbdən",
+      "w": "qərbdən",
+      "nw": "şimal-qərbdən"
+    },
+    "to": {
+      "n": "şimala",
+      "ne": "şimal-şərqə",
+      "e": "şərqə",
+      "se": "cənub-şərqə",
+      "s": "cənuba",
+      "sw": "cənub-qərbə",
+      "w": "qərbə",
+      "nw": "şimal-qərbə"
+    },
+    "fromTo": "{from} əsir, yanğını {to} itələyir",
+    "gusts": "ani sürəti {value} m/s",
+    "speed": "{value} m/s",
+    "fireTitle": "Külək, {date}",
+    "fireLine": "{speed} m/s, ani sürəti {gust} m/s-dək, {dir}.",
+    "day": "Külək {speed} m/s, ani sürəti {gust} m/s, {dir}"
   }
 }

@@ -243,7 +243,8 @@ export interface RiskDetail {
     drivers: Driver[];
     hotspots?: { slug: string; probability: number; level: RiskLevel }[];
   };
-  daily: { date: string; danger: number; tmax: number; rh: number; wind: number; precip: number }[];
+  /** wind: mean m/s; gust: strongest gust m/s; wind_from: degrees the wind comes from */
+  daily: { date: string; danger: number; tmax: number; rh: number; wind: number; precip: number; gust?: number | null; wind_from?: number | null }[];
   outlook: {
     weeks: number;
     q10: number;
@@ -306,6 +307,8 @@ export interface FireEvent {
   active: boolean;
   /** the region holding most of its detections */
   region: { slug: string; name_en: string; name_az: string; country: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string } | null;
+  /** the wind forecast for the fire's region, first day ahead (m/s; "from" in degrees) */
+  wind?: { date: string; speed: number | null; gust: number | null; from: number | null } | null;
 }
 
 export interface FireEventDetail extends FireEvent {

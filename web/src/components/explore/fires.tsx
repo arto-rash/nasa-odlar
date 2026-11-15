@@ -14,6 +14,7 @@ import { http } from "@/lib/client";
 import { cn } from "@/lib/cn";
 import { fmtDate, fmtNum, regionName, type AppLocale } from "@/lib/format";
 import type { FireEvent, FireEventDetail } from "@/lib/types";
+import { useWindText, WindArrow } from "@/components/ui/wind";
 
 /** Fires as circles: size by detections, bright while still burning. */
 export function FiresLayer({ events, selected, onPick }: { events: FireEvent[]; selected: string | null; onPick: (id: string) => void }) {
@@ -24,7 +25,11 @@ export function FiresLayer({ events, selected, onPick }: { events: FireEvent[]; 
       features: events.map((e) => ({
         type: "Feature",
         geometry: { type: "Point", coordinates: [e.lon, e.lat] },
-        properties: { id: e.id, n: e.detections, active: e.active, both: e.modis > 0 && e.viirs > 0 },
+        properties: {
+          id: e.id, n: e.detections, active: e.active, both: e.modis > 0 && e.viirs > 0,
+          // the way the wind pushes it (from + 180°), for burning fires with a forecast
+          ...(e.active && e.wind?.from != null ? { to: (e.wind.from + 180) % 360, ws: e.wind.gust ?? e.wind.speed ?? 0 } : {}),
+        },
       })),
     }),
     [events],
@@ -54,6 +59,24 @@ export function FiresLayer({ events, selected, onPick }: { events: FireEvent[]; 
       "circle-stroke-width": ["case", ["==", ["get", "id"], selected ?? ""], 2.5, 1.2],
     },
   });
+  useWindArrows(map);
+  useLayer({
+    id: "fires-wind",
+    type: "symbol",
+    source: "fires",
+    filter: ["has", "to"],
+    layout: {
+      "icon-image": "odlar-wind-arrow",
+      "icon-rotate": ["get", "to"],
+      "icon-rotation-alignment": "map",
+      "icon-allow-overlap": true,
+      "icon-ignore-placement": true,
+      // just past the fire's edge, downwind; stronger gusts, bigger arrow
+      "icon-offset": [0, -22],
+      "icon-size": ["interpolate", ["linear"], ["get", "ws"], 2, 0.55, 10, 0.8, 18, 1.05],
+    },
+    paint: { "icon-opacity": 0.95 },
+  });
   useEffect(() => {
     if (!map) return;
     const click = (e: MapLayerMouseEvent) => {
@@ -72,6 +95,46 @@ export function FiresLayer({ events, selected, onPick }: { events: FireEvent[]; 
     };
   }, [map, onPick]);
   return null;
+}
+
+/** The arrow icon for the map, drawn once per style (a white arrow with a dark rim). */
+function useWindArrows(map: ReturnType<typeof useMap>) {
+  useEffect(() => {
+    if (!map || map.hasImage("odlar-wind-arrow")) return;
+    const size = 40;
+    const c = document.createElement("canvas");
+    c.width = c.height = size;
+    const g = c.getContext("2d");
+    if (!g) return;
+    g.beginPath();
+    g.moveTo(20, 3); g.lineTo(32, 22); g.lineTo(24.5, 22); g.lineTo(24.5, 37); g.lineTo(15.5, 37); g.lineTo(15.5, 22); g.lineTo(8, 22);
+    g.closePath();
+    g.lineJoin = "round";
+    g.lineWidth = 3;
+    g.strokeStyle = "rgba(26,13,6,0.9)";
+    g.stroke();
+    g.fillStyle = "#fff4dc";
+    g.fill();
+    map.addImage("odlar-wind-arrow", g.getImageData(0, 0, size, size), { pixelRatio: 2 });
+  }, [map]);
+}
+
+/** "Wind, 16 Nov: 6 m/s, gusts up to 14 m/s, from the north-west, pushing fires south-east." */
+export function FireWind({ e, className }: { e: FireEvent; className?: string }) {
+  const t = useTranslations("wind");
+  const locale = useLocale() as AppLocale;
+  const windText = useWindText();
+  const w = e.wind;
+  if (!w || w.from == null) return null;
+  return (
+    <div className={cn("flex items-start gap-2.5 rounded-lg bg-bg-sunken/70 px-3 py-2.5 ring-1 ring-line", className)}>
+      <WindArrow from={w.from} className={cn("mt-0.5 size-5 shrink-0", (w.gust ?? 0) >= 12 ? "text-ember-300" : "text-text")} />
+      <p className="text-[13px] leading-snug text-dim">
+        <span className="font-medium text-text">{t("fireTitle", { date: fmtDate(w.date, locale, { day: "numeric", month: "short" }) })}:</span>{" "}
+        {t("fireLine", { speed: fmtNum(w.speed, locale, 1), gust: fmtNum(w.gust ?? w.speed, locale, 0), dir: windText(w.from) })}
+      </p>
+    </div>
+  );
 }
 
 export function FireFacts({ e, className }: { e: FireEvent; className?: string }) {
@@ -169,6 +232,7 @@ export function FireDetail({ id, onBack, onWeek }: { id: string; onBack: () => v
             {fmtDate(data.first_seen, locale, { day: "numeric", month: "short" })} – {fmtDate(data.last_seen, locale, { day: "numeric", month: "short" })}
           </p>
           <FireFacts e={data} className="mt-2" />
+          {data.active && <FireWind e={data} className="mt-3" />}
           <p className="mt-5 text-[12.5px] font-semibold text-faint">{t("perDay")}</p>
           <div className="mt-2 flex h-24 items-end gap-1">
             {data.per_day.map((d) => (

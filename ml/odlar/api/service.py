@@ -488,10 +488,13 @@ def risk_detail(s: Store, slug: str) -> dict:
                         "recent7": _f(rn["lag7"].sum(), 1), "drivers": top.iloc[0].drivers,
                         "hotspots": [{"slug": s.by_id[int(t.region_id)].slug, "probability": _f(t.probability, 4),
                                       "level": t.level} for t in top.itertuples()]}
+    fw = _with_wind_vectors(fw)
     days = fw.groupby("date").agg(danger=("danger", "mean"), tmax=("tmax", "mean"), rh=("rh", "mean"),
-                                  wind=("wind", "mean"), precip=("precip", "mean")).reset_index()
+                                  wind=("wind", "mean"), precip=("precip", "mean"), gust=("gust", "max"),
+                                  u=("u", "mean"), v=("v", "mean")).reset_index()
     out["daily"] = [{"date": d.date.strftime("%Y-%m-%d"), "danger": _f(d.danger, 1), "tmax": _f(d.tmax, 1),
-                     "rh": _f(d.rh, 0), "wind": _f(d.wind, 1), "precip": _f(d.precip, 1)} for d in days.itertuples()]
+                     "rh": _f(d.rh, 0), "wind": _f(d.wind, 1), "precip": _f(d.precip, 1),
+                     "gust": _f(d.gust, 1), "wind_from": _wind_from(d.u, d.v)} for d in days.itertuples()]
     out["outlook"] = {"weeks": 13, "q10": _f(ol["q10"].sum(), 1), "q50": _f(ol["q50"].sum(), 1),
                       "q90": _f(ol["q90"].sum(), 1), "normal": _f(ol["clim_next13w"].sum(), 1),
                       "normal_p10": _f(ol["clim_p10_13w"].sum(), 1), "normal_p90": _f(ol["clim_p90_13w"].sum(), 1)}
@@ -582,6 +585,42 @@ def forecast_map(s: Store, week: date, bbox: tuple[float, float, float, float] |
                        for a, b, c, d in rows.itertuples(index=False)]}
 
 
+def _with_wind_vectors(fw: pd.DataFrame) -> pd.DataFrame:
+    """Adds the wind as a vector (u east, v north, the way it blows), so directions of
+    several regions can be averaged (350° and 10° make north, not south)."""
+    fw = fw.copy()
+    for col in ("gust", "wdir"):
+        if col not in fw:
+            fw[col] = np.nan  # a store from before the refresh fetched them
+    to = np.radians((fw["wdir"].astype(float) + 180) % 360)
+    fw["u"] = fw["wind"].astype(float) * np.sin(to)
+    fw["v"] = fw["wind"].astype(float) * np.cos(to)
+    return fw
+
+
+def _wind_from(u: float, v: float) -> float | None:
+    """The direction the wind comes from (meteorological degrees), from a mean vector."""
+    if not (np.isfinite(u) and np.isfinite(v)) or (abs(u) < 1e-6 and abs(v) < 1e-6):
+        return None
+    return round(float((np.degrees(np.arctan2(u, v)) + 180) % 360), 0)
+
+
+def _next_wind(s: Store) -> dict:
+    """Per region, the first forecast day's wind (what a fire burning now will meet)."""
+    cached = getattr(s, "_next_wind", None)
+    if cached is not None:
+        return cached
+    fw = s.fire_weather
+    if fw.empty or "wdir" not in fw:
+        s._next_wind = {}
+        return s._next_wind
+    first = fw[fw["date"] == fw["date"].min()]
+    s._next_wind = {int(r.region_id): {"date": pd.Timestamp(r.date).strftime("%Y-%m-%d"), "speed": _f(r.wind, 1),
+                                       "gust": _f(r.gust, 1), "from": _f(r.wdir, 0)}
+                    for r in first.itertuples() if np.isfinite(r.wdir)}
+    return s._next_wind
+
+
 def _event_dict(s: Store, e) -> dict:
     reg = s.by_id.get(int(e.region_id))
     place = ({"slug": reg.slug, "name_en": reg.name_en, "name_az": reg.name_az, "country": reg.country, **_where(s, reg)}
@@ -590,7 +629,8 @@ def _event_dict(s: Store, e) -> dict:
             "first_seen": pd.Timestamp(e.first_seen).strftime("%Y-%m-%d"),
             "last_seen": pd.Timestamp(e.last_seen).strftime("%Y-%m-%d"), "days": int(e.days),
             "detections": int(e.detections), "modis": int(e.modis), "viirs": int(e.viirs),
-            "frp_max": _f(e.frp_max, 1), "frp_sum": _f(e.frp_sum, 1), "active": bool(e.active), "region": place}
+            "frp_max": _f(e.frp_max, 1), "frp_sum": _f(e.frp_sum, 1), "active": bool(e.active), "region": place,
+            "wind": _next_wind(s).get(int(e.region_id))}
 
 
 def events(s: Store, bbox: tuple[float, float, float, float] | None = None, region: str | None = None,

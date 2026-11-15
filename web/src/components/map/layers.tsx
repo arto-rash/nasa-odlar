@@ -101,10 +101,16 @@ export interface HotspotPoint {
 }
 
 /** Fire detections: soft glow underneath, crisp core on top, older weeks fade like embers. */
-export function HotspotLayer({ points, visible = true, sensors = { M: true, V: true } }: {
+/** On satellite imagery the map's usual dot colours vanish (cyan in clouds and sea,
+ *  glow over bright ground): bolder colours, a dark rim and no haze instead. */
+export const SATELLITE_SENSOR_HEX = { modis: "#ffd23f", viirs: "#ff4d2e" };
+
+export function HotspotLayer({ points, visible = true, sensors = { M: true, V: true }, onImagery = false }: {
   points: HotspotPoint[];
   visible?: boolean;
   sensors?: { M: boolean; V: boolean };
+  /** drawn over satellite imagery */
+  onImagery?: boolean;
 }) {
   const lc = useLayerColors();
   const fc: FC = {
@@ -115,8 +121,11 @@ export function HotspotLayer({ points, visible = true, sensors = { M: true, V: t
   };
   useGeoJson("hotspots", fc);
   const vis = visible ? "visible" : "none";
-  const color: ExpressionSpecification = ["match", ["get", "s"], "M", lc.sensor.modis, lc.sensor.viirs];
-  const fade: ExpressionSpecification = ["interpolate", ["linear"], ["get", "a"], 0, 1, 1, 0.45, 3, 0.12];
+  const sensorHex = onImagery ? SATELLITE_SENSOR_HEX : lc.sensor;
+  const color: ExpressionSpecification = ["match", ["get", "s"], "M", sensorHex.modis, sensorHex.viirs];
+  const fade: ExpressionSpecification = onImagery
+    ? ["interpolate", ["linear"], ["get", "a"], 0, 1, 1, 0.7, 3, 0.35]
+    : ["interpolate", ["linear"], ["get", "a"], 0, 1, 1, 0.45, 3, 0.12];
   useLayer({
     id: "hotspots-glow",
     type: "circle",
@@ -128,9 +137,9 @@ export function HotspotLayer({ points, visible = true, sensors = { M: true, V: t
         5, ["*", ["case", ["==", ["get", "a"], 0], 1, 0.6], ["+", 2.5, ["*", 0.6, ["ln", ["+", 1, ["get", "f"]]]]]],
         10, ["*", ["case", ["==", ["get", "a"], 0], 1, 0.6], ["+", 10, ["*", 2.5, ["ln", ["+", 1, ["get", "f"]]]]]],
       ],
-      "circle-color": lc.hotspotGlow ?? color,
+      "circle-color": onImagery ? color : lc.hotspotGlow ?? color,
       "circle-blur": 1,
-      "circle-opacity": ["*", lc.hotspotGlowOpacity, fade],
+      "circle-opacity": ["*", onImagery ? 0.25 : lc.hotspotGlowOpacity, fade],
     },
   });
   useLayer({
@@ -139,12 +148,14 @@ export function HotspotLayer({ points, visible = true, sensors = { M: true, V: t
     source: "hotspots",
     layout: { visibility: vis },
     paint: {
-      "circle-radius": ["interpolate", ["linear"], ["zoom"], 5, ["match", ["get", "s"], "M", 1.8, 1.1], 10, ["match", ["get", "s"], "M", 5, 3]],
+      "circle-radius": onImagery
+        ? ["interpolate", ["linear"], ["zoom"], 5, ["match", ["get", "s"], "M", 3.2, 2.4], 10, ["match", ["get", "s"], "M", 8, 6]]
+        : ["interpolate", ["linear"], ["zoom"], 5, ["match", ["get", "s"], "M", 1.8, 1.1], 10, ["match", ["get", "s"], "M", 5, 3]],
       "circle-color": color,
       "circle-opacity": fade,
-      "circle-stroke-width": ["match", ["get", "s"], "M", 0.8, 0],
-      "circle-stroke-color": lc.hotspotStroke,
-      "circle-stroke-opacity": ["*", 0.5, fade],
+      "circle-stroke-width": onImagery ? ["interpolate", ["linear"], ["zoom"], 5, 0.9, 10, 1.6] : ["match", ["get", "s"], "M", 0.8, 0],
+      "circle-stroke-color": onImagery ? "#1a0d06" : lc.hotspotStroke,
+      "circle-stroke-opacity": onImagery ? ["*", 0.9, fade] : ["*", 0.5, fade],
     },
   });
   return null;

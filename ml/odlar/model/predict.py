@@ -142,6 +142,11 @@ def fire_weather_daily(forecast: pd.DataFrame, weather: pd.DataFrame) -> pd.Data
         for r in g.itertuples():
             near = hist[(hist["doy"] - r.doy).abs().pipe(lambda d: np.minimum(d, 366 - d)) <= 15]["fwi"].to_numpy()
             pct = float((near < r.fwi).mean() * 100) if near.size else 50.0
-            out.append({"region_id": rid, "date": r.date, "danger": round(pct, 1), "tmax": round(r.tmax, 1),
-                        "rh": round(r.rh, 0), "wind": round(r.wind, 1), "precip": round(r.precip, 1)})
+            row = {"region_id": rid, "date": r.date, "danger": round(pct, 1), "tmax": round(r.tmax, 1),
+                   "rh": round(r.rh, 0), "wind": round(r.wind, 1), "precip": round(r.precip, 1)}
+            # shown, not scored: the 25-year record the danger is ranked against has no gusts
+            for col in ("gust", "wdir"):
+                v = getattr(r, col, None)
+                row[col] = round(float(v), 1) if v is not None and np.isfinite(v) else np.nan
+            out.append(row)
     return pd.DataFrame(out)
