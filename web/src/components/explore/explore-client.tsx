@@ -13,7 +13,7 @@ import { FlyTo } from "@/components/map/fly-to";
 import { NearMeControl } from "@/components/map/near-me-control";
 import { MapViewWatcher, useCountryShape, type PointView } from "@/components/map/use-regions";
 import { ViewportRegionsLayer } from "@/components/map/viewport-regions";
-import { DensityLayer, HotspotLayer, SATELLITE_SENSOR_HEX, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
+import { DensityLayer, HotspotLayer, SignatureLayer, useGeoJson, useLayer, useLayerColors, type HotspotPoint, type RegionMode } from "@/components/map/layers";
 import { RiskBadge } from "@/components/ui/risk-badge";
 import { Link } from "@/i18n/navigation";
 import { http } from "@/lib/client";
@@ -367,8 +367,8 @@ export function ExploreClient({
                 )}
                 <Toggle on={layers.hotspots} onChange={(v) => setLayers((l) => ({ ...l, hotspots: v }))} label={t("hotspots")} />
                 <div className="flex gap-1.5 pl-8">
-                  <SensorChip on={sensors.M} color={layers.imagery === "satellite" ? SATELLITE_SENSOR_HEX.modis : "var(--modis)"} label={t("legendModis")} onClick={() => setSensors((s) => ({ ...s, M: !s.M }))} />
-                  <SensorChip on={sensors.V} color={layers.imagery === "satellite" ? SATELLITE_SENSOR_HEX.viirs : "var(--viirs)"} label={t("legendViirs")} onClick={() => setSensors((s) => ({ ...s, V: !s.V }))} />
+                  <SensorChip on={sensors.M} color="var(--modis)" label={t("legendModis")} onClick={() => setSensors((s) => ({ ...s, M: !s.M }))} />
+                  <SensorChip on={sensors.V} color="var(--viirs)" label={t("legendViirs")} onClick={() => setSensors((s) => ({ ...s, V: !s.V }))} />
                 </div>
                 <Toggle on={layers.density} onChange={(v) => setLayers((l) => ({ ...l, density: v }))} label={t("heat")} />
                 <Toggle on={layers.regions === "risk"} onChange={(v) => setLayers((l) => ({ ...l, regions: v ? "risk" : "outline" }))} label={t("riskLayer")} />
