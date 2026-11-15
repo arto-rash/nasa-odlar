@@ -27,9 +27,12 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
     metadataBase: new URL(SITE_URL),
     title: { default: t("title"), template: `%s · ODLAR` },
     description: t("description"),
-    openGraph: { title: t("title"), description: t("description"), type: "website", locale },
+    openGraph: {
+      title: t("title"), description: t("description"), type: "website", locale, siteName: "ODLAR",
+      images: [{ url: "/brand/odlar-og.png", width: 1200, height: 630, alt: "ODLAR" }],
+    },
+    twitter: { card: "summary_large_image", title: t("title"), description: t("description"), images: ["/brand/odlar-og.png"] },
     alternates: { languages: { az: "/az", en: "/en" } },
-    icons: { icon: "/icon.svg" },
   };
 }
 

@@ -1,21 +1,28 @@
 import { cn } from "@/lib/cn";
 
-export function LogoMark({ className }: { className?: string }) {
+/* The ODLAR logo (flame towers on a ring of light), as separated from the artwork:
+ * the glowing version for the dark theme, the solid one with dark lettering for the
+ * light theme. Both are in the page; the theme's CSS shows one (no flash on load,
+ * since the theme is set on <html> before paint). Source files: the brand pack. */
+
+/* eslint-disable @next/next/no-img-element -- tiny fixed-size brand images, served as they are */
+
+/** Mark and name side by side: the header, footer, login and report. */
+export function Wordmark({ className }: { className?: string }) {
   return (
-    <svg viewBox="0 0 40 40" className={cn("size-7", className)} aria-hidden>
-      <path
-        d="M20 3.5c2.2 6.6 10.4 11 10.4 20.6a10.4 10.4 0 0 1-20.8 0c0-5.2 3-8.2 5.2-10.4 0 3.7 1.5 5.9 3.7 6.7-1.5-6 0-11.9 1.5-16.9z"
-        fill="var(--ember-500)"
-      />
-    </svg>
+    <span className={cn("inline-flex h-8 items-center", className)}>
+      <img src="/brand/odlar-horizontal-dark.png" alt="ODLAR" width={751} height={144} className="hidden h-full w-auto dark:block" />
+      <img src="/brand/odlar-horizontal-light.png" alt="ODLAR" width={756} height={144} className="block h-full w-auto dark:hidden" />
+    </span>
   );
 }
 
-export function Wordmark({ className }: { className?: string }) {
+/** The flame towers alone, for tight spots. */
+export function LogoMark({ className }: { className?: string }) {
   return (
-    <span className={cn("inline-flex items-center gap-1.5", className)}>
-      <LogoMark />
-      <span className="font-display text-[1.3rem]">ODLAR</span>
+    <span className={cn("inline-flex size-7 items-center justify-center", className)} aria-hidden>
+      <img src="/brand/odlar-mark-dark.png" alt="" width={253} height={160} className="hidden max-h-full w-auto dark:block" />
+      <img src="/brand/odlar-mark-light.png" alt="" width={258} height={160} className="block max-h-full w-auto dark:hidden" />
     </span>
   );
 }
