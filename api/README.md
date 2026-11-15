@@ -1,6 +1,6 @@
 # ODLAR API
 
-Laravel 13 gateway for ODLAR (harmonized MODIS/VIIRS fire calendar + fire-risk alerts for the South Caucasus).
+Laravel 13 gateway for ODLAR (harmonized MODIS/VIIRS fire calendar + fire-risk alerts for 193 countries (27,083 districts and provinces)).
 It is the only public API: analytics are proxied (and cached) to the internal FastAPI service in `../ml`;
 accounts, subscriptions, alerts and region geometries (PostGIS) live here.
 

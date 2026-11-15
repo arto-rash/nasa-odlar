@@ -860,7 +860,9 @@ def export(s: Store, slug: str, kind: str, fmt: str, start: date | None, end: da
     if fmt == "csv":
         buf = io.StringIO()
         source = "NASA FIRMS" if s.meta.get("source") == "firms" else s.meta.get("source")
-        buf.write(f"# ODLAR {kind} export: {r.name_en}. Source: {source}. Harmonized to the VIIRS S-NPP scale.\n")
+        scale = ("Raw detections, not harmonized." if kind == "hotspots" else
+                 "Columns harmonized/lo/hi are on the VIIRS S-NPP scale (continued from NOAA-20 after 2 Nov 2026); modis/viirs are raw counts.")
+        buf.write(f"# ODLAR {kind} export: {r.name_en}. Source: {source}, data through {s.meta.get('data_end')}. {scale} https://odlar.app\n")
         df.to_csv(buf, index=False)
         return buf.getvalue().encode(), "text/csv", f"{name}.csv"
     if fmt == "json":

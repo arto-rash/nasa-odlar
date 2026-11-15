@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ODLAR: yanğınların vahid tarixçəsi və risk xəritəsi",
-    "description": "NASA MODIS və VIIRS peyk arxivlərini vahid miqyasa gətirən, yanğın təqvimi quran və riski 25 illik tarixçə fonunda göstərən platforma. Pilot: Azərbaycan və Cənubi Qafqaz."
+    "description": "NASA MODIS və VIIRS peyk arxivlərini vahid miqyasa gətirən, yanğın təqvimi quran və riski 2000-ci ildən bəri tarixçə fonunda göstərən, 193 ölkə üçün hər gün yenilənən platforma. Əsas pilot: Azərbaycan."
   },
   "nav": {
     "main": "Əsas naviqasiya",
@@ -172,7 +172,7 @@
       "snpp": "Suomi NPP dayandı",
       "snppWhen": "2 noyabr 2026 · NOAA-20 ilə körpü",
       "modis": "MODIS söndürülür",
-      "modisWhen": "2027 (Terra yanvar, Aqua ~sentyabr)",
+      "modisWhen": "2027 (Terra fevral, Aqua sentyabr)",
       "lead": "Hər iki sensorun eyni vaxtda işlədiyi ortaq dövr kalibrasiyanın yeganə mənbəyidir. Bu dövr bitdikdən sonra vahid arxiv qurmaq çox çətinləşəcək."
     }
   },
@@ -268,7 +268,7 @@
   },
   "regions": {
     "title": "Bölgələr",
-    "lead": "Azərbaycanın 78 rayonu, Gürcüstan və Ermənistanın regionları. Hər biri üçün 25 illik harmonizə edilmiş yanğın tarixçəsi.",
+    "lead": "193 ölkədə 27 083 rayon və vilayət, hər biri üçün 2000-ci ildən bəri harmonizə edilmiş yanğın tarixçəsi. Ölkə seçin.",
     "search": "Bölgə adı…",
     "sort": "Sırala",
     "sortRisk": "Risk",
@@ -514,7 +514,7 @@
     "email": "E-poçt",
     "sms": "SMS",
     "push": "Push",
-    "soon": "tezliklə",
+    "soon": "mövcud deyil",
     "remove": "Sil",
     "active": "Aktiv",
     "paused": "Dayandırılıb",
@@ -526,7 +526,7 @@
       "not_available": "hələ mövcud deyil"
     },
     "previews": "Kanalların görünüşü",
-    "previewsLead": "SMS və push bildirişləri dizayn prototipidir. Belə görünəcək:",
+    "previewsLead": "SMS və push bildirişləri hələ mövcud deyil. Belə görünərdi:",
     "smsText": "ODLAR: {region} üçün yanğın riski {level}. Küləş yandırmayın. Təcili: 112",
     "gatewayMissing": "Bildiriş sistemi üçün ODLAR serveri tələb olunur.",
     "telegram": "Telegram",

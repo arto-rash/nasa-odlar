@@ -19,7 +19,7 @@ from odlar.store import Store, get_store
 from odlar.week_packs import PACK_DIR
 
 app = FastAPI(title="ODLAR analytics", version="1.0.0",
-              description="Harmonized MODIS/VIIRS fire calendar and risk engine for the South Caucasus.")
+              description="Harmonized MODIS/VIIRS fire calendar and risk engine for 193 countries, from November 2000, updated daily.")
 app.add_middleware(GZipMiddleware, minimum_size=1024)
 
 INTERNAL_TOKEN = os.environ.get("ODLAR_INTERNAL_TOKEN", "")

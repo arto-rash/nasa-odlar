@@ -35,7 +35,7 @@ Open-Meteo ─┘   harmonize · calendar · LightGBM
 | Folder | What it is |
 |---|---|
 | `ml/` | Pipeline: ingest, quality control, gridding, harmonization (two-part quantile mapping + conditional bias correction + predictive block bootstrap), leave-one-year-out validation, calendar, LightGBM risk and outlook models. Also the FastAPI analytics service. |
-| `api/` | Laravel 12 gateway: Sanctum auth, subscriptions, alert engine (`odlar:evaluate-risk`, hourly), PostGIS region geometries, caching proxy to analytics. |
+| `api/` | Laravel 13 gateway: Sanctum auth, subscriptions, alert engine (`odlar:evaluate-risk`, hourly), PostGIS region geometries, caching proxy to analytics. |
 | `web/` | Next.js 16 frontend: landing story, Explore (timeline + area-of-interest calendar), region Fire Clock, Risk, Harmonization Lab, Methodology, Data & API, citizen Simple mode, Alerts. |
 | `deploy/` | Production compose and deploy script for the shared Hetzner box. |
 

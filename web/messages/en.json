@@ -1,7 +1,7 @@
 {
   "meta": {
     "title": "ODLAR: one consistent fire record and risk map",
-    "description": "A platform that harmonizes NASA's MODIS and VIIRS satellite archives, builds burning-activity calendars and shows today's fire risk against 25 years of history. Pilot: Azerbaijan and the South Caucasus."
+    "description": "A platform that harmonizes NASA's MODIS and VIIRS satellite archives, builds burning-activity calendars and shows today's fire risk against the record since 2000, for 193 countries, updated daily. Home pilot: Azerbaijan."
   },
   "nav": {
     "main": "Main navigation",
@@ -172,7 +172,7 @@
       "snpp": "Suomi NPP stopped",
       "snppWhen": "2 November 2026 · bridged via NOAA-20",
       "modis": "MODIS switches off",
-      "modisWhen": "2027 (Terra Jan, Aqua ~Sep)",
+      "modisWhen": "2027 (Terra Feb, Aqua Sep)",
       "lead": "The overlap period, when both sensors fly at once, is the only basis for calibration. Once it ends, building one consistent archive gets much harder."
     }
   },
@@ -268,7 +268,7 @@
   },
   "regions": {
     "title": "Regions",
-    "lead": "Azerbaijan's 78 districts plus the provinces of Georgia and Armenia, each with a 25-year harmonized fire history.",
+    "lead": "27,083 districts and provinces in 193 countries, each with a harmonized fire history since 2000. Pick a country to browse its regions.",
     "search": "Region name…",
     "sort": "Sort",
     "sortRisk": "Risk",
@@ -514,7 +514,7 @@
     "email": "Email",
     "sms": "SMS",
     "push": "Push",
-    "soon": "soon",
+    "soon": "not available",
     "remove": "Remove",
     "active": "Active",
     "paused": "Paused",
@@ -526,7 +526,7 @@
       "not_available": "not yet available"
     },
     "previews": "Channel previews",
-    "previewsLead": "SMS and push alerts are a design prototype. This is how they will look:",
+    "previewsLead": "SMS and push alerts are not available yet. This is how they would look:",
     "smsText": "ODLAR: fire risk in {region} is {level}. Do not burn stubble. Emergency: 112",
     "gatewayMissing": "The alert system needs the ODLAR server.",
     "telegram": "Telegram",
