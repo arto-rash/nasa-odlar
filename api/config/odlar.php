@@ -18,6 +18,9 @@ return [
         'ttl' => (int) env('ODLAR_CACHE_TTL', 600),
     ],
 
+    // Shared secret the website's server sends with its own data fetches (rate limits).
+    'frontend_token' => env('FRONTEND_TOKEN'),
+
     // First FRONTEND_URLS entry: used for links in emails.
     'frontend_url' => rtrim(trim(explode(',', (string) env('FRONTEND_URLS', 'http://localhost:3000'))[0]), '/'),
 

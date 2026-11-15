@@ -18,7 +18,17 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        RateLimiter::for('api', fn (Request $r) => Limit::perMinute(240)->by($r->ip()));
+        // The website's own server fetches every page's data from one address, for all
+        // visitors (cached 10 min): with its token it gets one large allowance of its own
+        // instead of sharing a single visitor's 240 a minute. Browsers never send the token.
+        RateLimiter::for('api', function (Request $r) {
+            $token = (string) config('odlar.frontend_token');
+            if ($token !== '' && hash_equals($token, (string) $r->header('X-Frontend-Token'))) {
+                return Limit::perMinute(3000)->by('frontend');
+            }
+
+            return Limit::perMinute(240)->by($r->ip());
+        });
         RateLimiter::for('auth', fn (Request $r) => Limit::perMinute(10)->by($r->ip()));
         RateLimiter::for('export', fn (Request $r) => Limit::perMinute(20)->by($r->ip()));
         RateLimiter::for('evaluate', fn (Request $r) => Limit::perMinute(10)->by($r->user()?->id ?: $r->ip()));

@@ -11,6 +11,9 @@ import "server-only";
 const API_URL = process.env.ODLAR_API_URL?.replace(/\/$/, "");
 const ML_URL = (process.env.ODLAR_ML_URL ?? "http://127.0.0.1:8001").replace(/\/$/, "");
 const ML_TOKEN = process.env.ODLAR_INTERNAL_TOKEN;
+// Sent only with this server's own page-data fetches (api() below), never by the
+// browser proxy: the gateway then counts them apart from visitors' rate limits.
+const FRONTEND_TOKEN = process.env.ODLAR_FRONTEND_TOKEN;
 
 export const gatewayMode = Boolean(API_URL);
 
@@ -60,6 +63,7 @@ export class ApiError extends Error {
 export async function api<T>(path: string, opts: { search?: string } = {}): Promise<T> {
   const res = await upstream(path, {
     search: opts.search,
+    headers: API_URL && FRONTEND_TOKEN ? { "X-Frontend-Token": FRONTEND_TOKEN } : undefined,
     next: { revalidate: 600 },
   } as RequestInit & { search?: string });
   if (!res.ok) {
