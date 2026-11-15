@@ -164,3 +164,13 @@ def test_calendar_spread(client):
     i2005, i2020 = c["years"].index(2005), c["years"].index(2020)
     # MODIS years carry a range, Suomi NPP years are exact
     assert max(sp[i2005]) > 0 and max(sp[i2020]) == 0
+
+
+def test_fire_wind(client):
+    from odlar.api.service import _next_wind
+    from odlar.store import get_store
+    s = get_store()
+    w = _next_wind(s)
+    if "wdir" in s.fire_weather and s.fire_weather["wdir"].notna().any():
+        rid, v = next(iter(w.items()))
+        assert 0 <= v["from"] <= 360 and v["speed"] is not None

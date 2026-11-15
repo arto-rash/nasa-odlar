@@ -614,7 +614,8 @@ def _next_wind(s: Store) -> dict:
     if fw.empty or "wdir" not in fw:
         s._next_wind = {}
         return s._next_wind
-    first = fw[fw["date"] == fw["date"].min()]
+    # each region's own first forecast day (batches refreshed on different days start apart)
+    first = fw[fw["wdir"].notna()].sort_values("date").drop_duplicates("region_id")
     s._next_wind = {int(r.region_id): {"date": pd.Timestamp(r.date).strftime("%Y-%m-%d"), "speed": _f(r.wind, 1),
                                        "gust": _f(r.gust, 1), "from": _f(r.wdir, 0)}
                     for r in first.itertuples() if np.isfinite(r.wdir)}
