@@ -5,6 +5,7 @@ import { Check, Copy, Download, Loader2 } from "lucide-react";
 import { motion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
 import { useState } from "react";
+import { addDays, DateRange, daysBetween } from "./date-range";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RegionCombobox } from "@/components/ui/region-combobox";
@@ -34,6 +35,8 @@ const ENDPOINTS = [
   ["GET", "/export/{slug}?kind=weekly&format=csv", "File export"],
 ];
 
+const HOTSPOT_DAYS = 92;
+
 export function DataClient({ apiBase }: { apiBase: string }) {
   const t = useTranslations("data");
   const locale = useLocale() as AppLocale;
@@ -41,8 +44,11 @@ export function DataClient({ apiBase }: { apiBase: string }) {
   const { data: picked } = useQuery({ queryKey: ["region", slug], queryFn: () => http<RegionRef>(`/regions/${slug}`) });
   const [kind, setKind] = useState<Kind>("weekly");
   const [fmt, setFmt] = useState<Fmt>("csv");
-  const [from, setFrom] = useState("2024-01-01");
-  const [to, setTo] = useState("2024-12-31");
+  // the newest full day (the record runs through yesterday); weekly opens on the
+  // last 12 months, detections on the last 30 days (the API takes up to 92)
+  const [latest] = useState(() => new Date(Date.now() - 86_400_000).toISOString().slice(0, 10));
+  const [from, setFrom] = useState(() => addDays(latest, -364));
+  const [to, setTo] = useState(latest);
   const [busy, setBusy] = useState(false);
   const formats: Fmt[] = kind === "hotspots" ? ["csv", "json", "geojson"] : ["csv", "json"];
   const url = `/api/v1/export/${slug}?kind=${kind}&format=${formats.includes(fmt) ? fmt : "csv"}${kind !== "annual" ? `&start=${from}&end=${to}` : ""}`;
@@ -81,6 +87,9 @@ export function DataClient({ apiBase }: { apiBase: string }) {
               onChange={(k) => {
                 setKind(k);
                 if (k !== "hotspots" && fmt === "geojson") setFmt("csv");
+                if (k === "hotspots" && daysBetween(from, to) + 1 > HOTSPOT_DAYS) {
+                  setFrom(addDays(to, -29));
+                }
               }}
               options={[
                 { value: "weekly", label: t("kindWeekly") },
@@ -93,14 +102,10 @@ export function DataClient({ apiBase }: { apiBase: string }) {
             <Segmented label={t("format")} value={fmt} onChange={setFmt} options={formats.map((f) => ({ value: f, label: f.toUpperCase() }))} />
           </Field>
           {kind !== "annual" && (
-            <div className="grid grid-cols-2 gap-3">
-              <Field label={t("from")}>
-                <input type="date" value={from} min="2000-11-01" onChange={(e) => setFrom(e.target.value)} className="h-11 w-full rounded-lg bg-bg-sunken px-3 tabular-nums text-[13px] ring-1 ring-line outline-none [color-scheme:dark]" />
-              </Field>
-              <Field label={t("to")}>
-                <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className="h-11 w-full rounded-lg bg-bg-sunken px-3 tabular-nums text-[13px] ring-1 ring-line outline-none [color-scheme:dark]" />
-              </Field>
-            </div>
+            <Field label={t("period")}>
+              <DateRange from={from} to={to} latest={latest} maxDays={kind === "hotspots" ? HOTSPOT_DAYS : undefined} allowRecord={kind === "weekly"}
+                onChange={(a, b) => { setFrom(a); setTo(b); }} />
+            </Field>
           )}
           <Button variant="ember" size="lg" className="w-full" onClick={download} disabled={busy}>
             {busy ? <Loader2 className="size-4 animate-spin" /> : <Download className="size-4" />}

@@ -98,7 +98,7 @@ it('sends alerts to a linked chat with a link to the region', function () {
     expect(NotificationLog::sole()->status)->toBe(NotificationLog::SENT);
     Http::assertSent(fn (Request $r) => str_contains($r->url(), 'api.telegram.org') && $r['chat_id'] === 555
         && str_contains($r['text'], 'Sabirabad: extreme')
-        && $r['reply_markup']['inline_keyboard'][0][0]['url'] === 'http://localhost:3000/en/region/az-sabirabad');
+        && $r['reply_markup']['inline_keyboard'][0][0]['url'] === 'http://localhost:3000/region/az-sabirabad');
 });
 
 it('marks Telegram unavailable for users who never linked it', function () {

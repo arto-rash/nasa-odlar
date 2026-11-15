@@ -13,13 +13,13 @@ test("simple mode works on a phone", async ({ page }) => {
 });
 
 test("mobile menu opens and navigates", async ({ page }) => {
-  await page.goto("/en");
+  await page.goto("/");
   await page.getByRole("button", { name: "Open menu" }).click();
   const dialogLink = page.locator("div.fixed.inset-0 ul").getByRole("link", { name: "Regions" });
   await expect(dialogLink).toBeVisible();
   await page.waitForTimeout(600); // let the staggered entrance settle
   await dialogLink.click();
-  await expect(page).toHaveURL(/\/en\/regions$/);
+  await expect(page).toHaveURL(/\/regions$/);
 });
 
 test("simple mode remembers the district and server-renders it on return", async ({ page, request }) => {

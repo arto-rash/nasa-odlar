@@ -464,7 +464,8 @@
     "apiLead": "Every endpoint returns JSON. No key is needed; requests are rate-limited per IP.",
     "license": "License & citation",
     "licenseText": "Source data: NASA FIRMS (public domain), NASA POWER, OpenStreetMap (ODbL), geoBoundaries. The harmonized product is shared under CC BY 4.0.",
-    "columns": "Columns"
+    "columns": "Columns",
+    "period": "Period"
   },
   "simple": {
     "title": "Fire risk where I live",
@@ -685,5 +686,21 @@
     "fireTitle": "Wind, {date}",
     "fireLine": "{speed} m/s, gusts up to {gust} m/s, {dir}.",
     "day": "Wind {speed} m/s, gusts {gust} m/s, {dir}"
+  },
+  "range": {
+    "d30": "Last 30 days",
+    "m3": "Last 3 months",
+    "m12": "Last 12 months",
+    "year": "This year",
+    "all": "Whole record (2000 →)",
+    "days": "{count, plural, one {# day} other {# days}}",
+    "max": "Fire detections: up to {count} days at a time",
+    "prev": "Previous month",
+    "next": "Next month",
+    "month": "Month",
+    "year_": "Year",
+    "pickStart": "Pick the first day",
+    "pickEnd": "Now pick the last day",
+    "done": "Done"
   }
 }

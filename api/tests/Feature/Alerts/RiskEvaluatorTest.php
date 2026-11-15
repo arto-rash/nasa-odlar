@@ -114,7 +114,7 @@ it('emails in Azerbaijani for az users', function () {
     Mail::assertSent(RiskAlertMail::class, function (RiskAlertMail $mail) {
         return $mail->hasTo('az@example.com')
             && $mail->locale === 'az'
-            && $mail->hasSubject('ODLAR yanğın riski xəbərdarlığı: Sabirabad rayonu — çox yüksək risk');
+            && $mail->hasSubject('ODLAR yanğın riski xəbərdarlığı: Sabirabad rayonu, çox yüksək risk');
     });
 });
 
@@ -137,7 +137,7 @@ it('renders localized html and text bodies', function () {
     $mail->assertSeeInHtml('Hello Leyla,')
         ->assertSeeInHtml('is now extreme (as of 2026-10-20)')
         ->assertSeeInHtml('81%')
-        ->assertSeeInText('Open the region in ODLAR: http://localhost:3000/en/region/az-sabirabad');
+        ->assertSeeInText('Open the region in ODLAR: http://localhost:3000/region/az-sabirabad');
 
     $sub->user->update(['locale' => 'az']);
     (new RiskAlertMail($alert->fresh()->load('user', 'region')))->assertSeeInText('Salam, Leyla!');

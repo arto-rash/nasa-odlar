@@ -48,7 +48,10 @@ class Alert extends Model
     {
         $locale = $this->user?->preferredLocale() ?? 'az';
 
-        return config('odlar.frontend_url')."/{$locale}/region/".$this->region->slug;
+        // English pages have no language prefix; Azerbaijani ones are under /az
+        $prefix = $locale === 'az' ? '/az' : '';
+
+        return config('odlar.frontend_url')."{$prefix}/region/".$this->region->slug;
     }
 
     public function notificationLogs(): HasMany

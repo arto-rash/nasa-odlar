@@ -21,7 +21,7 @@ export function Toc({ items, title }: { items: { id: string; label: string }[]; 
     return () => obs.disconnect();
   }, [items]);
   return (
-    <nav aria-label={title} className="sticky top-28 hidden lg:block">
+    <nav aria-label={title} className="sticky top-28 hidden self-start lg:block">
       <p className="mb-3 text-[12.5px] font-semibold text-faint">{title}</p>
       <ul className="relative space-y-0.5 border-l border-line">
         {items.map((i) => (

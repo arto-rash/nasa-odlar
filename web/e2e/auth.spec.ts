@@ -5,13 +5,13 @@ test.describe("accounts and alerts (needs the Laravel gateway)", () => {
 
   test("register → subscribe → evaluate → alert feed", async ({ page }) => {
     const email = `e2e-${Date.now()}@odlar.test`;
-    await page.goto("/en/login?next=/alerts?add=az-sabirabad");
+    await page.goto("/login?next=/alerts?add=az-sabirabad");
     await page.getByRole("radio", { name: "Create account" }).click();
     await page.getByLabel("Name").fill("E2E Tester");
     await page.getByLabel("Email").fill(email);
     await page.getByLabel("Password").fill("correct-horse-battery");
     await page.getByRole("button", { name: "Create account" }).last().click();
-    await expect(page).toHaveURL(/\/en\/alerts/);
+    await expect(page).toHaveURL(/\/alerts/);
     // prefilled from ?add=
     await page.getByRole("button", { name: "≥ Moderate" }).click();
     await page.locator("form").getByRole("button", { name: "Add a region" }).click();
@@ -23,7 +23,7 @@ test.describe("accounts and alerts (needs the Laravel gateway)", () => {
   });
 
   test("wrong password shows an inline error", async ({ page }) => {
-    await page.goto("/en/login");
+    await page.goto("/login");
     await page.getByLabel("Email").fill("demo@odlar.az");
     await page.getByLabel("Password").fill("nope-nope");
     await page.getByRole("button", { name: "Sign in" }).last().click();
@@ -31,7 +31,7 @@ test.describe("accounts and alerts (needs the Laravel gateway)", () => {
   });
 
   test("alerts page sends guests to login", async ({ page }) => {
-    await page.goto("/en/alerts");
-    await expect(page).toHaveURL(/\/en\/login\?next=/);
+    await page.goto("/alerts");
+    await expect(page).toHaveURL(/\/login\?next=/);
   });
 });

@@ -19,12 +19,12 @@ test.describe("landing", () => {
     await p.goto("/");
     await expect(p).toHaveURL(/\/az$/);
     await az.close();
-    await page.goto("/en");
+    await page.goto("/");
     await expect(page.getByRole("heading", { level: 1 })).toHaveAccessibleName("25 years of fire. One consistent record.");
   });
 
   test("is accessible", async ({ page }) => {
-    await page.goto("/en");
+    await page.goto("/");
     await page.waitForTimeout(2500);
     await expectAccessible(page);
   });
@@ -33,7 +33,7 @@ test.describe("landing", () => {
 test.describe("region page", () => {
   test("shows calendar, risk and history and switches views", async ({ page }) => {
     const errors = trackErrors(page);
-    await page.goto("/en/region/az-sabirabad");
+    await page.goto("/region/az-sabirabad");
     await expect(page.getByRole("heading", { level: 1, name: "Sabirabad District" })).toBeVisible();
     await expect(page.getByText("Fire clock").first()).toBeVisible();
     await expect(page.getByText("Next 7 days").first()).toBeVisible();
@@ -46,7 +46,7 @@ test.describe("region page", () => {
   });
 
   test("unknown region is a 404", async ({ page }) => {
-    await page.goto("/en/region/nowhere");
+    await page.goto("/region/nowhere");
     await expect(page.locator('meta[name="robots"]').first()).toHaveAttribute("content", /noindex/);
     await expect(page.getByText("This page has burned down")).toBeVisible();
   });
@@ -61,7 +61,7 @@ test.describe("region page", () => {
 test.describe("explore", () => {
   test("timeline scrubs with the keyboard and plays", async ({ page }) => {
     const errors = trackErrors(page);
-    await page.goto("/en/explore?w=2025-08-04");
+    await page.goto("/explore?w=2025-08-04");
     const slider = page.getByRole("slider", { name: "Timeline of weekly detections" });
     await expect(slider).toHaveAttribute("aria-valuetext", "2025-08-04");
     await slider.focus();
@@ -80,7 +80,7 @@ test.describe("explore", () => {
   });
 
   test("draws an area of interest and gets its calendar", async ({ page }) => {
-    await page.goto("/en/explore?w=2025-08-04");
+    await page.goto("/explore?w=2025-08-04");
     await page.locator('[data-map-ready="true"]').waitFor();
     await page.getByRole("button", { name: /Draw area/ }).click();
     const canvas = page.locator(".maplibregl-canvas");
@@ -97,7 +97,7 @@ test.describe("explore", () => {
 
 test.describe("risk", () => {
   test("ranking opens a region with drivers and outlook", async ({ page }) => {
-    await page.goto("/en/risk");
+    await page.goto("/risk");
     await expect(page.getByRole("heading", { name: "Risk map" })).toBeVisible();
     await page.locator("aside ol button").first().click();
     await expect(page.getByText("Why?")).toBeVisible();
@@ -108,7 +108,7 @@ test.describe("risk", () => {
 
 test.describe("compare", () => {
   test("before/after slider responds to the keyboard", async ({ page }) => {
-    await page.goto("/en/compare");
+    await page.goto("/compare");
     const s = page.getByRole("slider", { name: "Drag" });
     await expect(s).toHaveAttribute("aria-valuenow", "50");
     // the slider is server-rendered; a key pressed before hydration is lost
@@ -122,14 +122,14 @@ test.describe("compare", () => {
 
 test.describe("methodology & data", () => {
   test("methodology shows live validation numbers", async ({ page }) => {
-    await page.goto("/en/methodology");
+    await page.goto("/methodology");
     await expect(page.getByRole("heading", { name: "Harmonization", exact: true })).toBeVisible();
     await expect(page.getByRole("cell", { name: "ROC-AUC" })).toBeVisible();
     await expectAccessible(page);
   });
 
   test("export downloads a valid CSV", async ({ page }) => {
-    await page.goto("/en/data");
+    await page.goto("/data");
     await page.getByRole("radio", { name: "Annual totals" }).click();
     const [download] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download" }).click()]);
     const body = await (await download.createReadStream()).toArray();
@@ -152,14 +152,14 @@ test.describe("navigation", () => {
   test("locale switch keeps the page", async ({ page }) => {
     await page.goto("/az/region/az-qabala");
     await page.getByRole("radio", { name: "en" }).first().click();
-    await expect(page).toHaveURL(/\/en\/region\/az-qabala$/);
+    await expect(page).toHaveURL(/^(?!.*\/az\/).*\/region\/az-qabala$/);
     await expect(page.getByRole("heading", { level: 1, name: "Qabala District" })).toBeVisible();
   });
 
   test("respects reduced motion", async ({ browser }) => {
     const ctx = await browser.newContext({ reducedMotion: "reduce" });
     const page = await ctx.newPage();
-    await page.goto("/en");
+    await page.goto("/");
     await expect(page.getByText("ODLAR stitches NASA's two satellite fire archives together", { exact: false })).toBeVisible();
     await ctx.close();
   });

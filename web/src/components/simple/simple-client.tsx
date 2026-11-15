@@ -66,7 +66,7 @@ function Picker({ onPick }: { onPick: (slug: string) => void }) {
   );
   const { locate, locating } = useNearMe(useCallback((r: RegionRef) => onPick(r.slug), [onPick]));
   return (
-    <div className="mx-auto max-w-[560px] px-4 pb-16 pt-28 sm:pt-36">
+    <div className="mx-auto max-w-[560px] px-4 pb-16 pt-28 sm:pt-36 lg:max-w-[680px]">
       <h1 className="font-display text-[2.6rem] leading-[1.02]">{t("pick")}</h1>
       <p className="mt-3 text-[16px] leading-relaxed text-dim">{t("pickLead")}</p>
       <button onClick={locate} disabled={locating} className="mt-7 flex h-14 w-full items-center justify-center gap-3 rounded-lg bg-text text-[16px] font-medium text-bg transition active:scale-[0.98] disabled:opacity-70">
@@ -115,7 +115,7 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
     onError: (e) => toast.error(e instanceof HttpError && e.status === 501 ? ta("gatewayMissing") : (e as Error).message),
   });
 
-  if (!region || !risk) return <div className="skeleton mx-auto mt-32 h-[70vh] max-w-[560px]" />;
+  if (!region || !risk) return <div className="skeleton mx-auto mt-32 h-[70vh] max-w-[560px] lg:max-w-[1120px]" />;
   const level = risk.short.level;
   const high = ["high", "very_high", "extreme"].includes(level);
   const c = region.current;
@@ -125,7 +125,7 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
   const crit = region.season?.critical[0];
 
   return (
-    <div className="mx-auto max-w-[560px] px-4 pb-16 pt-24 sm:pt-32">
+    <div className="mx-auto max-w-[560px] px-4 pb-16 pt-24 sm:pt-32 lg:max-w-[1120px] lg:px-8">
       <div className="flex items-center justify-between">
         <p className="flex items-center gap-2 text-[15px] text-dim">
           <MapPin className="size-4 shrink-0" />
@@ -139,11 +139,14 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
         </button>
       </div>
 
+      {/* phones: one column; laptops: the risk and its week on the left, what to do on the right */}
+      <div className="lg:mt-4 lg:grid lg:grid-cols-[1.2fr_1fr] lg:items-start lg:gap-6">
+      <div>
       <motion.section
         initial={{ scale: 0.97, opacity: 0 }}
         animate={{ scale: 1, opacity: 1 }}
         transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-        className="relative mt-4 overflow-hidden rounded-lg p-7 ring-1 ring-line-strong"
+        className="relative mt-4 overflow-hidden rounded-lg p-7 ring-1 ring-line-strong lg:mt-0"
         style={{ background: "var(--panel-solid)", borderTop: `6px solid var(--risk-${level})` }}
       >
         <p className="text-[13px] font-semibold text-dim">{t("thisWeek")}</p>
@@ -176,7 +179,9 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
         </div>
       </section>
 
-      <section className="mt-5 rounded-lg bg-panel p-6 ring-1 ring-line">
+      </div>
+      <div>
+      <section className="mt-5 rounded-lg bg-panel p-6 ring-1 ring-line lg:mt-0">
         <h2 className="text-[13px] font-semibold text-faint">{t("advice")}</h2>
         <ul className="mt-4 space-y-3">
           {advice.map((a, i) => (
@@ -222,6 +227,8 @@ function RiskCard({ slug, prefetched, onChange }: { slug: string; prefetched?: P
           </Link>
         </p>
       </section>
+      </div>
+      </div>
     </div>
   );
 }

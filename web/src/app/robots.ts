@@ -3,7 +3,7 @@ import { SITE_URL } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/en/account", "/az/account", "/en/login", "/az/login"] },
+    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/account", "/az/account", "/login", "/az/login"] },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

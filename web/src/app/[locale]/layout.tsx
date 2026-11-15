@@ -32,7 +32,7 @@ export async function generateMetadata({ params }: { params: Promise<{ locale: s
       images: [{ url: "/brand/odlar-og.png", width: 1200, height: 630, alt: "ODLAR" }],
     },
     twitter: { card: "summary_large_image", title: t("title"), description: t("description"), images: ["/brand/odlar-og.png"] },
-    alternates: { languages: { az: "/az", en: "/en" } },
+    alternates: { languages: { en: "/", az: "/az", "x-default": "/" } },
   };
 }
 

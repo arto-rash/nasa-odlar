@@ -136,6 +136,14 @@ body {
   border-radius: 4px;
 }
 
+/* text fields: browsers treat every click into one as keyboard focus and drew
+   the ring around the bare input inside its styled box; the caret is enough */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: none;
+}
+
 /* headlines: heavy Geologica with its corners sharpened */
 .font-display {
   font-family: var(--font-display);

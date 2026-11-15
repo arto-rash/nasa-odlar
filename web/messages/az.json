@@ -464,7 +464,8 @@
     "apiLead": "Bütün son nöqtələr JSON qaytarır. Açar tələb olunmur, sorğular IP üzrə məhdudlaşdırılır.",
     "license": "Lisenziya və istinad",
     "licenseText": "Mənbə məlumatı: NASA FIRMS (ictimai), NASA POWER, OpenStreetMap (ODbL), geoBoundaries. Harmonizə edilmiş məhsul CC BY 4.0 lisenziyası ilə paylaşılır.",
-    "columns": "Sütunlar"
+    "columns": "Sütunlar",
+    "period": "Dövr"
   },
   "simple": {
     "title": "Bölgəmdə yanğın riski",
@@ -685,5 +686,21 @@
     "fireTitle": "Külək, {date}",
     "fireLine": "{speed} m/s, ani sürəti {gust} m/s-dək, {dir}.",
     "day": "Külək {speed} m/s, ani sürəti {gust} m/s, {dir}"
+  },
+  "range": {
+    "d30": "Son 30 gün",
+    "m3": "Son 3 ay",
+    "m12": "Son 12 ay",
+    "year": "Bu il",
+    "all": "Bütün qeyd (2000 →)",
+    "days": "{count} gün",
+    "max": "Yanğın aşkarlamaları: bir dəfəyə {count} günədək",
+    "prev": "Əvvəlki ay",
+    "next": "Növbəti ay",
+    "month": "Ay",
+    "year_": "İl",
+    "pickStart": "Başlanğıc günü seçin",
+    "pickEnd": "İndi son günü seçin",
+    "done": "Hazır"
   }
 }
