@@ -355,7 +355,7 @@ def main() -> None:
         except UpToDate as exc:
             print(f"   {exc}", flush=True)
             continue
-        except Exception as exc:  # noqa: BLE001 — one batch failing must not stop the others
+        except Exception as exc:  # noqa: BLE001 (one batch failing must not stop the others)
             print(f"   {name} failed: {exc!r}", flush=True)
             failed.append(name)
             continue

@@ -73,7 +73,7 @@ def main() -> None:
     for name in names:
         try:
             print(json.dumps(run(name)), flush=True)
-        except Exception as exc:  # noqa: BLE001 — one batch must not stop the others
+        except Exception as exc:  # noqa: BLE001 (one batch must not stop the others)
             print(f"{name} failed: {exc!r}", flush=True)
             failed.append(name)
     if failed:

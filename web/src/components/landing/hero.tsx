@@ -17,7 +17,7 @@ import { RegionPlace } from "@/components/ui/region-place";
 
 const HeroMap = dynamic(() => import("./hero-map"), { ssr: false });
 
-/** true once the browser is idle after load — the globe waits so it never competes with hydration. */
+/** true once the browser is idle after load: the globe waits so it never competes with hydration. */
 function useIdle(timeout = 1500) {
   const [idle, setIdle] = useState(false);
   useEffect(() => {
@@ -57,7 +57,7 @@ export function Hero({ overview }: { overview: Overview }) {
           <div>
             <div style={{ "--d": "0.15s", "--rise-y": "10px" } as React.CSSProperties} className="anim-rise mb-6 flex flex-wrap items-center gap-3">
               <Eyebrow>{t("eyebrow")}</Eyebrow>
-              <DataBadge source={overview.meta.source} />
+              <DataBadge />
             </div>
             <h1 className="font-display max-w-[20ch] text-balance text-[clamp(2.6rem,6vw,5.2rem)] leading-[1.02]">{t.rich("title", rich)}</h1>
             <p

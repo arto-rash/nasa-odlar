@@ -67,7 +67,7 @@ def main() -> None:
         try:
             prefetch(b["name"], key, end)
             print(f"prefetch: {b['name']} ready in {(time.time() - t0) / 60:.1f} min", flush=True)
-        except Exception as exc:  # noqa: BLE001 — the build will fetch whatever is missing itself
+        except Exception as exc:  # noqa: BLE001 (the build will fetch whatever is missing itself)
             print(f"prefetch: {b['name']} failed ({exc!r:.150}); the build will fetch it", flush=True)
         done.add(b["name"])
 

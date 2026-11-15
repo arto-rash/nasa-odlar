@@ -1,4 +1,4 @@
-# ODLAR — one fire record for the Land of Fire
+# ODLAR: one fire record for the Land of Fire
 
 NASA Space Apps Challenge 2026 · **MODIS and VIIRS Hot Spots**
 
@@ -50,7 +50,7 @@ make setup
 make pipeline          # synthetic, ~8 min; writes ml/artifacts/
 make serve-ml          # :8001
 make serve-api         # :8000 (needs Postgres+PostGIS; see api/README.md)
-make web               # :3000 — set web/.env.local ODLAR_API_URL=http://127.0.0.1:8000/api/v1
+make web               # :3000, set web/.env.local ODLAR_API_URL=http://127.0.0.1:8000/api/v1
 ```
 
 Without Laravel, the web app can talk to FastAPI directly (`ODLAR_ML_URL`). Accounts and alerts are then disabled.

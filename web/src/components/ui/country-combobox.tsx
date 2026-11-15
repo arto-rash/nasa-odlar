@@ -89,7 +89,7 @@ export function CountryCombobox({
       </label>
       {open && (
         <ul id={listId} role="listbox" className="absolute z-40 mt-1 max-h-72 w-full min-w-[220px] overflow-auto rounded-md bg-panel py-1 shadow-lg ring-1 ring-line-strong">
-          {items.length === 0 && <li className="px-3 py-2 text-[13px] text-faint">—</li>}
+          {items.length === 0 && <li className="px-3 py-2 text-[13px] text-faint">–</li>}
           {items.map((o, i) => (
             <li
               key={o.value}

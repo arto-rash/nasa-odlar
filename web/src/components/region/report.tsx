@@ -72,7 +72,7 @@ export function RegionReport({
         <div className="flex items-center justify-between gap-4">
           <Wordmark />
           <p className="tabular-nums text-[12.5px] text-faint">
-            {t("meta", { end: end ? fmtDate(end, locale, { day: "numeric", month: "long", year: "numeric" }) : "—", today: fmtDate(today, locale, { day: "numeric", month: "long", year: "numeric" }) })}
+            {t("meta", { end: end ? fmtDate(end, locale, { day: "numeric", month: "long", year: "numeric" }) : "–", today: fmtDate(today, locale, { day: "numeric", month: "long", year: "numeric" }) })}
           </p>
         </div>
         <p className="mt-6 text-[13px] font-semibold text-faint">{t("title")}</p>
@@ -91,8 +91,8 @@ export function RegionReport({
         <h2 className="text-[13px] font-semibold text-faint">{t("keyNumbers")}</h2>
         <dl className="mt-3 grid grid-cols-2 gap-px overflow-hidden rounded-lg bg-line ring-1 ring-line sm:grid-cols-4">
           <Fact label={tr("annualMean")} value={fmtNum(s.annual_mean, locale)} />
-          <Fact label={tr("peakSeason")} value={crit ? weekRange(crit.start, crit.end, locale) : "—"} small />
-          <Fact label={tr("recordYear")} value={`${s.record_year ?? "—"}`} note={fmtNum(s.record_value, locale)} />
+          <Fact label={tr("peakSeason")} value={crit ? weekRange(crit.start, crit.end, locale) : "–"} small />
+          <Fact label={tr("recordYear")} value={`${s.record_year ?? "–"}`} note={fmtNum(s.record_value, locale)} />
           <Fact label={tr("trend")} value={`${fmtPct(s.trend.pct_per_decade / 100, locale, 0, true)} / 10`}
             note={tr("fakeTrend", { value: fmtPct(s.trend_naive.pct_per_decade / 100, locale, 0, true) })} />
         </dl>

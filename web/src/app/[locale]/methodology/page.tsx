@@ -60,12 +60,12 @@ export default async function MethodologyPage({ params }: { params: Promise<{ lo
   const vars = {
     bias: P(skill.bias), rawBias: P(skill.raw_modis_bias, 0), cov: P(skill.annual_interval_coverage, 0, false),
     wcov: P(skill.weekly_interval_coverage, 0, false), rho: N(skill.annual_spearman), years: skill.n_years,
-    truth: overview.synthetic_truth ? P(overview.synthetic_truth.bias) : "—", auc: N(h.roc_auc), aucRaw: N(r.roc_auc),
+    auc: N(h.roc_auc), aucRaw: N(r.roc_auc),
     base: N(h.base_roc_auc), bss: N(h.brier_skill), bssRaw: N(r.brier_skill), pr: N(h.pr_auc), prRaw: N(r.pr_auc), prBase: N(h.base_pr_auc),
     nboot: overview.meta.n_boot,
-    nBreak: overview.breaks?.countries ?? "—", rawBreaks: overview.breaks?.raw_breaks ?? "—",
-    rawAtSat: overview.breaks?.raw_at_new_satellite ?? "—", corrBreaks: overview.breaks?.corrected_breaks ?? "—",
-    corrAtSat: overview.breaks?.corrected_at_new_satellite ?? "—",
+    nBreak: overview.breaks?.countries ?? "–", rawBreaks: overview.breaks?.raw_breaks ?? "–",
+    rawAtSat: overview.breaks?.raw_at_new_satellite ?? "–", corrBreaks: overview.breaks?.corrected_breaks ?? "–",
+    corrAtSat: overview.breaks?.corrected_at_new_satellite ?? "–",
   };
   const fill = (s: string) => s.replace(/\{(\w+)\}/g, (_, k) => String(vars[k as keyof typeof vars] ?? `{${k}}`));
 

@@ -48,7 +48,6 @@ export function CompareClient({ initial, initialAnnual, initialSkill }: { initia
         <ValidationPanel skill={skill} />
       </div>
       <MetricsPanel skill={skill} />
-      {skill.synthetic_truth && <TruthPanel truth={skill.synthetic_truth} />}
     </div>
   );
 }
@@ -302,28 +301,5 @@ function MetricsPanel({ skill }: { skill: Skill }) {
         </Reveal>
       ))}
     </div>
-  );
-}
-
-function TruthPanel({ truth }: { truth: NonNullable<Skill["synthetic_truth"]> }) {
-  const t = useTranslations("compare");
-  const tc = useTranslations("common");
-  const locale = useLocale() as AppLocale;
-  const rows = truth.by_year.filter((r) => r.year >= 2001 && r.year <= 2011);
-  return (
-    <Panel className="p-5 sm:p-7">
-      <PanelHeader eyebrow={t("truthTitle")} title={<span className="text-[1rem] text-dim">{t("truthLead", { bias: fmtPct(truth.bias, locale, 1, true) })}</span>} />
-      <SeriesChart
-        className="mt-5"
-        ariaLabel={t("truthTitle")}
-        data={rows}
-        x={(d) => d.year}
-        height={240}
-        series={[
-          { key: "cf", label: t("hiddenTruth"), color: "var(--viirs)", value: (d) => d.viirs_cf, width: 2, dashed: true },
-          { key: "h", label: tc("harmonized"), color: "var(--harmonized)", value: (d) => d.harmonized, width: 2.5 },
-        ]}
-      />
-    </Panel>
   );
 }

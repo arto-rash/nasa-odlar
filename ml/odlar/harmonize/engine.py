@@ -177,7 +177,7 @@ def _fit_maps(train: pd.DataFrame) -> FittedMaps:
 
 
 def _year_sigma(train: pd.DataFrame, maps: FittedMaps) -> dict[int, float]:
-    """Spread of region-year totals around the mapping — the part of the error
+    """Spread of region-year totals around the mapping, the part of the error
     that is shared by all weeks of a year (season mix, fire-size regime) and so
     does not average out when weeks are summed."""
     t = train.reset_index(drop=True)

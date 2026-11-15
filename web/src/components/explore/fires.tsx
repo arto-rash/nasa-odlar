@@ -177,7 +177,7 @@ export function FiresList({ events, total, onPick }: { events: FireEvent[]; tota
           <li key={e.id}>
             <button onClick={() => onPick(e)} className="w-full rounded-md px-3 py-2.5 text-left ring-1 ring-line transition hover:bg-panel-hover">
               <span className="flex items-center justify-between gap-2">
-                <span className="truncate text-[13.5px] font-medium">{e.region ? regionName(e.region, locale) : "—"}</span>
+                <span className="truncate text-[13.5px] font-medium">{e.region ? regionName(e.region, locale) : "–"}</span>
                 <Status e={e} />
               </span>
               {e.region && <RegionPlace r={e.region} className="text-[12px]" />}

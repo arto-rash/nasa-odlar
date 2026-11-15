@@ -2,9 +2,9 @@
 
 Two sources:
 
-* ``ornl_point_series`` — MODIS MOD13Q1 250 m 16-day NDVI from the ORNL DAAC
+* ``ornl_point_series``, MODIS MOD13Q1 250 m 16-day NDVI from the ORNL DAAC
   MODIS Web Service (no login needed). Used when ``ODLAR_NDVI=modis``.
-* ``climatological_ndvi`` — a smooth seasonal curve per region, used offline and
+* ``climatological_ndvi``, a smooth seasonal curve per region, used offline and
   in tests. Flagged as ``source="climatology"`` so the UI can say so.
 """
 

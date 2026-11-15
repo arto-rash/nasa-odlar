@@ -359,7 +359,6 @@ export interface Overview {
     annual_median_rel_error: number;
     n_years: number;
   };
-  synthetic_truth: { bias: number; weekly_coverage: number } | null;
   model: { harmonized: ModelScore; raw: ModelScore };
   risk_top: RiskMapItem[];
   risk_counts: Partial<Record<RiskLevel, number>>;
@@ -370,7 +369,7 @@ export interface Overview {
 }
 
 export interface Meta {
-  source: "synthetic" | "firms";
+  source: string;
   weather_source: string;
   forecast_source: string;
   ndvi_source: string;
@@ -421,7 +420,6 @@ export interface Skill {
   weekly_interval_coverage: number;
   annual_interval_coverage: number;
   by_year: { year: number; obs_total: number; pred_total: number; modis_total: number; bias: number }[];
-  synthetic_truth?: { bias: number; weekly_coverage: number; by_year: { year: number; harmonized: number; viirs_cf: number }[] };
   transfer?: { region_id: number; season: string; source: string; q: number; modis: number; viirs: number }[];
   loyo_annual?: { year: number; obs: number; pred: number; modis: number; lo?: number; hi?: number }[];
 }

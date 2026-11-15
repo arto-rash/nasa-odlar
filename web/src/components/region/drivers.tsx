@@ -22,13 +22,13 @@ const ICON: Record<DriverCode, React.ComponentType<{ className?: string }>> = {
 
 export function driverText(t: ReturnType<typeof useTranslations>, d: Pick<Driver, "code" | "direction" | "value">, locale: AppLocale) {
   const digits = d.code === "wind" ? 1 : 0;
-  return t(`${d.code}.${d.direction}`, { value: d.value == null ? "—" : fmtNum(Math.abs(d.value), locale, digits) });
+  return t(`${d.code}.${d.direction}`, { value: d.value == null ? "–" : fmtNum(Math.abs(d.value), locale, digits) });
 }
 
 export function DriverLine({ code, className }: { code: DriverCode; className?: string }) {
   const t = useTranslations("drivers");
   const locale = useLocale() as AppLocale;
-  return <p className={className}>{driverText(t, { code, direction: "up", value: null }, locale).replace(/\s*\(—.*?\)/, "")}</p>;
+  return <p className={className}>{driverText(t, { code, direction: "up", value: null }, locale).replace(/\s*\(–.*?\)/, "")}</p>;
 }
 
 export function DriverList({ drivers, className }: { drivers: Driver[]; className?: string }) {

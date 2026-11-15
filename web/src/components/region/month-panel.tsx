@@ -46,7 +46,7 @@ export function MonthPanel({ m, className }: { m: MonthToDate; className?: strin
       <p className="mt-1 text-[12.5px] text-faint">{t("weeks", { range })}</p>
 
       {m.ratio !== null ? (
-        <div className="mt-5 space-y-3" role="img" aria-label={t("aria", { ratio: fmtRatio(m.ratio, locale), raw: raw?.ratio != null ? fmtRatio(raw.ratio, locale) : "—" })}>
+        <div className="mt-5 space-y-3" role="img" aria-label={t("aria", { ratio: fmtRatio(m.ratio, locale), raw: raw?.ratio != null ? fmtRatio(raw.ratio, locale) : "–" })}>
           <Bar label={t("odlar")} ratio={m.ratio} tone="bg-text" strong locale={locale} />
           {raw?.ratio != null && <Bar label={t("raw")} ratio={raw.ratio} tone="bg-[var(--text-faint)]" locale={locale} />}
           <div className="grid grid-cols-[64px_1fr_52px] gap-2.5 text-[11px] text-faint">

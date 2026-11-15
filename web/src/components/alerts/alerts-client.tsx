@@ -227,7 +227,7 @@ function SubscriptionsPanel({ subs, onChange }: { subs: Subscription[]; onChange
             }}
           >
             <div className="mt-4 space-y-3 rounded-lg bg-bg-sunken/60 p-4 ring-1 ring-line">
-              <RegionCombobox value={slug || null} valueLabel={pickedName || undefined} onChange={(v, r) => { setSlug(v); setPickedName(regionName(r, locale)); }} leavesOnly placeholder="—" />
+              <RegionCombobox value={slug || null} valueLabel={pickedName || undefined} onChange={(v, r) => { setSlug(v); setPickedName(regionName(r, locale)); }} leavesOnly placeholder="–" />
               <ThresholdPicker value={threshold} onChange={setThreshold} />
               <ChannelPicker value={channels} onToggle={(c) => setChannels((l) => toggle(l, c))} />
               <div className="flex gap-2">

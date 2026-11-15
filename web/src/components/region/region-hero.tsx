@@ -56,10 +56,10 @@ export function RegionHero({ region }: { region: RegionDetail }) {
             <span className="ml-1.5 text-[13px] text-faint">{tc("detections")}</span>
           </Stat>
           <Stat label={t("peakSeason")}>
-            <span className="text-[1.25rem] leading-snug">{crit ? weekRange(crit.start, crit.end, locale) : "—"}</span>
+            <span className="text-[1.25rem] leading-snug">{crit ? weekRange(crit.start, crit.end, locale) : "–"}</span>
           </Stat>
           <Stat label={t("recordYear")}>
-            {s.record_year ?? "—"}
+            {s.record_year ?? "–"}
             <span className="ml-2 tabular-nums text-[13px] text-faint">{fmtNum(s.record_value, locale)}</span>
           </Stat>
           <Stat label={t("trend")} hint={t("trendHint")}>

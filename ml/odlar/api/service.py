@@ -859,7 +859,8 @@ def export(s: Store, slug: str, kind: str, fmt: str, start: date | None, end: da
     name = f"odlar_{slug}_{kind}"
     if fmt == "csv":
         buf = io.StringIO()
-        buf.write(f"# ODLAR {kind} export — {r.name_en} — source: {s.meta['source']} — harmonized to VIIRS S-NPP scale\n")
+        source = "NASA FIRMS" if s.meta.get("source") == "firms" else s.meta.get("source")
+        buf.write(f"# ODLAR {kind} export: {r.name_en}. Source: {source}. Harmonized to the VIIRS S-NPP scale.\n")
         df.to_csv(buf, index=False)
         return buf.getvalue().encode(), "text/csv", f"{name}.csv"
     if fmt == "json":
@@ -891,7 +892,6 @@ def overview(s: Store) -> dict:
         "pilot": tot.round(1).to_dict(orient="records"),
         "skill": {k: sk.get(k) for k in ("bias", "raw_modis_bias", "annual_spearman", "weekly_interval_coverage",
                                           "annual_interval_coverage", "annual_median_rel_error", "n_years")},
-        "synthetic_truth": {k: v for k, v in (sk.get("synthetic_truth") or {}).items() if k != "by_year"} or None,
         "model": {"harmonized": mr["harmonized"]["overall"], "raw": mr["raw"]["overall"]},
         "risk_top": risk[:8],
         "risk_counts": pd.Series([r["level"] for r in risk]).value_counts().to_dict(),

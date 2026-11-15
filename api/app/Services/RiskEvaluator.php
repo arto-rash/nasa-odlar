@@ -134,7 +134,7 @@ class RiskEvaluator
         $text = __('odlar.telegram.alert', [
             'region' => $region,
             'level' => __('odlar.levels.'.$alert->level->value, [], $locale),
-            'probability' => $alert->probability !== null ? round($alert->probability * 100) : '—',
+            'probability' => $alert->probability !== null ? round($alert->probability * 100) : '–',
             'date' => $alert->as_of->toDateString(),
         ], $locale);
         try {

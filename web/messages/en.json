@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "ODLAR — One consistent fire record and risk map",
+    "title": "ODLAR: one consistent fire record and risk map",
     "description": "A platform that harmonizes NASA's MODIS and VIIRS satellite archives, builds burning-activity calendars and shows today's fire risk against 25 years of history. Pilot: Azerbaijan and the South Caucasus."
   },
   "nav": {
@@ -68,8 +68,6 @@
     "district": "District",
     "country": "Country",
     "province": "Province",
-    "syntheticBadge": "Demo data",
-    "syntheticTip": "This demo runs on a synthetic fire world driven by real NASA POWER weather. With a FIRMS MAP_KEY the same pipeline runs on the real NASA FIRMS archive.",
     "realBadge": "NASA FIRMS",
     "km2": "km²",
     "weeks": "{n} weeks",
@@ -115,7 +113,7 @@
       "s3": "Trends computed on the raw record show growth that never happened, and AI trained on it learns the wrong lesson.",
       "s4t": "ODLAR repairs the seam",
       "s4": "Using the years both sensors flew together, we calibrate MODIS to the VIIRS scale per region and season, and carry the uncertainty all the way through.",
-      "fakeTrend": "Fake trend",
+      "fakeTrend": "Trend in raw data",
       "realTrend": "Real trend",
       "jump": "VIIRS begins",
       "chartAria": "Annual fire detections in the South Caucasus: raw vs harmonized"
@@ -435,16 +433,13 @@
     "coverage": "90% interval coverage",
     "spearman": "Annual rank correlation",
     "medianError": "Median annual error",
-    "truthTitle": "A test where the answer is known",
-    "truthLead": "In the synthetic world we know what VIIRS would have seen before 2012. Harmonization recovers that hidden truth with {bias} bias.",
     "weeklyCoverage": "Weekly interval coverage",
     "seasons": {
       "DJF": "Winter",
       "MAM": "Spring",
       "JJA": "Summer",
       "SON": "Autumn"
-    },
-    "hiddenTruth": "VIIRS (hidden truth)"
+    }
   },
   "methodology": {
     "title": "Methodology",
@@ -486,7 +481,7 @@
     "same": "Close to normal",
     "advice": "What to do",
     "adviceLow": [
-      "Don't burn stubble — it is prohibited and the main cause of fires.",
+      "Don't burn stubble. It is prohibited and the main cause of fires.",
       "If you see smoke, call 112."
     ],
     "adviceHigh": [
@@ -549,7 +544,7 @@
     "password": "Password",
     "submitLogin": "Sign in",
     "submitRegister": "Create account",
-    "demo": "Use the demo account",
+    "demo": "Try it with a guest account",
     "welcome": "Welcome, {name}",
     "logout": "Sign out",
     "account": "Account",

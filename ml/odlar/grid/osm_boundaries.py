@@ -264,11 +264,11 @@ def build_world(iso3: str, client: httpx.Client) -> tuple[gpd.GeoDataFrame, str]
                 print(f"  {iso3}: OSM level {level} covers {cover / land_km2:.0%} of the land", flush=True)
             if levels:
                 print(f"  {iso3}: no OSM level covers the country; using geoBoundaries", flush=True)
-        except Exception as exc:  # noqa: BLE001 — any OSM trouble falls back to geoBoundaries
+        except Exception as exc:  # noqa: BLE001 (any OSM trouble falls back to geoBoundaries)
             print(f"  {iso3}: OSM failed ({exc!r:.120}); using geoBoundaries")
     try:
         gb = geoboundaries_full(iso3, "ADM1", client)
-    except Exception:  # noqa: BLE001 — a few small countries have no ADM1 release
+    except Exception:  # noqa: BLE001 (a few small countries have no ADM1 release)
         gb = geoboundaries(iso3, "ADM0", client, gb_dir).assign(shapeName=meta["name_en"])
     gb["geometry"] = gb.geometry.make_valid()
     gb = gb.dissolve(by="shapeName", as_index=False)
@@ -427,7 +427,7 @@ def main() -> None:
                 path = BOUNDARY_DIR / f"{COUNTRIES[iso3]['file']}_OSM.geojson"
                 try:
                     keep = still_right(iso3, path, client)
-                except Exception as exc:  # noqa: BLE001 — cannot check: rebuild it
+                except Exception as exc:  # noqa: BLE001 (cannot check: rebuild it)
                     print(f"{iso3}: check failed ({exc!r:.100}); rebuilding", flush=True)
                     keep = None
                 if keep:
@@ -437,7 +437,7 @@ def main() -> None:
                     continue
                 try:
                     gdf, source = build_world(iso3, client)
-                except Exception as exc:  # noqa: BLE001 — log and move on to the next country
+                except Exception as exc:  # noqa: BLE001 (log and move on to the next country)
                     print(f"{iso3}: FAILED {exc!r:.200}", flush=True)
                     continue
                 path.write_text(json.dumps(json.loads(gdf.to_json(drop_id=True)), separators=(",", ":")))

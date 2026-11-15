@@ -17,7 +17,7 @@ tomorrow to a year ahead.
 ## What already exists (don't rebuild)
 - Raw ↔ harmonized toggle, uncertainty bands, unusual-year marks (region page).
 - 7-day risk probability + drivers, 8-day daily fire-weather danger, 13-week
-  outlook total (q10/q50/q90 against normal) — `risk_detail` in
+  outlook total (q10/q50/q90 against normal), `risk_detail` in
   `ml/odlar/api/service.py`, shown on `/risk`.
 - Weekly climatology per region (mean, p10–p90, season start/peak/end) in the
   calendar (`ml/odlar/calendar/engine.py`).
@@ -34,7 +34,7 @@ One consistent story everywhere, with confidence fading as the horizon grows:
 | Next 8 days | Open-Meteo weather forecast → fire-weather danger | daily bars | "Forecast" |
 | Next 7 days | short-term model probability | risk level + drivers | "Forecast" |
 | Next 13 weeks | outlook model q10/q50/q90, spread over weeks by the region's seasonal shape | band vs normal band | "Outlook" |
-| 14–52 weeks | climatology p10–p90 (+ trend nudge) | faded band | "Typical year — not a forecast" |
+| 14–52 weeks | climatology p10–p90 (+ trend nudge) | faded band | "Typical year, not a forecast" |
 
 Every horizon carries a plain reliability line from back-tests, e.g. "In past
 years the real value fell inside this range 8 times in 10."
@@ -46,7 +46,7 @@ weekly on a coarse grid. Verify limits before building.
 
 ## Batches
 
-### Batch 1 — quick wins (mostly frontend)
+### Batch 1: quick wins (mostly frontend)
 1. **Calendar → evidence.** Click any calendar cell (year × week) → Explore at
    that week, zoomed to the region, region selected, real MODIS/VIIRS points.
    Same from the weekly chart tooltip. Explore already reads URL state; add
@@ -59,12 +59,12 @@ weekly on a coarse grid. Verify limits before building.
    Per-region cloud cover is out of scope (would need a full weather re-fetch).
    Add the caveat "a detection is a heat signal, not burned area" next to counts.
 3. **Season countdown** in the region header: "Season starts in ~3 weeks",
-   "Peak now — 2.4× usual", "Season over — next starts ~March". From the
+   "Peak now, 2.4× usual", "Season over, next starts ~March". From the
    existing season profile + current status. Also on Simple mode.
 4. **Near me everywhere.** Locate button in the nav/command palette, Explore and
    Risk (geolocation → `/regions/locate` → region). Not stored or sent anywhere else.
 
-### Batch 2 — forecasts, backend
+### Batch 2: forecasts, backend
 1. `refresh.py` + `pipeline.py`: new table `outlook_weekly` (region, week,
    q10, q50, q90, normal, normal_p10, normal_p90) for the next 13 weeks:
    climatology shape × (q50 / normal 13-week total), same for q10/q90.
@@ -77,7 +77,7 @@ weekly on a coarse grid. Verify limits before building.
 4. Gateway routes + cache headers (Laravel `AnalyticsController`), pytest +
    PHP tests.
 
-### Batch 3 — forecasts, frontend ("intuitive")
+### Batch 3: forecasts, frontend ("intuitive")
 1. **"Ahead" chart** on the region page and risk detail: one timeline from
    today → 12 months: daily danger bars, then the 13-week band against the
    normal band, then the faded typical-year band. "Today" line, season
@@ -90,7 +90,7 @@ weekly on a coarse grid. Verify limits before building.
 4. **Risk map horizon switch**: Next 7 days | Next 3 months | Season peak.
 5. Home: "This week & ahead" card for Azerbaijan.
 
-### Batch 4 — Fires now (event view)
+### Batch 4: Fires now (event view)
 1. `odlar.events` in the refresh: last 14 days of detections, linked within
    ~2 km and 1 day (grid-based connected components), MODIS+VIIRS together.
    Per event: centroid, bbox, first/last seen, detections, max/total FRP,
@@ -100,7 +100,7 @@ weekly on a coarse grid. Verify limits before building.
    event outlines, click → fly + detail (timeline of the event's detections).
    Region page: "Active fires" section.
 
-### Batch 5 — reach
+### Batch 5: reach
 1. **Telegram alerts.** Bot (token from the user, server env only). Link via
    `t.me/<bot>?start=<one-time code>` from Alerts; new `telegram` channel in
    subscriptions; `odlar:evaluate-risk` sends via Bot API. Commands: `/risk`,

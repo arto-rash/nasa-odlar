@@ -7,8 +7,8 @@ describe("formatting is deterministic for both locales", () => {
     expect(fmtNum(1234567.891, "az", 2)).toBe("1 234 567,89");
     expect(fmtNum(-3.5, "en", 1)).toBe("−3.5");
     expect(fmtNum(-0.01, "en", 0)).toBe("0");
-    expect(fmtNum(null, "en")).toBe("—");
-    expect(fmtNum(Number.NaN, "az")).toBe("—");
+    expect(fmtNum(null, "en")).toBe("–");
+    expect(fmtNum(Number.NaN, "az")).toBe("–");
   });
   it("percentages with sign", () => {
     expect(fmtPct(0.123, "en", 1, true)).toBe("+12.3%");
@@ -28,7 +28,7 @@ describe("formatting is deterministic for both locales", () => {
   it("week labels", () => {
     expect(weekLabel(29, "en")).toBe("late July");
     expect(weekLabel(29, "az")).toBe("iyul sonu");
-    expect(weekLabel(null, "en")).toBe("—");
+    expect(weekLabel(null, "en")).toBe("–");
     expect(weekRange(22, 34, "en")).toBe("early June – late August");
   });
   it("region names", () => {

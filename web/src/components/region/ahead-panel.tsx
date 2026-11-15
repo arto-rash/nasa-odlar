@@ -11,19 +11,19 @@ import type { ForecastPayload } from "@/lib/types";
 
 /** Small expected counts read as "<0.1", not a misleading "0.0". */
 const approx = (v: number | null | undefined, locale: AppLocale, about = false) =>
-  v == null ? "—" : v > 0 && v < 0.05 ? "<0.1" : (about ? "~" : "") + fmtNum(v, locale, v < 10 ? 1 : 0);
-const per100 = (v: number | null | undefined) => (v == null ? "—" : String(Math.round(v * 100)));
+  v == null ? "–" : v > 0 && v < 0.05 ? "<0.1" : (about ? "~" : "") + fmtNum(v, locale, v < 10 ? 1 : 0);
+const per100 = (v: number | null | undefined) => (v == null ? "–" : String(Math.round(v * 100)));
 
 /** The days, weeks and months ahead in one place, each with how far to trust it. */
 export function AheadPanel({ f, notesOpen = false }: { f: ForecastPayload; notesOpen?: boolean }) {
   const t = useTranslations("ahead");
   const locale = useLocale() as AppLocale;
   const o = f.outlook;
-  const d = (iso: string | null) => (iso ? fmtDate(iso, locale, { day: "numeric", month: "long" }) : "—");
+  const d = (iso: string | null) => (iso ? fmtDate(iso, locale, { day: "numeric", month: "long" }) : "–");
   const Signal = o.signal === "above" ? TrendingUp : o.signal === "below" ? TrendingDown : Minus;
   const inSeason = f.season.end && f.season.start && f.season.end < f.season.start;
   const r = f.reliability;
-  const source = f.forecast_source === "open_meteo" ? "Open-Meteo" : (f.forecast_source ?? "—");
+  const source = f.forecast_source === "open_meteo" ? "Open-Meteo" : (f.forecast_source ?? "–");
   return (
     <Panel className="p-5 sm:p-7">
       <PanelHeader eyebrow={t("title")} title={<span className="text-[1.05rem] text-dim">{t("lead")}</span>} />

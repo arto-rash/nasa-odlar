@@ -45,7 +45,7 @@ ANOMALIES = [
     ({"ge-samtskhe-javakheti"}, 2017, 6.0, (220, 245)),  # Borjomi forest fire
     (None, 2010, 1.6, (150, 260)),               # 2010 heat wave, whole region
     (None, 2021, 1.5, (180, 260)),               # 2021 hot dry summer
-    (None, 2014, 0.55, (60, 140)),               # wet spring — suppressed burning
+    (None, 2014, 0.55, (60, 140)),               # wet spring, suppressed burning
 ]
 
 GAS_FLARES = [(40.42, 49.93), (40.18, 49.47), (40.33, 50.36), (39.40, 49.25)]

@@ -38,7 +38,7 @@ def daily_series(daily: pd.DataFrame, harm_weekly: pd.DataFrame, mode: str = "ha
 
     ``harmonized``: VIIRS S-NPP scale. Pre-2012 weekly harmonized totals are
     spread over the days of the week in proportion to that week's MODIS detections.
-    ``raw``: the naive merged record — MODIS before 2012, every VIIRS satellite after.
+    ``raw``: the naive merged record, MODIS before 2012, every VIIRS satellite after.
     """
     d = daily[["region_id", "date", "modis_t", "modis_a", "viirs_n", "viirs_j1", "viirs_j2"]].copy()
     # S-NPP scale: S-NPP itself, or the NOAA-20/21 bridge on days it is missing
@@ -232,7 +232,7 @@ def weather_norms(w: pd.DataFrame, chunk: int = 60, fill: bool = False) -> pd.Da
 
 def _block_roll(x: np.ndarray, keys: np.ndarray, window: int) -> tuple[np.ndarray, np.ndarray]:
     """Trailing ``window`` sum and count of non-NaN values within runs of equal
-    ``keys`` — a grouped ``rolling(window, min_periods=1)`` without its memory cost."""
+    ``keys``, a grouped ``rolling(window, min_periods=1)`` without its memory cost."""
     start = np.r_[0, np.flatnonzero(keys[1:] != keys[:-1]) + 1]
     pos = np.arange(keys.size) - np.repeat(start, np.diff(np.r_[start, keys.size]))
     ok = ~np.isnan(x)

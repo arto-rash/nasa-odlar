@@ -69,7 +69,7 @@ export function ClockTeaser({ cal }: { cal: CalendarPayload }) {
             <Fact label={t("season")} value={weekRange(cal.season.start, cal.season.end, locale)} />
             <Fact
               label={t("peak")}
-              value={cal.season.critical[0] ? weekRange(cal.season.critical[0].start, cal.season.critical[0].end, locale) : "—"}
+              value={cal.season.critical[0] ? weekRange(cal.season.critical[0].start, cal.season.critical[0].end, locale) : "–"}
             />
           </Reveal>
           {cal.anomalies.length > 0 && (

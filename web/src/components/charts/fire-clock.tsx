@@ -277,7 +277,7 @@ export function FireClock({
               {hoverFc
                 ? `~${fmtNum(hoverFc.value, locale, hoverFc.value < 10 ? 1 : 0)}`
                 : unseen
-                ? "—"
+                ? "–"
                 : centerVal != null
                 ? fmtNum(centerVal, locale, centerVal < 10 ? 1 : 0)
                 : fmtNum(season?.annual_mean ?? 0, locale)}

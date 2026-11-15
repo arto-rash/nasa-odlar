@@ -3,7 +3,7 @@ import type { MetadataRoute } from "next";
 /** Installed on a phone's home screen: the ODLAR icon on its dark tile. */
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "ODLAR — fire record and risk",
+    name: "ODLAR: fire record and risk",
     short_name: "ODLAR",
     description: "One consistent 25-year fire record from NASA's MODIS and VIIRS, fire calendars and risk forecasts.",
     start_url: "/",

@@ -1,4 +1,4 @@
-// Pure geometry for the radial Fire Clock — unit tested.
+// Pure geometry for the radial Fire Clock, unit tested.
 
 export const WEEKS = 52;
 export const TAU = Math.PI * 2;

@@ -164,7 +164,7 @@ export function NowPanel({ region }: { region: RegionDetail }) {
           </div>
           <PercentileBar value={c.ytd_percentile ?? 0} />
           <div className="mt-2 flex justify-between text-[13px] text-faint">
-            <span>{t("ytdRank", { rank: c.ytd_rank ?? "—", years: c.n_years + 1 })}</span>
+            <span>{t("ytdRank", { rank: c.ytd_rank ?? "–", years: c.n_years + 1 })}</span>
             <span>{t("ytdVsNormal", { value: fmtNum(c.ytd_median, locale) })}</span>
           </div>
         </div>

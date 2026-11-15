@@ -9,7 +9,7 @@ return [
         'extreme' => 'ekstremal',
     ],
     'mail' => [
-        'subject' => 'ODLAR yanğın riski xəbərdarlığı: :region — :level risk',
+        'subject' => 'ODLAR yanğın riski xəbərdarlığı: :region, :level risk',
         'greeting' => 'Salam, :name!',
         'body' => ':region üçün 7 günlük yanğın riski proqnozu artıq :level səviyyəsindədir (:date tarixinə).',
         'probability' => 'Normadan yüksək yanğın aktivliyi ehtimalı: :value%',

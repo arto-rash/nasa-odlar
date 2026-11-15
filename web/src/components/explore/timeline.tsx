@@ -94,7 +94,7 @@ export function Timeline({
     <div className="shrink-0">
       <p className={cn("text-[12px] font-semibold", inFuture ? "text-ember-300" : "text-faint")}>{inFuture ? t("forecastChip") : t("weekShort")}</p>
       <p className="font-display tabular text-[1rem] leading-tight sm:text-[1.15rem]">
-        {cur ? fmtDate(cur.week, locale, { day: "numeric", month: "short", year: "numeric" }) : "—"}
+        {cur ? fmtDate(cur.week, locale, { day: "numeric", month: "short", year: "numeric" }) : "–"}
       </p>
     </div>
   );

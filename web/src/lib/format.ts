@@ -9,7 +9,7 @@ function group(intPart: string, sep: string) {
 }
 
 export function fmtNum(v: number | null | undefined, locale: AppLocale, digits = 0): string {
-  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  if (v === null || v === undefined || Number.isNaN(v)) return "–";
   const neg = v < 0 && Math.abs(v).toFixed(digits) !== (0).toFixed(digits);
   const [i, d] = Math.abs(v).toFixed(digits).split(".");
   const out = locale === "az" ? group(i, "\u00a0") + (d ? "," + d : "") : group(i, ",") + (d ? "." + d : "");
@@ -17,7 +17,7 @@ export function fmtNum(v: number | null | undefined, locale: AppLocale, digits =
 }
 
 export function fmtCompact(v: number | null | undefined, locale: AppLocale): string {
-  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  if (v === null || v === undefined || Number.isNaN(v)) return "–";
   const a = Math.abs(v);
   if (a >= 1e6) return fmtNum(v / 1e6, locale, a >= 1e7 ? 0 : 1) + (locale === "az" ? " mln" : "M");
   if (a >= 1e4) return fmtNum(v / 1e3, locale, 0) + (locale === "az" ? " min" : "k");
@@ -26,7 +26,7 @@ export function fmtCompact(v: number | null | undefined, locale: AppLocale): str
 }
 
 export function fmtPct(v: number | null | undefined, locale: AppLocale, digits = 0, signed = false): string {
-  if (v === null || v === undefined || Number.isNaN(v)) return "—";
+  if (v === null || v === undefined || Number.isNaN(v)) return "–";
   const n = fmtNum(v * 100, locale, digits);
   const sign = signed && v * 100 >= 0.5 * 10 ** -digits ? "+" : "";
   return locale === "az" ? `${sign}${n}%` : `${sign}${n}%`;
@@ -104,7 +104,7 @@ export function weekToDate(week: number): Date {
 
 /** "early July" style label for a calendar-week bin. */
 export function weekLabel(week: number | null | undefined, l: AppLocale): string {
-  if (week === null || week === undefined) return "—";
+  if (week === null || week === undefined) return "–";
   const d = weekToDate(week);
   const day = d.getUTCDate();
   const m = d.getUTCMonth();
@@ -116,7 +116,7 @@ export function weekLabel(week: number | null | undefined, l: AppLocale): string
 }
 
 export function weekRange(start: number | null, end: number | null, l: AppLocale): string {
-  if (start === null || end === null) return "—";
+  if (start === null || end === null) return "–";
   return `${weekLabel(start, l)} – ${weekLabel(end, l)}`;
 }
 

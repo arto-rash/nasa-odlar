@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "ODLAR — Yanğınların vahid tarixçəsi və risk xəritəsi",
+    "title": "ODLAR: yanğınların vahid tarixçəsi və risk xəritəsi",
     "description": "NASA MODIS və VIIRS peyk arxivlərini vahid miqyasa gətirən, yanğın təqvimi quran və riski 25 illik tarixçə fonunda göstərən platforma. Pilot: Azərbaycan və Cənubi Qafqaz."
   },
   "nav": {
@@ -68,8 +68,6 @@
     "district": "Rayon",
     "country": "Ölkə",
     "province": "Region",
-    "syntheticBadge": "Demo məlumatı",
-    "syntheticTip": "Bu nümayiş versiyası real NASA POWER hava məlumatı ilə idarə olunan sintetik yanğın dünyasından istifadə edir. FIRMS MAP_KEY verildikdə eyni boru xətti real NASA FIRMS arxivində işləyir.",
     "realBadge": "NASA FIRMS",
     "km2": "km²",
     "weeks": "{n} həftə",
@@ -115,7 +113,7 @@
       "s3": "Xam məlumatla qurulan trend süni artım göstərir, belə məlumatla öyrədilən AI isə səhv proqnoz verir.",
       "s4t": "ODLAR tikişi bərpa edir",
       "s4": "2012-dən sonrakı ortaq dövrdən istifadə edib MODIS-i region və mövsüm üzrə VIIRS miqyasına kalibrləyirik və nəticəni qeyri-müəyyənlik intervalı ilə göstəririk.",
-      "fakeTrend": "Süni trend",
+      "fakeTrend": "Xam məlumatın trendi",
       "realTrend": "Həqiqi trend",
       "jump": "VIIRS başlayır",
       "chartAria": "Cənubi Qafqazda illik yanğın aşkarlamaları: xam və harmonizə edilmiş"
@@ -291,7 +289,7 @@
     "trendHint": "Theil–Sen meyli, Mann–Kendall testi ilə",
     "fakeTrend": "xam məlumatla: {value}",
     "clockTitle": "Yanğın saatı",
-    "clockLead": "Halqa — il, dilim — həftə. Həftəyə toxunun, yanğınlarını xəritədə görün.",
+    "clockLead": "Halqa = il, dilim = həftə. Həftəyə toxunun, yanğınlarını xəritədə görün.",
     "nowTitle": "İndi",
     "thisWeek": "Bu həftə",
     "weekPercentile": "Bu həftə tarixi həftələrin {pct}%-indən aktivdir",
@@ -435,16 +433,13 @@
     "coverage": "90% interval əhatəsi",
     "spearman": "İllik sıra korrelyasiyası",
     "medianError": "Median illik xəta",
-    "truthTitle": "Cavabı bilinən dünyada sınaq",
-    "truthLead": "Sintetik dünyada 2012-dən əvvəl VIIRS-in nə görəcəyini bilirik. Harmonizasiya bu gizli həqiqəti {bias} xəta ilə bərpa edir.",
     "weeklyCoverage": "Həftəlik interval əhatəsi",
     "seasons": {
       "DJF": "Qış",
       "MAM": "Yaz",
       "JJA": "Yay",
       "SON": "Payız"
-    },
-    "hiddenTruth": "VIIRS (gizli həqiqət)"
+    }
   },
   "methodology": {
     "title": "Metodologiya",
@@ -486,7 +481,7 @@
     "same": "Normaya yaxın",
     "advice": "Nə etməli",
     "adviceLow": [
-      "Küləş yandırmayın — bu qadağandır və yanğınların əsas səbəbidir.",
+      "Küləş yandırmayın. Bu qadağandır və yanğınların əsas səbəbidir.",
       "Hər hansı tüstü görsəniz 112-yə zəng edin."
     ],
     "adviceHigh": [
@@ -549,7 +544,7 @@
     "password": "Şifrə",
     "submitLogin": "Daxil ol",
     "submitRegister": "Hesab yarat",
-    "demo": "Demo hesabı ilə daxil ol",
+    "demo": "Qonaq hesabı ilə yoxla",
     "welcome": "Xoş gəldiniz, {name}",
     "logout": "Çıxış",
     "account": "Hesab",

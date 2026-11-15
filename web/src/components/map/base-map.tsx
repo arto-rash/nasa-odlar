@@ -68,7 +68,7 @@ export function BaseMap({
     const next = docTheme();
     if (built.current?.theme === next && built.current.locale === locale) return;
     built.current = { theme: next, locale };
-    // diff: false — a diffed swap silently drops runtime sources/layers and never fires
+    // diff: false, because a diffed swap silently drops runtime sources/layers and never fires
     // "style.load", so the children would not get the chance to add theirs back
     map.setStyle(buildStyle({ theme: next, locale, terrain, globe }), { diff: false });
     map.once("style.load", () => {
