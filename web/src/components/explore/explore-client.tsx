@@ -35,12 +35,13 @@ const addDays = (s: string, n: number) => iso(new Date(new Date(s + "T00:00:00Z"
 const FORECAST_WEEKS = 13;
 
 export function ExploreClient({
-  timeline, initialWeek, initialRegion = null, initialFire = null,
+  timeline, initialWeek, initialRegion = null, initialFire = null, initialSatellite = false,
 }: {
   timeline: TimelinePoint[];
   initialWeek: string;
   initialRegion?: string | null;
   initialFire?: string | null;
+  initialSatellite?: boolean;
 }) {
   const t = useTranslations("explore");
   const tf = useTranslations("fires");
@@ -53,7 +54,7 @@ export function ExploreClient({
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [layers, setLayers] = useState({ hotspots: true, density: false, regions: "outline" as RegionMode | "off", flares: false,
-    imagery: "map" as "map" | "satellite", nasaDay: true });
+    imagery: (initialSatellite ? "satellite" : "map") as "map" | "satellite", nasaDay: true });
   const { data: flares } = useStaticSources(layers.flares);
   const [sensors, setSensors] = useState({ M: true, V: true });
   const [hover, setHover] = useState<{ id?: number; slug: string; name_az: string; name_en: string; country?: string; level?: string; country_name_en?: string; country_name_az?: string; state_name_en?: string; state_name_az?: string; risk_level?: string; x: number; y: number } | null>(null);
@@ -183,8 +184,10 @@ export function ExploreClient({
     u.searchParams.set("w", week);
     if (fireId) u.searchParams.set("fire", fireId);
     else u.searchParams.delete("fire");
+    if (layers.imagery === "satellite") u.searchParams.set("sat", "1");
+    else u.searchParams.delete("sat");
     window.history.replaceState(null, "", u);
-  }, [week, fireId]);
+  }, [week, fireId, layers.imagery]);
   const { data: fireData } = useQuery({
     queryKey: ["events", view?.bbox ?? null],
     queryFn: () => http<{ total: number; events: FireEvent[] }>(`/events?limit=300${view?.bbox ? `&bbox=${view.bbox}` : ""}`),
