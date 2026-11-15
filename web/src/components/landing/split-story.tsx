@@ -1,8 +1,8 @@
 "use client";
 
-import { AnimatePresence, motion, useMotionValueEvent, useScroll } from "motion/react";
+import { AnimatePresence, motion, useInView, useReducedMotion } from "motion/react";
 import { useLocale, useTranslations } from "next-intl";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { SeriesChart, type Series } from "@/components/charts/series-chart";
 import { Eyebrow } from "@/components/ui/panel";
 import { cn } from "@/lib/cn";
@@ -19,8 +19,21 @@ export function SplitStory({ pilot, endYear }: { pilot: Overview["pilot"]; endYe
   const locale = useLocale() as AppLocale;
   const ref = useRef<HTMLElement>(null);
   const [step, setStep] = useState(0);
-  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end end"] });
-  useMotionValueEvent(scrollYProgress, "change", (v) => setStep(Math.min(3, Math.floor(v * 4.2))));
+  // No pinned, scroll-driven section (it lagged and held the page on phones): the
+  // story plays by itself once in view, one step every few seconds, and stops for
+  // good the moment the reader picks a step. Never for reduced motion.
+  const [touched, setTouched] = useState(false);
+  const inView = useInView(ref, { amount: 0.45 });
+  const reduce = useReducedMotion();
+  useEffect(() => {
+    if (!inView || touched || reduce || step >= 3) return;
+    const id = setTimeout(() => setStep((v) => Math.min(3, v + 1)), step === 0 ? 2600 : 3800);
+    return () => clearTimeout(id);
+  }, [inView, touched, reduce, step]);
+  const pick = (i: number) => {
+    setTouched(true);
+    setStep(i);
+  };
 
   const { rows, naivePct, harmPct } = useMemo(() => {
     const full = pilot.filter((p) => p.year >= 2001 && p.year < endYear);
@@ -62,25 +75,23 @@ export function SplitStory({ pilot, endYear }: { pilot: Overview["pilot"]; endYe
   ];
 
   return (
-    <section ref={ref} className="relative h-[420vh]" aria-labelledby="split-title">
-      <div className="sticky top-0 flex h-[100svh] items-center">
-        <div className="mx-auto grid w-full max-w-[1240px] items-center gap-8 px-5 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:gap-14">
-          <div>
+    <section ref={ref} className="relative py-20 sm:py-28" aria-labelledby="split-title">
+      <div>
+        <div className="mx-auto grid w-full max-w-[1240px] gap-6 px-5 sm:px-8 lg:grid-cols-[0.85fr_1.15fr] lg:grid-rows-[auto_1fr] lg:gap-x-14 lg:gap-y-6">
+          <div className="lg:col-start-1 lg:row-start-1">
             <Eyebrow>{t("eyebrow")}</Eyebrow>
             <h2 id="split-title" className="font-display mt-4 text-[clamp(2.2rem,4.6vw,3.8rem)] leading-[1]">
               {t.rich("title", rich)}
             </h2>
-            <ol className="mt-8 space-y-1">
+          </div>
+          <div className="lg:col-start-1 lg:row-start-2 lg:self-start">
+            <ol className="space-y-1">
               {steps.map((s, i) => (
                 <li key={i}>
                   <button
                     type="button"
-                    onClick={() => {
-                      const el = ref.current;
-                      if (!el) return;
-                      const top = el.offsetTop + (el.offsetHeight - window.innerHeight) * ((i + 0.5) / 4.2);
-                      window.scrollTo({ top, behavior: "smooth" });
-                    }}
+                    onClick={() => pick(i)}
+                    aria-pressed={step === i}
                     className={cn(
                       "group flex w-full gap-4 rounded-lg p-3 text-left transition-colors",
                       step === i ? "bg-panel" : "hover:bg-panel/50",
@@ -116,7 +127,7 @@ export function SplitStory({ pilot, endYear }: { pilot: Overview["pilot"]; endYe
             </ol>
           </div>
 
-          <div className="glass relative rounded-lg p-4 sm:p-6">
+          <div className="glass relative self-center rounded-lg p-4 sm:p-6 max-lg:row-start-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
             <div className="mb-3 flex flex-wrap items-center gap-x-5 gap-y-2 text-[13px] text-dim">
               <Legend color="var(--modis)" label={step === 0 ? tc("modis") : tc("naive")} />
               {step >= 3 && <Legend color="var(--harmonized)" label={tc("harmonized")} />}
@@ -156,7 +167,7 @@ export function SplitStory({ pilot, endYear }: { pilot: Overview["pilot"]; endYe
               band={step >= 3 ? { lo: (d) => d.lo, hi: (d) => d.hi, color: "var(--harmonized)", label: tc("uncertainty") } : undefined}
               markers={step >= 1 ? [{ x: 2012, label: t("jump") }] : []}
               fadeBefore={step >= 1 ? 2012 : undefined}
-              height={380}
+              height={340}
             />
           </div>
         </div>
